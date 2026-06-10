@@ -57,7 +57,7 @@ export async function runAudit(auditId: string): Promise<void> {
       if (seen.has(p.prompt)) return false
       seen.add(p.prompt)
       return true
-    })
+    }).slice(0, 5)
 
     // 3. Run all providers in parallel
     const providers = getAvailableProviders()

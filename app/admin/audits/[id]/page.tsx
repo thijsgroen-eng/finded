@@ -76,6 +76,7 @@ export default async function AuditDetailPage({
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
+      {/* Back + header */}
       <div className="mb-6">
         <Link
           href="/admin/audits"
@@ -100,6 +101,7 @@ export default async function AuditDetailPage({
         </div>
       </div>
 
+      {/* Core metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="Mention frequency"
@@ -123,6 +125,7 @@ export default async function AuditDetailPage({
         />
       </div>
 
+      {/* Model breakdown + sentiment */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <Card>
           <CardHeader><CardTitle>AI model breakdown</CardTitle></CardHeader>
@@ -181,13 +184,14 @@ export default async function AuditDetailPage({
         </Card>
       </div>
 
+      {/* Website audit */}
       {websiteAudit ? (
         <Card className="mb-5">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Website audit</CardTitle>
               {restaurant.website && (
-                
+                <a
                   href={restaurant.website.startsWith('http') ? restaurant.website : `https://${restaurant.website}`}
                   target="_blank"
                   rel="noreferrer"
@@ -201,13 +205,13 @@ export default async function AuditDetailPage({
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
               <div>
-                <CheckRow label="Schema.org markup"     value={websiteAudit.schema_present} />
-                <CheckRow label="Menu page detected"    value={websiteAudit.menu_present} />
-                <CheckRow label="Opening hours present" value={websiteAudit.opening_hours_present} />
+                <CheckRow label="Schema.org markup"       value={websiteAudit.schema_present} />
+                <CheckRow label="Menu page detected"      value={websiteAudit.menu_present} />
+                <CheckRow label="Opening hours present"   value={websiteAudit.opening_hours_present} />
               </div>
               <div>
-                <CheckRow label="Reservation link"      value={websiteAudit.reservation_links_present} />
-                <CheckRow label="Social media links"    value={websiteAudit.social_links_present} />
+                <CheckRow label="Reservation link"        value={websiteAudit.reservation_links_present} />
+                <CheckRow label="Social media links"      value={websiteAudit.social_links_present} />
               </div>
             </div>
             {(websiteAudit.meta_title || websiteAudit.meta_description) && (
@@ -236,6 +240,7 @@ export default async function AuditDetailPage({
         </Card>
       )}
 
+      {/* AI Recommendations */}
       <Recommendations auditId={id} />
 
       {audit.error_message && (

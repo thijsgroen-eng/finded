@@ -51,7 +51,7 @@ export function computeMetrics(mentions: MentionRow[]): ComputedMetrics {
   const totalMentions = allMentions.length
 
   // Mention frequency
-  const mention_frequency = totalPrompts > 0 ? totalMentions / totalPrompts : 0
+  const mention_frequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
 
   // Position score — weighted average over all mentioned rows
   const positionScores = allMentions
@@ -81,7 +81,7 @@ export function computeMetrics(mentions: MentionRow[]): ComputedMetrics {
       mentions: modelMentions.length,
       total_prompts: new Set(modelRows.map((m) => m.prompt_id)).size,
       frequency:
-        modelRows.length > 0 ? modelMentions.length / new Set(modelRows.map((m) => m.prompt_id)).size : 0,
+        modelRows.length > 0 ? Math.min(1, modelMentions.length / new Set(modelRows.map((m) => m.prompt_id)).size) : 0,
       avg_position:
         positions.length > 0
           ? positions.reduce((a, b) => a + b, 0) / positions.length

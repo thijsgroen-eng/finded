@@ -97,7 +97,7 @@ export async function runAudit(auditId: string): Promise<void> {
             raw_response: `ERROR: ${result.error}`,
             tokens_used:  null,
             duration_ms:  result.duration_ms,
-          )
+          })
           continue
         }
 

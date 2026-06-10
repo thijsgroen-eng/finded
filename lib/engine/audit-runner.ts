@@ -86,9 +86,17 @@ export async function runAudit(auditId: string): Promise<void> {
 
         const result = await provider.runPrompt(promptObj.prompt)
 
-        if (result.error) {
+       if (result.error) {
           console.error(
             `[audit ${auditId}] ${provider.name} error on prompt "${promptObj.prompt}": ${result.error}`
+          )
+          await supabaseAdmin.from('model_runs').insert({
+            audit_id:     auditId,
+            model:        provider.name,
+            prompt_id:    promptObj.id,
+            raw_response: `ERROR: ${result.error}`,
+            tokens_used:  null,
+            duration_ms:  result.duration_ms,
           )
           continue
         }

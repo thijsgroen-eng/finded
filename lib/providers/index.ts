@@ -1,0 +1,41 @@
+import { ModelName } from '@/types/database'
+import { ModelProvider } from './types'
+import { OpenAIProvider } from './openai'
+import { AnthropicProvider } from './anthropic'
+import { GeminiProvider } from './gemini'
+import { PerplexityProvider } from './perplexity'
+
+// Lazy-initialized providers (only instantiated when keys are present)
+const providerCache: Partial<Record<ModelName, ModelProvider>> = {}
+
+export function getProvider(model: ModelName): ModelProvider | null {
+  if (providerCache[model]) return providerCache[model]!
+
+  try {
+    switch (model) {
+      case 'openai':
+        providerCache[model] = new OpenAIProvider()
+        break
+      case 'anthropic':
+        providerCache[model] = new AnthropicProvider()
+        break
+      case 'gemini':
+        providerCache[model] = new GeminiProvider()
+        break
+      case 'perplexity':
+        providerCache[model] = new PerplexityProvider()
+        break
+    }
+    return providerCache[model]!
+  } catch {
+    // Provider not configured (missing API key)
+    return null
+  }
+}
+
+export function getAvailableProviders(): ModelProvider[] {
+  const models: ModelName[] = ['openai', 'anthropic', 'gemini', 'perplexity']
+  return models.map(getProvider).filter(Boolean) as ModelProvider[]
+}
+
+export { OpenAIProvider, AnthropicProvider, GeminiProvider, PerplexityProvider }

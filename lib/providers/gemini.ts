@@ -16,7 +16,7 @@ export class GeminiProvider implements ModelProvider {
 
     try {
       const model = this.client.getGenerativeModel({
-        model: 'gemini-2.0-flash-lite',
+        model: 'gemini-2.5-flash',
         systemInstruction:
           'You are a helpful local guide. When asked about restaurants, provide specific, real recommendations with names. List restaurants clearly, typically as numbered lists or clearly named suggestions.',
       })

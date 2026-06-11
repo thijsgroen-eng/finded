@@ -5,6 +5,7 @@ import { auditWebsite } from '@/lib/engine/website-auditor'
 import { generatePrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
+import { resolveEntityName } from '@/lib/engine/entity-extractor'
 
 const BATCH_SIZE = 5      // prompts per batch to avoid rate limits
 const BATCH_DELAY = 1000  // ms between batches
@@ -242,74 +243,124 @@ export const auditFunction = inngest.createFunction(
       allEntities.push(...extractedBatch)
     }
 
-    // ── Step 6: Compute full metrics ──────────────────────────
-    await step.run('compute-metrics', async () => {
-      const { data: mentions } = await supabaseAdmin
-        .from('mentions')
-        .select('model, prompt_id, mentioned, position, sentiment')
-        .eq('audit_id', audit_id)
+   await step.run('compute-metrics', async () => {
+  const { data: entities } = await supabaseAdmin
+    .from('entities')
+    .select('*')
+    .eq('audit_id', audit_id)
 
-      const metrics = computeFullMetrics(
-        restaurant.name,
-        mentions ?? [],
-        allEntities
-      )
+  const { data: allModelRuns } = await supabaseAdmin
+    .from('model_runs')
+    .select('model, prompt_id')
+    .eq('audit_id', audit_id)
+    .not('raw_response', 'like', 'ERROR:%')
 
-      // Store visibility score
-      await supabaseAdmin.from('visibility_scores').insert({
+  if (!entities || !allModelRuns) return
+
+  // Build mentions from entities
+  const mentionMap = new Map<string, { mentioned: boolean; position: number | null; sentiment: string | null }>()
+  
+  for (const run of allModelRuns) {
+    const key = `${run.model}:${run.prompt_id}`
+    const entity = entities.find(e => 
+      e.model === run.model && 
+      e.prompt_id === run.prompt_id &&
+      resolveEntityName(e.name, restaurant.name) >= 0.7
+    )
+    mentionMap.set(key, {
+      mentioned: entity !== null,
+      position: entity?.position ?? null,
+      sentiment: entity?.sentiment ?? null,
+    })
+  }
+
+  // Insert mentions
+  const mentionInserts = [...mentionMap.entries()].map(([key, val]) => {
+    const [model, prompt_id] = key.split(':')
+    return {
+      audit_id,
+      model,
+      prompt_id,
+      restaurant_name: restaurant.name,
+      mentioned: val.mentioned,
+      position: val.position,
+      sentiment: val.sentiment,
+    }
+  })
+
+  if (mentionInserts.length > 0) {
+    await supabaseAdmin.from('mentions').insert(mentionInserts)
+  }
+
+  const mentions = mentionInserts.map(m => ({
+    model: m.model as any,
+    prompt_id: m.prompt_id,
+    mentioned: m.mentioned,
+    position: m.position,
+    sentiment: m.sentiment,
+  }))
+
+  const entityData = (entities ?? []).map(e => ({
+    name: e.name,
+    position: e.position ?? 0,
+    sentiment: e.sentiment ?? 'neutral',
+    reasons: [],
+    model: e.model,
+    prompt_id: e.prompt_id,
+  }))
+
+  const metrics = computeFullMetrics(restaurant.name, mentions, entityData)
+
+  await supabaseAdmin.from('visibility_scores').insert({
+    audit_id,
+    restaurant_id,
+    visibility_score:          metrics.visibility_score,
+    opportunity_score:         metrics.opportunity_score,
+    opportunity_label:         metrics.opportunity_label,
+    mention_frequency:         metrics.mention_frequency,
+    prompt_coverage:           metrics.prompt_coverage,
+    avg_position:              metrics.avg_position,
+    median_position:           metrics.median_position,
+    best_position:             metrics.best_position,
+    worst_position:            metrics.worst_position,
+    position_score:            metrics.position_score,
+    model_consensus:           metrics.model_consensus,
+    share_of_voice:            metrics.share_of_voice,
+    total_market_mentions:     metrics.total_market_mentions,
+    sentiment_score:           metrics.sentiment_score,
+    sentiment_positive:        metrics.sentiment_breakdown.positive,
+    sentiment_neutral:         metrics.sentiment_breakdown.neutral,
+    sentiment_negative:        metrics.sentiment_breakdown.negative,
+    visibility_gap:            metrics.visibility_gap,
+    recommendation_gap:        metrics.recommendation_gap,
+    estimated_visitors_min:    metrics.estimated_additional_visitors_min,
+    estimated_visitors_max:    metrics.estimated_additional_visitors_max,
+    estimated_revenue_min:     metrics.estimated_revenue_min,
+    estimated_revenue_max:     metrics.estimated_revenue_max,
+    total_mentions:            metrics.total_mentions,
+    total_prompts:             metrics.total_prompts,
+    total_model_runs:          metrics.total_model_runs,
+  })
+
+  if (metrics.competitors.length > 0) {
+    await supabaseAdmin.from('competitors').insert(
+      metrics.competitors.map(c => ({
         audit_id,
-        restaurant_id,
-        visibility_score:          metrics.visibility_score,
-        opportunity_score:         metrics.opportunity_score,
-        opportunity_label:         metrics.opportunity_label,
-        mention_frequency:         metrics.mention_frequency,
-        prompt_coverage:           metrics.prompt_coverage,
-        avg_position:              metrics.avg_position,
-        median_position:           metrics.median_position,
-        best_position:             metrics.best_position,
-        worst_position:            metrics.worst_position,
-        position_score:            metrics.position_score,
-        model_consensus:           metrics.model_consensus,
-        share_of_voice:            metrics.share_of_voice,
-        total_market_mentions:     metrics.total_market_mentions,
-        sentiment_score:           metrics.sentiment_score,
-        sentiment_positive:        metrics.sentiment_breakdown.positive,
-        sentiment_neutral:         metrics.sentiment_breakdown.neutral,
-        sentiment_negative:        metrics.sentiment_breakdown.negative,
-        visibility_gap:            metrics.visibility_gap,
-        recommendation_gap:        metrics.recommendation_gap,
-        estimated_visitors_min:    metrics.estimated_additional_visitors_min,
-        estimated_visitors_max:    metrics.estimated_additional_visitors_max,
-        estimated_revenue_min:     metrics.estimated_revenue_min,
-        estimated_revenue_max:     metrics.estimated_revenue_max,
-        total_mentions:            metrics.total_mentions,
-        total_prompts:             metrics.total_prompts,
-        total_model_runs:          metrics.total_model_runs,
-      })
+        name:            c.name,
+        mention_count:   c.mention_count,
+        avg_position:    c.avg_position,
+        sentiment_score: c.sentiment_score,
+        share_of_voice:  c.share_of_voice,
+        top_reasons:     c.top_reasons,
+      }))
+    )
+  }
 
-      // Store competitors
-      if (metrics.competitors.length > 0) {
-        await supabaseAdmin.from('competitors').insert(
-          metrics.competitors.map(c => ({
-            audit_id,
-            name:           c.name,
-            mention_count:  c.mention_count,
-            avg_position:   c.avg_position,
-            sentiment_score: c.sentiment_score,
-            share_of_voice: c.share_of_voice,
-            top_reasons:    c.top_reasons,
-          }))
-        )
-      }
-
-      // Update audit with totals
-      await supabaseAdmin
-        .from('audits')
-        .update({
-          total_prompts:    metrics.total_prompts,
-          total_model_runs: metrics.total_model_runs,
-        })
-        .eq('id', audit_id)
+  await supabaseAdmin
+    .from('audits')
+    .update({ total_prompts: metrics.total_prompts, total_model_runs: metrics.total_model_runs })
+    .eq('id', audit_id)
+})
     })
 
     // ── Step 7: Complete ──────────────────────────────────────

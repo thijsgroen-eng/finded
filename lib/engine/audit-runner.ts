@@ -139,9 +139,11 @@ export async function runAudit(auditId: string): Promise<void> {
       .delete()
       .eq('audit_id', auditId)
 
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`[audit ${auditId}] FAILED:`, message)
+  } catch (err) {
+    console.error('[createAudit] Inngest send failed:', err)
+    // Fall back to legacy queue if Inngest not configured
+    await supabaseAdmin.from('audit_queue').insert({ audit_id: audit.id })
+  }
 
     await supabaseAdmin
       .from('audits')

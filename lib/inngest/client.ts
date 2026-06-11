@@ -15,3 +15,4 @@ export type AuditRequestedEvent = {
 }
 
 export type Events = AuditRequestedEvent
+

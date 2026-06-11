@@ -360,7 +360,6 @@ export const auditFunction = inngest.createFunction(
     .from('audits')
     .update({ total_prompts: metrics.total_prompts, total_model_runs: metrics.total_model_runs })
     .eq('id', audit_id)
-})
     })
 
     // ── Step 7: Complete ──────────────────────────────────────

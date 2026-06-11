@@ -104,7 +104,7 @@ export const auditFunction = inngest.createFunction(
     for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
       const batch = batches[batchIdx]
 
-      const batchResults = await step.run(`run-prompts-batch-${batchIdx}`, async () => {
+      const batchResults = await step.run(`run-prompts-batch-${audit_id}-${batchIdx}`, async () => {
         const results: Array<{ model: string; prompt_id: string; response: string; error?: string }> = []
 
         await Promise.all(
@@ -138,7 +138,7 @@ export const auditFunction = inngest.createFunction(
       allModelRuns.push(...batchResults)
 
       if (batchIdx < batches.length - 1) {
-        await step.sleep(`batch-delay-${batchIdx}`, `${BATCH_DELAY}ms`)
+        await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, `${BATCH_DELAY}ms`)
       }
     }
 
@@ -162,7 +162,7 @@ export const auditFunction = inngest.createFunction(
     for (let batchIdx = 0; batchIdx < extractionBatches.length; batchIdx++) {
       const batch = extractionBatches[batchIdx]
 
-      const extractedBatch = await step.run(`extract-entities-batch-${batchIdx}`, async () => {
+      const extractedBatch = await step.run(`extract-entities-batch-${audit_id}-${batchIdx}`, async () => {
         const results: Array<{ name: string; position: number; sentiment: string; reasons: string[]; model: string; prompt_id: string }> = []
 
         for (const run of batch) {

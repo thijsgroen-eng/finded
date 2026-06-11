@@ -2,7 +2,7 @@ import { inngest } from '@/lib/inngest/client'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
 import { auditWebsite } from '@/lib/engine/website-auditor'
-import { generatePrompts } from '@/lib/engine/prompt-generator'
+import { getQuickPrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { resolveEntityName } from '@/lib/engine/entity-extractor'
@@ -42,7 +42,6 @@ export const auditFunction = inngest.createFunction(
     await step.run('website-audit', async () => {
       const result = await auditWebsite(restaurant.website ?? '')
 
-      // Check if website audit already exists
       const { data: existing } = await supabaseAdmin
         .from('website_audits')
         .select('id')
@@ -67,7 +66,7 @@ export const auditFunction = inngest.createFunction(
 
     // ── Step 3: Generate prompts ──────────────────────────────
     const { prompts } = await step.run('generate-prompts', async () => {
-      const generated = generatePrompts(
+      const generated = getQuickPrompts(
         restaurant.name,
         restaurant.category ?? restaurant.cuisine ?? 'restaurant',
         restaurant.city,
@@ -75,7 +74,6 @@ export const auditFunction = inngest.createFunction(
         restaurant.cuisine ?? undefined
       )
 
-      // Store prompt runs
       await supabaseAdmin.from('prompt_runs').insert(
         generated.map(p => ({
           audit_id,
@@ -98,7 +96,6 @@ export const auditFunction = inngest.createFunction(
       error?: string
     }> = []
 
-    // Process in batches to avoid timeouts
     const batches = []
     for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
       batches.push(prompts.slice(i, i + BATCH_SIZE))
@@ -116,7 +113,6 @@ export const auditFunction = inngest.createFunction(
               await new Promise(r => setTimeout(r, 200))
               const result = await provider.runPrompt(promptObj.prompt)
 
-              // Store model run
               await supabaseAdmin.from('model_runs').insert({
                 audit_id,
                 model:        provider.name,
@@ -141,7 +137,6 @@ export const auditFunction = inngest.createFunction(
 
       allModelRuns.push(...batchResults)
 
-      // Delay between batches
       if (batchIdx < batches.length - 1) {
         await step.sleep(`batch-delay-${batchIdx}`, `${BATCH_DELAY}ms`)
       }
@@ -159,7 +154,6 @@ export const auditFunction = inngest.createFunction(
 
     const successfulRuns = allModelRuns.filter(r => r.response && !r.error)
 
-    // Process entity extraction in batches of 10
     const extractionBatches = []
     for (let i = 0; i < successfulRuns.length; i += 10) {
       extractionBatches.push(successfulRuns.slice(i, i + 10))
@@ -177,7 +171,6 @@ export const auditFunction = inngest.createFunction(
 
           const extraction = await extractEntities(run.response, prompt.prompt, run.model)
 
-          // Store entities
           for (const entity of extraction.entities) {
             await supabaseAdmin.from('entities').insert({
               audit_id,
@@ -191,7 +184,6 @@ export const auditFunction = inngest.createFunction(
               confidence: entity.confidence,
             })
 
-            // Store recommendation reasons
             if (entity.reasons.length > 0) {
               const { data: entityRow } = await supabaseAdmin
                 .from('entities')
@@ -223,7 +215,6 @@ export const auditFunction = inngest.createFunction(
             })
           }
 
-          // Also check target business mention using entity extraction
           const targetEntity = findTargetInEntities(restaurant.name, extraction.entities)
 
           await supabaseAdmin.from('mentions').insert({
@@ -243,123 +234,137 @@ export const auditFunction = inngest.createFunction(
       allEntities.push(...extractedBatch)
     }
 
-   await step.run('compute-metrics', async () => {
-  const { data: entities } = await supabaseAdmin
-    .from('entities')
-    .select('*')
-    .eq('audit_id', audit_id)
+    // ── Step 6a: Build mention map ────────────────────────────
+    await step.run('build-mentions', async () => {
+      const { data: entities } = await supabaseAdmin
+        .from('entities')
+        .select('*')
+        .eq('audit_id', audit_id)
 
-  const { data: allModelRuns } = await supabaseAdmin
-    .from('model_runs')
-    .select('model, prompt_id')
-    .eq('audit_id', audit_id)
-    .not('raw_response', 'like', 'ERROR:%')
+      const { data: modelRuns } = await supabaseAdmin
+        .from('model_runs')
+        .select('model, prompt_id')
+        .eq('audit_id', audit_id)
+        .not('raw_response', 'like', 'ERROR:%')
 
-  if (!entities || !allModelRuns) return
+      if (!entities || !modelRuns) return
 
-  // Build mentions from entities
-  const mentionMap = new Map<string, { mentioned: boolean; position: number | null; sentiment: string | null }>()
-  
-  for (const run of allModelRuns) {
-    const key = `${run.model}:${run.prompt_id}`
-    const entity = entities.find(e => 
-      e.model === run.model && 
-      e.prompt_id === run.prompt_id &&
-      resolveEntityName(e.name, restaurant.name) >= 0.7
-    )
-    mentionMap.set(key, {
-      mentioned: entity !== null,
-      position: entity?.position ?? null,
-      sentiment: entity?.sentiment ?? null,
+      const mentionMap = new Map<string, { mentioned: boolean; position: number | null; sentiment: string | null }>()
+
+      for (const run of modelRuns) {
+        const key = `${run.model}:${run.prompt_id}`
+        const entity = entities.find(e =>
+          e.model === run.model &&
+          e.prompt_id === run.prompt_id &&
+          resolveEntityName(e.name, restaurant.name) >= 0.7
+        )
+        mentionMap.set(key, {
+          mentioned: entity !== null,
+          position:  entity?.position ?? null,
+          sentiment: entity?.sentiment ?? null,
+        })
+      }
+
+      const mentionInserts = [...mentionMap.entries()].map(([key, val]) => {
+        const [model, prompt_id] = key.split(':')
+        return {
+          audit_id,
+          model,
+          prompt_id,
+          restaurant_name: restaurant.name,
+          mentioned:       val.mentioned,
+          position:        val.position,
+          sentiment:       val.sentiment,
+        }
+      })
+
+      if (mentionInserts.length > 0) {
+        await supabaseAdmin.from('mentions').insert(mentionInserts)
+      }
     })
-  }
 
-  // Insert mentions
-  const mentionInserts = [...mentionMap.entries()].map(([key, val]) => {
-    const [model, prompt_id] = key.split(':')
-    return {
-      audit_id,
-      model,
-      prompt_id,
-      restaurant_name: restaurant.name,
-      mentioned: val.mentioned,
-      position: val.position,
-      sentiment: val.sentiment,
-    }
-  })
+    // ── Step 6b: Compute scores ───────────────────────────────
+    await step.run('compute-scores', async () => {
+      const { data: entities } = await supabaseAdmin
+        .from('entities')
+        .select('*')
+        .eq('audit_id', audit_id)
 
-  if (mentionInserts.length > 0) {
-    await supabaseAdmin.from('mentions').insert(mentionInserts)
-  }
+      const { data: mentions } = await supabaseAdmin
+        .from('mentions')
+        .select('*')
+        .eq('audit_id', audit_id)
 
-  const mentions = mentionInserts.map(m => ({
-    model: m.model as any,
-    prompt_id: m.prompt_id,
-    mentioned: m.mentioned,
-    position: m.position,
-    sentiment: m.sentiment,
-  }))
+      if (!entities || !mentions) return
 
-  const entityData = (entities ?? []).map(e => ({
-    name: e.name,
-    position: e.position ?? 0,
-    sentiment: e.sentiment ?? 'neutral',
-    reasons: [],
-    model: e.model,
-    prompt_id: e.prompt_id,
-  }))
-
-  const metrics = computeFullMetrics(restaurant.name, mentions, entityData)
-
-  await supabaseAdmin.from('visibility_scores').insert({
-    audit_id,
-    restaurant_id,
-    visibility_score:          metrics.visibility_score,
-    opportunity_score:         metrics.opportunity_score,
-    opportunity_label:         metrics.opportunity_label,
-    mention_frequency:         metrics.mention_frequency,
-    prompt_coverage:           metrics.prompt_coverage,
-    avg_position:              metrics.avg_position,
-    median_position:           metrics.median_position,
-    best_position:             metrics.best_position,
-    worst_position:            metrics.worst_position,
-    position_score:            metrics.position_score,
-    model_consensus:           metrics.model_consensus,
-    share_of_voice:            metrics.share_of_voice,
-    total_market_mentions:     metrics.total_market_mentions,
-    sentiment_score:           metrics.sentiment_score,
-    sentiment_positive:        metrics.sentiment_breakdown.positive,
-    sentiment_neutral:         metrics.sentiment_breakdown.neutral,
-    sentiment_negative:        metrics.sentiment_breakdown.negative,
-    visibility_gap:            metrics.visibility_gap,
-    recommendation_gap:        metrics.recommendation_gap,
-    estimated_visitors_min:    metrics.estimated_additional_visitors_min,
-    estimated_visitors_max:    metrics.estimated_additional_visitors_max,
-    estimated_revenue_min:     metrics.estimated_revenue_min,
-    estimated_revenue_max:     metrics.estimated_revenue_max,
-    total_mentions:            metrics.total_mentions,
-    total_prompts:             metrics.total_prompts,
-    total_model_runs:          metrics.total_model_runs,
-  })
-
-  if (metrics.competitors.length > 0) {
-    await supabaseAdmin.from('competitors').insert(
-      metrics.competitors.map(c => ({
-        audit_id,
-        name:            c.name,
-        mention_count:   c.mention_count,
-        avg_position:    c.avg_position,
-        sentiment_score: c.sentiment_score,
-        share_of_voice:  c.share_of_voice,
-        top_reasons:     c.top_reasons,
+      const mentionData = mentions.map(m => ({
+        model:     m.model as any,
+        prompt_id: m.prompt_id,
+        mentioned: m.mentioned,
+        position:  m.position,
+        sentiment: m.sentiment,
       }))
-    )
-  }
 
-  await supabaseAdmin
-    .from('audits')
-    .update({ total_prompts: metrics.total_prompts, total_model_runs: metrics.total_model_runs })
-    .eq('id', audit_id)
+      const entityData = entities.map(e => ({
+        name:      e.name,
+        position:  e.position ?? 0,
+        sentiment: e.sentiment ?? 'neutral',
+        reasons:   [],
+        model:     e.model,
+        prompt_id: e.prompt_id,
+      }))
+
+      const metrics = computeFullMetrics(restaurant.name, mentionData, entityData)
+
+      await supabaseAdmin.from('visibility_scores').insert({
+        audit_id,
+        restaurant_id,
+        visibility_score:          metrics.visibility_score,
+        opportunity_score:         metrics.opportunity_score,
+        opportunity_label:         metrics.opportunity_label,
+        mention_frequency:         metrics.mention_frequency,
+        prompt_coverage:           metrics.prompt_coverage,
+        avg_position:              metrics.avg_position,
+        median_position:           metrics.median_position,
+        best_position:             metrics.best_position,
+        worst_position:            metrics.worst_position,
+        position_score:            metrics.position_score,
+        model_consensus:           metrics.model_consensus,
+        share_of_voice:            metrics.share_of_voice,
+        total_market_mentions:     metrics.total_market_mentions,
+        sentiment_score:           metrics.sentiment_score,
+        sentiment_positive:        metrics.sentiment_breakdown.positive,
+        sentiment_neutral:         metrics.sentiment_breakdown.neutral,
+        sentiment_negative:        metrics.sentiment_breakdown.negative,
+        visibility_gap:            metrics.visibility_gap,
+        recommendation_gap:        metrics.recommendation_gap,
+        estimated_visitors_min:    metrics.estimated_additional_visitors_min,
+        estimated_visitors_max:    metrics.estimated_additional_visitors_max,
+        estimated_revenue_min:     metrics.estimated_revenue_min,
+        estimated_revenue_max:     metrics.estimated_revenue_max,
+        total_mentions:            metrics.total_mentions,
+        total_prompts:             metrics.total_prompts,
+        total_model_runs:          metrics.total_model_runs,
+      })
+
+      if (metrics.competitors.length > 0) {
+        await supabaseAdmin.from('competitors').insert(
+          metrics.competitors.map(c => ({
+            audit_id,
+            name:            c.name,
+            mention_count:   c.mention_count,
+            avg_position:    c.avg_position,
+            sentiment_score: c.sentiment_score,
+            share_of_voice:  c.share_of_voice,
+            top_reasons:     c.top_reasons,
+          }))
+        )
+      }
+
+      await supabaseAdmin
+        .from('audits')
+        .update({ total_prompts: metrics.total_prompts, total_model_runs: metrics.total_model_runs })
+        .eq('id', audit_id)
     })
 
     // ── Step 7: Complete ──────────────────────────────────────

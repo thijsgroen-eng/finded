@@ -139,11 +139,9 @@ export async function runAudit(auditId: string): Promise<void> {
       .delete()
       .eq('audit_id', auditId)
 
-  } catch (err) {
-    console.error('[createAudit] Inngest send failed:', err)
-    // Fall back to legacy queue if Inngest not configured
-    await supabaseAdmin.from('audit_queue').insert({ audit_id: audit.id })
-  }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`[audit ${auditId}] FAILED:`, message)
 
     await supabaseAdmin
       .from('audits')
@@ -154,7 +152,6 @@ export async function runAudit(auditId: string): Promise<void> {
       })
       .eq('id', auditId)
 
-    // Increment attempt count in queue
     // Increment attempt count so failed audits don't loop forever
     await supabaseAdmin
       .from('audit_queue')
@@ -176,15 +173,14 @@ export async function createAudit(restaurantId: string): Promise<string> {
 
   if (error || !audit) throw new Error(`Failed to create audit: ${error?.message}`)
 
-  // Try Inngest first, fall back to queue
   try {
     const { inngest } = await import('@/lib/inngest/client')
     await inngest.send({
       name: 'audit/requested',
       data: { audit_id: audit.id, restaurant_id: restaurantId },
     })
-  } catch {
-    // Fall back to legacy queue if Inngest not configured
+  } catch (err) {
+    console.error('[createAudit] Inngest send failed:', err)
     await supabaseAdmin.from('audit_queue').insert({ audit_id: audit.id })
   }
 

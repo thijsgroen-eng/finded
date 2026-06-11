@@ -22,7 +22,7 @@ export const auditFunction = inngest.createFunction(
     const { audit_id, restaurant_id } = event.data
 
     // ── Step 1: Load restaurant + mark running ────────────────
-    const { restaurant } = await step.run('load-restaurant', async () => {
+    const { restaurant } = await step.run(`load-restaurant-${audit_id}`, async () => {
       await supabaseAdmin
         .from('audits')
         .update({ status: 'running' })
@@ -39,7 +39,7 @@ export const auditFunction = inngest.createFunction(
     })
 
     // ── Step 2: Website audit ─────────────────────────────────
-    await step.run('website-audit', async () => {
+    await step.run(`website-audit-${audit_id}`, async () => {
       const result = await auditWebsite(restaurant.website ?? '')
 
       const { data: existing } = await supabaseAdmin
@@ -65,7 +65,7 @@ export const auditFunction = inngest.createFunction(
     })
 
     // ── Step 3: Generate prompts ──────────────────────────────
-    const { prompts } = await step.run('generate-prompts', async () => {
+    const { prompts } = await step.run(`generate-prompts-${audit_id}`, async () => {
       const generated = getQuickPrompts(
         restaurant.name,
         restaurant.category ?? restaurant.cuisine ?? 'restaurant',
@@ -235,7 +235,7 @@ export const auditFunction = inngest.createFunction(
     }
 
     // ── Step 6a: Build mention map ────────────────────────────
-    await step.run('build-mentions', async () => {
+    await step.run(`build-mentions-${audit_id}`, async () => {
       const { data: entities } = await supabaseAdmin
         .from('entities')
         .select('*')
@@ -284,7 +284,7 @@ export const auditFunction = inngest.createFunction(
     })
 
     // ── Step 6b: Compute scores ───────────────────────────────
-    await step.run('compute-scores', async () => {
+    await step.run(`compute-scores-${audit_id}`, async () => {
       const { data: entities } = await supabaseAdmin
         .from('entities')
         .select('*')
@@ -368,7 +368,7 @@ export const auditFunction = inngest.createFunction(
     })
 
     // ── Step 7: Complete ──────────────────────────────────────
-    await step.run('complete', async () => {
+    await step.run(`complete-${audit_id}`, async () => {
       await supabaseAdmin
         .from('audits')
         .update({

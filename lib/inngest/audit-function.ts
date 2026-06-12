@@ -5,10 +5,9 @@ import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
-import { resolveEntityName } from '@/lib/engine/entity-extractor'
 
-const BATCH_SIZE = 5      // prompts per batch to avoid rate limits
-const BATCH_DELAY = 1000  // ms between batches
+const BATCH_SIZE = 5
+const BATCH_DELAY = 1000
 
 export const auditFunction = inngest.createFunction(
   {
@@ -142,7 +141,7 @@ export const auditFunction = inngest.createFunction(
       }
     }
 
-    // ── Step 5: Extract entities with LLM ────────────────────
+    // ── Step 5: Extract entities + insert mentions ────────────
     const allEntities: Array<{
       name: string
       position: number
@@ -215,8 +214,8 @@ export const auditFunction = inngest.createFunction(
             })
           }
 
+          // Insert mention for this model run — was target mentioned?
           const targetEntity = findTargetInEntities(restaurant.name, extraction.entities)
-
           await supabaseAdmin.from('mentions').insert({
             audit_id,
             model:           run.model,
@@ -234,56 +233,7 @@ export const auditFunction = inngest.createFunction(
       allEntities.push(...extractedBatch)
     }
 
-    // ── Step 6a: Build mention map ────────────────────────────
-    await step.run(`build-mentions-${audit_id}`, async () => {
-      const { data: entities } = await supabaseAdmin
-        .from('entities')
-        .select('*')
-        .eq('audit_id', audit_id)
-
-      const { data: modelRuns } = await supabaseAdmin
-        .from('model_runs')
-        .select('model, prompt_id')
-        .eq('audit_id', audit_id)
-        .not('raw_response', 'like', 'ERROR:%')
-
-      if (!entities || !modelRuns) return
-
-      const mentionMap = new Map<string, { mentioned: boolean; position: number | null; sentiment: string | null }>()
-
-      for (const run of modelRuns) {
-        const key = `${run.model}:${run.prompt_id}`
-        const entity = entities.find(e =>
-          e.model === run.model &&
-          e.prompt_id === run.prompt_id &&
-          resolveEntityName(e.name, restaurant.name) >= 0.7
-        )
-        mentionMap.set(key, {
-          mentioned: entity !== null,
-          position:  entity?.position ?? null,
-          sentiment: entity?.sentiment ?? null,
-        })
-      }
-
-      const mentionInserts = [...mentionMap.entries()].map(([key, val]) => {
-        const [model, prompt_id] = key.split(':')
-        return {
-          audit_id,
-          model,
-          prompt_id,
-          restaurant_name: restaurant.name,
-          mentioned:       val.mentioned,
-          position:        val.position,
-          sentiment:       val.sentiment,
-        }
-      })
-
-      if (mentionInserts.length > 0) {
-        await supabaseAdmin.from('mentions').insert(mentionInserts)
-      }
-    })
-
-    // ── Step 6b: Compute scores ───────────────────────────────
+    // ── Step 6: Compute scores ────────────────────────────────
     await step.run(`compute-scores-${audit_id}`, async () => {
       const { data: entities } = await supabaseAdmin
         .from('entities')
@@ -295,7 +245,7 @@ export const auditFunction = inngest.createFunction(
         .select('*')
         .eq('audit_id', audit_id)
 
-      if (!entities || !mentions) return
+      if (!entities || !mentions || mentions.length === 0) return
 
       const mentionData = mentions.map(m => ({
         model:     m.model as any,

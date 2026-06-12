@@ -11,7 +11,7 @@ import { LeadStatus } from '@/components/admin/lead-status'
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(*)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, website)')
     .eq('id', id)
     .single()
 

@@ -8,17 +8,19 @@ import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { LeadStatus } from '@/components/admin/lead-status'
 import { OutreachEmail } from '@/components/admin/outreach-email'
+import { ScoreTrend } from '@/components/admin/score-trend'
+import { CopyReportLink } from '@/components/admin/copy-report-link'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(id, name, city, cuisine, website)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, website, preview_slug)')
     .eq('id', id)
     .single()
 
   if (!audit) return null
 
-  const restaurant = audit.restaurant as { id: string; name: string; city: string; cuisine: string | null; website: string | null }
+  const restaurant = audit.restaurant as { id: string; name: string; city: string; cuisine: string | null; website: string | null; preview_slug: string | null }
 
   const [
     { data: websiteAudit },
@@ -73,7 +75,7 @@ export default async function AuditDetailPage({
 
   const { audit, websiteAudit, metrics, leadStatus, visibilityScore, competitors } = data
   const restaurant = audit.restaurant as {
-    id: string; name: string; city: string; cuisine: string | null; website: string | null
+    id: string; name: string; city: string; cuisine: string | null; website: string | null; preview_slug: string | null
   }
 
   const totalPrompts = audit.total_prompts ?? metrics.total_prompts
@@ -126,11 +128,19 @@ export default async function AuditDetailPage({
               Audited {formatDateTime(audit.created_at)}
             </p>
           </div>
-          <Badge variant={statusVariant(audit.status) as 'success' | 'warning' | 'danger' | 'info' | 'default'}>
-            {audit.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {restaurant.preview_slug && audit.status === 'completed' && (
+              <CopyReportLink slug={restaurant.preview_slug} />
+            )}
+            <Badge variant={statusVariant(audit.status) as 'success' | 'warning' | 'danger' | 'info' | 'default'}>
+              {audit.status}
+            </Badge>
+          </div>
         </div>
       </div>
+
+      {/* Score trend chart — only shows when 2+ audits exist */}
+      <ScoreTrend restaurantId={restaurant.id} />
 
       {/* Core metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

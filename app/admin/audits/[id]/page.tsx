@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
+import { LeadStatus } from '@/components/admin/lead-status'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
@@ -16,19 +17,23 @@ async function getAuditData(id: string) {
 
   if (!audit) return null
 
+  const restaurant = audit.restaurant as { id: string; name: string; city: string; cuisine: string | null; website: string | null }
+
   const [
     { data: websiteAudit },
     { data: mentions },
     { data: modelRuns },
+    { data: leadStatus },
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', id),
     supabaseAdmin.from('model_runs').select('model, duration_ms, tokens_used').eq('audit_id', id),
+    supabaseAdmin.from('lead_statuses').select('*').eq('restaurant_id', restaurant.id).single(),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
 
-  return { audit, websiteAudit, metrics, modelRuns: modelRuns ?? [] }
+  return { audit, websiteAudit, metrics, modelRuns: modelRuns ?? [], leadStatus }
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -61,9 +66,9 @@ export default async function AuditDetailPage({
   const data = await getAuditData(id)
   if (!data) notFound()
 
-  const { audit, websiteAudit, metrics } = data
+  const { audit, websiteAudit, metrics, leadStatus } = data
   const restaurant = audit.restaurant as {
-    name: string; city: string; cuisine: string | null; website: string | null
+    id: string; name: string; city: string; cuisine: string | null; website: string | null
   }
 
   const totalPrompts = audit.total_prompts ?? metrics.total_prompts
@@ -128,8 +133,8 @@ export default async function AuditDetailPage({
         />
       </div>
 
-      {/* Model breakdown + sentiment */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+      {/* Model breakdown + sentiment + lead status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <Card>
           <CardHeader><CardTitle>AI model breakdown</CardTitle></CardHeader>
           <CardContent className="pt-0">
@@ -183,6 +188,18 @@ export default async function AuditDetailPage({
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Lead status</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <LeadStatus
+              restaurantId={restaurant.id}
+              initialStatus={leadStatus?.status ?? null}
+              initialNotes={leadStatus?.notes ?? null}
+              initialNextFollowup={leadStatus?.next_followup_at ?? null}
+            />
           </CardContent>
         </Card>
       </div>

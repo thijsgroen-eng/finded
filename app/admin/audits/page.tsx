@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Badge, Card, EmptyState, Spinner, Button } from '@/components/ui'
 import { formatDateTime, statusVariant } from '@/lib/utils'
 import { ClipboardList, RefreshCw, ChevronRight, Loader2 } from 'lucide-react'
@@ -25,11 +25,12 @@ export default function AuditsPage() {
   const [page, setPage] = useState(1)
   const [processing, setProcessing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const limit = 25
 
-  const fetchAudits = useCallback(async () => {
-    setLoading(true)
+  const fetchAudits = useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true)
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -40,18 +41,36 @@ export default function AuditsPage() {
     const json = await res.json()
     setAudits(json.data ?? [])
     setTotal(json.meta?.total ?? 0)
-    setLoading(false)
+    if (showLoader) setLoading(false)
   }, [page, statusFilter])
 
-  useEffect(() => { fetchAudits() }, [fetchAudits])
+  // Initial load
+  useEffect(() => {
+    fetchAudits(true)
+  }, [fetchAudits])
+
+  // Reset page on filter change
   useEffect(() => { setPage(1) }, [statusFilter])
 
-  // Auto-refresh every 10s if there are running/queued audits
+  // Smart polling — only when active audits exist, 30s interval
   useEffect(() => {
-    const hasActive = audits.some((a) => a.status === 'running' || a.status === 'queued')
-    if (!hasActive) return
-    const t = setInterval(fetchAudits, 10_000)
-    return () => clearInterval(t)
+    const hasActive = audits.some(a => a.status === 'running' || a.status === 'queued')
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    if (hasActive) {
+      intervalRef.current = setInterval(() => fetchAudits(false), 30_000)
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
   }, [audits, fetchAudits])
 
   async function processQueue() {
@@ -63,7 +82,7 @@ export default function AuditsPage() {
       })
       const json = await res.json()
       setToast(json.message ?? 'Processing started')
-      setTimeout(fetchAudits, 2000)
+      setTimeout(() => fetchAudits(false), 2000)
     } catch {
       setToast('Failed to trigger queue')
     } finally {
@@ -91,7 +110,7 @@ export default function AuditsPage() {
           <p className="text-sm text-gray-500 mt-1">{total} total audits</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={fetchAudits}>
+          <Button variant="secondary" size="sm" onClick={() => fetchAudits(true)}>
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
           </Button>

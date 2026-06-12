@@ -10,60 +10,39 @@ export interface CompetitorStats {
 }
 
 export interface VisibilityMetricsV2 {
-  // Core scores
-  visibility_score: number          // 0-100
-  opportunity_score: number         // 0-100
-  
-  // Frequency
-  mention_frequency: number         // 0-1
-  prompt_coverage: number           // 0-1 (prompts where mentioned / total prompts)
-  
-  // Position
+  visibility_score: number
+  opportunity_score: number
+  mention_frequency: number
+  prompt_coverage: number
   avg_position: number | null
   median_position: number | null
   best_position: number | null
   worst_position: number | null
-  position_score: number            // 0-100 weighted
-  
-  // Consensus
-  model_consensus: number           // 0-4
+  position_score: number
+  model_consensus: number
   model_breakdown: {
     model: string
     frequency: number
     avg_position: number | null
     mentions: number
   }[]
-  
-  // Share of voice
-  share_of_voice: number            // 0-1
+  share_of_voice: number
   total_market_mentions: number
-  
-  // Sentiment
-  sentiment_score: number           // -1 to 1
+  sentiment_score: number
   sentiment_breakdown: {
     positive: number
     neutral: number
     negative: number
   }
-  
-  // Competitors
   competitors: CompetitorStats[]
-  
-  // Recommendation reasons
   top_reasons: string[]
-  
-  // Opportunity
-  visibility_gap: number            // vs competitor avg
+  visibility_gap: number
   recommendation_gap: number
   opportunity_label: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY HIGH'
-  
-  // Traffic/revenue estimates
   estimated_additional_visitors_min: number
   estimated_additional_visitors_max: number
   estimated_revenue_min: number
   estimated_revenue_max: number
-  
-  // Totals
   total_mentions: number
   total_prompts: number
   total_model_runs: number
@@ -95,25 +74,42 @@ export function computeVisibilityScore(
   promptCoverage: number,
   modelConsensus: number
 ): number {
-  // Weighted formula
   const score =
-    mentionFrequency * 35 +      // 35% weight
-    (positionScore / 100) * 25 + // 25% weight
-    promptCoverage * 20 +        // 20% weight
-    (modelConsensus / 4) * 20    // 20% weight
+    mentionFrequency * 35 +
+    (positionScore / 100) * 25 +
+    promptCoverage * 20 +
+    (modelConsensus / 4) * 20
 
   return Math.min(100, Math.round(score * 100))
 }
 
 export function computeOpportunityScore(
-  visibilityScore: number,
-  competitorAvgVisibility: number,
-  shareOfVoice: number
+  myMentions: number,
+  topCompetitorMentions: number,
+  shareOfVoice: number,
+  modelConsensus: number,
+  totalPrompts: number
 ): { score: number; label: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY HIGH' } {
-  const gap = Math.max(0, competitorAvgVisibility - visibilityScore)
-  const sovGap = Math.max(0, 0.25 - shareOfVoice) // Expected 25% SOV
+  if (totalPrompts === 0) return { score: 0, label: 'LOW' }
 
-  const score = Math.min(100, Math.round(gap * 0.7 + sovGap * 100 * 0.3))
+  // How much bigger is the top competitor vs you? (ratio-based)
+  const competitorRatio = topCompetitorMentions > 0
+    ? topCompetitorMentions / Math.max(myMentions, 1)
+    : 1
+
+  // Score from competitor gap (0-60 points)
+  // ratio of 1 = no gap = 0 points, ratio of 5+ = huge gap = 60 points
+  const gapScore = Math.min(60, Math.round((competitorRatio - 1) * 15))
+
+  // Score from low share of voice (0-25 points)
+  // SOV < 5% = 25 points, SOV > 30% = 0 points
+  const sovScore = Math.min(25, Math.round(Math.max(0, 0.30 - shareOfVoice) * 100))
+
+  // Score from model coverage gap (0-15 points)
+  // Missing from 2+ models = high opportunity
+  const modelGapScore = Math.round((4 - modelConsensus) / 4 * 15)
+
+  const score = Math.min(100, gapScore + sovScore + modelGapScore)
 
   const label =
     score >= 75 ? 'VERY HIGH' :
@@ -132,7 +128,6 @@ export function computeFullMetrics(
   const totalPrompts = new Set(mentions.map(m => m.prompt_id)).size
   const totalMentions = targetMentions.length
 
-  // Prompt coverage — unique prompts where mentioned
   const promptsWithMention = new Set(targetMentions.map(m => m.prompt_id)).size
   const promptCoverage = totalPrompts > 0 ? promptsWithMention / totalPrompts : 0
   const mentionFrequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
@@ -197,7 +192,7 @@ export function computeFullMetrics(
     negative: targetMentions.filter(m => m.sentiment === 'negative').length,
   }
 
-  // Competitor analysis from entity data
+  // Competitor analysis
   const competitorMap = new Map<string, {
     count: number
     positions: number[]
@@ -206,7 +201,6 @@ export function computeFullMetrics(
   }>()
 
   for (const entity of allEntities) {
-    // Skip target business
     if (entity.name.toLowerCase().includes(targetName.toLowerCase()) ||
         targetName.toLowerCase().includes(entity.name.toLowerCase())) continue
 
@@ -222,7 +216,6 @@ export function computeFullMetrics(
     comp.reasons.push(...entity.reasons)
   }
 
-  // Total market mentions (target + competitors)
   const total_market_mentions = totalMentions +
     [...competitorMap.values()].reduce((sum, c) => sum + c.count, 0)
 
@@ -230,27 +223,23 @@ export function computeFullMetrics(
     ? totalMentions / total_market_mentions
     : 0
 
-  // Top 10 competitors by mention count
   const competitors: CompetitorStats[] = [...competitorMap.entries()]
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
-    .map(([name, data]) => {
-      const totalMentionInMarket = total_market_mentions
-      return {
-        name,
-        mention_count: data.count,
-        avg_position: data.positions.length > 0
-          ? data.positions.reduce((a, b) => a + b, 0) / data.positions.length
-          : 0,
-        sentiment_score: data.sentiments.length > 0
-          ? data.sentiments.reduce((a, b) => a + b, 0) / data.sentiments.length
-          : 0,
-        share_of_voice: totalMentionInMarket > 0 ? data.count / totalMentionInMarket : 0,
-        top_reasons: [...new Set(data.reasons)].slice(0, 5),
-      }
-    })
+    .map(([name, data]) => ({
+      name,
+      mention_count: data.count,
+      avg_position: data.positions.length > 0
+        ? data.positions.reduce((a, b) => a + b, 0) / data.positions.length
+        : 0,
+      sentiment_score: data.sentiments.length > 0
+        ? data.sentiments.reduce((a, b) => a + b, 0) / data.sentiments.length
+        : 0,
+      share_of_voice: total_market_mentions > 0 ? data.count / total_market_mentions : 0,
+      top_reasons: [...new Set(data.reasons)].slice(0, 5),
+    }))
 
-  // Recommendation reasons for target business
+  // Top reasons for target
   const targetEntityData = allEntities.filter(e =>
     e.name.toLowerCase().includes(targetName.toLowerCase()) ||
     targetName.toLowerCase().includes(e.name.toLowerCase())
@@ -266,38 +255,31 @@ export function computeFullMetrics(
     .slice(0, 8)
     .map(([r]) => r)
 
-  // Competitor average visibility (simplified)
-  const competitorAvgVisibility = competitors.length > 0
-    ? competitors.slice(0, 5).reduce((sum, c) => {
-        const cv = computeVisibilityScore(
-          Math.min(1, c.mention_count / Math.max(1, totalPrompts)),
-          50, 0.5, 2
-        )
-        return sum + cv
-      }, 0) / Math.min(5, competitors.length)
-    : 50
-
-  // Opportunity
-  const { score: opportunityScore, label: opportunity_label } =
-    computeOpportunityScore(visibility_score, competitorAvgVisibility, share_of_voice)
-
-  const visibility_gap = Math.max(0, competitorAvgVisibility - visibility_score)
-  const recommendation_gap = Math.max(0,
-    (competitors[0]?.mention_count ?? 0) - totalMentions
+  // Opportunity score — based on actual competitive gap
+  const topCompetitorMentions = competitors[0]?.mention_count ?? 0
+  const { score: opportunityScore, label: opportunity_label } = computeOpportunityScore(
+    totalMentions,
+    topCompetitorMentions,
+    share_of_voice,
+    modelConsensus,
+    totalPrompts
   )
 
-  // Traffic/revenue estimates (ranges only, never precise)
-  const baseVisitors = Math.round(visibility_gap * 2)
-  const estimated_additional_visitors_min = Math.max(0, baseVisitors * 10)
-  const estimated_additional_visitors_max = Math.max(0, baseVisitors * 30)
+  const competitorAvgMentions = competitors.length > 0
+    ? competitors.slice(0, 5).reduce((sum, c) => sum + c.mention_count, 0) / Math.min(5, competitors.length)
+    : totalMentions
+  const visibility_gap = Math.max(0, competitorAvgMentions - totalMentions)
+  const recommendation_gap = Math.max(0, topCompetitorMentions - totalMentions)
+
+  // Revenue estimates based on mention gap
+  // Each additional mention = ~5-15 extra visitors/month at a typical restaurant
+  const mentionGap = recommendation_gap
+  const estimated_additional_visitors_min = Math.max(0, Math.round(mentionGap * 8))
+  const estimated_additional_visitors_max = Math.max(0, Math.round(mentionGap * 25))
   const avgSpend = 45 // €45 average restaurant spend
-  const conversionRate = 0.15
-  const estimated_revenue_min = Math.round(
-    estimated_additional_visitors_min * conversionRate * avgSpend / 100
-  ) * 100
-  const estimated_revenue_max = Math.round(
-    estimated_additional_visitors_max * conversionRate * avgSpend / 100
-  ) * 100
+  const conversionRate = 0.20 // 20% of visitors make a reservation
+  const estimated_revenue_min = Math.round(estimated_additional_visitors_min * conversionRate * avgSpend / 100) * 100
+  const estimated_revenue_max = Math.round(estimated_additional_visitors_max * conversionRate * avgSpend / 100) * 100
 
   return {
     visibility_score,

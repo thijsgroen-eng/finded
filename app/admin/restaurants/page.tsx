@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Badge, Button, Card, EmptyState, Spinner } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
-import { UtensilsCrossed, Search, Plus, PlayCircle, ExternalLink, X } from 'lucide-react'
+import { UtensilsCrossed, Search, Plus, PlayCircle, ExternalLink, X, Pencil } from 'lucide-react'
 import Link from 'next/link'
 
 interface Restaurant {
@@ -13,10 +13,11 @@ interface Restaurant {
   city: string
   cuisine: string | null
   email: string | null
+  phone: string | null
   created_at: string
 }
 
-const EMPTY_FORM = { name: '', city: '', website: '', cuisine: '', email: '' }
+const EMPTY_FORM = { name: '', city: '', website: '', cuisine: '', email: '', phone: '' }
 
 export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
@@ -29,6 +30,9 @@ export default function RestaurantsPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null)
+  const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [editSaving, setEditSaving] = useState(false)
 
   const limit = 25
 
@@ -44,6 +48,39 @@ export default function RestaurantsPage() {
 
   useEffect(() => { fetchRestaurants() }, [fetchRestaurants])
   useEffect(() => { setPage(1) }, [search])
+
+  function openEdit(r: Restaurant) {
+    setEditingRestaurant(r)
+    setEditForm({
+      name: r.name ?? '',
+      city: r.city ?? '',
+      website: r.website ?? '',
+      cuisine: r.cuisine ?? '',
+      email: r.email ?? '',
+      phone: r.phone ?? '',
+    })
+  }
+
+  async function handleSaveEdit() {
+    if (!editingRestaurant) return
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/restaurants/${editingRestaurant.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      showToast(`${editForm.name} updated`, 'success')
+      setEditingRestaurant(null)
+      fetchRestaurants()
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update', 'error')
+    } finally {
+      setEditSaving(false)
+    }
+  }
 
   async function triggerAudit(restaurantId: string, name: string) {
     setAuditingId(restaurantId)
@@ -129,6 +166,9 @@ export default function RestaurantsPage() {
 
   const totalPages = Math.ceil(total / limit)
 
+  const inputClass = "w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200"
+  const labelClass = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5"
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -147,6 +187,7 @@ export default function RestaurantsPage() {
         </div>
       </div>
 
+      {/* Add form */}
       {showForm && (
         <Card className="mb-5">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -158,34 +199,34 @@ export default function RestaurantsPage() {
           <div className="px-5 py-4">
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Restaurant name *</label>
+                <label className={labelClass}>Restaurant name *</label>
                 <input type="text" placeholder="Le Petit Bistro" value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">City *</label>
-                <input type="text" placeholder="Paris" value={form.city}
-                  onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                <label className={labelClass}>City *</label>
+                <input type="text" placeholder="Amsterdam" value={form.city}
+                  onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Website URL</label>
-                <input type="text" placeholder="https://lepetitbistro.com" value={form.website}
-                  onChange={e => setForm(f => ({ ...f, website: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                <label className={labelClass}>Website URL</label>
+                <input type="text" placeholder="https://restaurant.com" value={form.website}
+                  onChange={e => setForm(f => ({ ...f, website: e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Cuisine type</label>
+                <label className={labelClass}>Cuisine type</label>
                 <input type="text" placeholder="French, Italian…" value={form.cuisine}
-                  onChange={e => setForm(f => ({ ...f, cuisine: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                  onChange={e => setForm(f => ({ ...f, cuisine: e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Email</label>
-                <input type="text" placeholder="info@restaurant.com" value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                <label className={labelClass}>Contact email</label>
+                <input type="email" placeholder="info@restaurant.com" value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Phone</label>
+                <input type="text" placeholder="+31 20 123 4567" value={form.phone}
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} />
               </div>
             </div>
             <div className="flex gap-2">
@@ -203,6 +244,63 @@ export default function RestaurantsPage() {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Edit modal */}
+      {editingRestaurant && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900">Edit restaurant</h3>
+              <button onClick={() => setEditingRestaurant(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div>
+                  <label className={labelClass}>Restaurant name *</label>
+                  <input type="text" value={editForm.name}
+                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>City *</label>
+                  <input type="text" value={editForm.city}
+                    onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Website URL</label>
+                  <input type="text" value={editForm.website}
+                    onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Cuisine type</label>
+                  <input type="text" value={editForm.cuisine}
+                    onChange={e => setEditForm(f => ({ ...f, cuisine: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Contact email</label>
+                  <input type="email" value={editForm.email}
+                    onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Phone</label>
+                  <input type="text" value={editForm.phone}
+                    onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className={inputClass} />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveEdit} disabled={editSaving}>
+                  {editSaving ? <Spinner className="w-3.5 h-3.5 text-white" /> : null}
+                  Save changes
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingRestaurant(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="relative mb-5">
@@ -244,6 +342,7 @@ export default function RestaurantsPage() {
                       <td className="px-5 py-3">
                         <p className="font-medium text-gray-900">{r.name}</p>
                         {r.email && <p className="text-xs text-gray-400 mt-0.5">{r.email}</p>}
+                        {r.phone && <p className="text-xs text-gray-400">{r.phone}</p>}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{r.city}</td>
                       <td className="px-4 py-3">
@@ -260,10 +359,16 @@ export default function RestaurantsPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(r.created_at)}</td>
                       <td className="px-5 py-3 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => triggerAudit(r.id, r.name)} disabled={auditingId === r.id}>
-                          {auditingId === r.id ? <Spinner className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
-                          Audit
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => triggerAudit(r.id, r.name)} disabled={auditingId === r.id}>
+                            {auditingId === r.id ? <Spinner className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
+                            Audit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

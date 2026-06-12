@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp } from 'lucid
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { LeadStatus } from '@/components/admin/lead-status'
+import { OutreachEmail } from '@/components/admin/outreach-email'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
@@ -215,7 +216,6 @@ export default async function AuditDetailPage({
           <CardHeader><CardTitle>Competitor comparison</CardTitle></CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {/* Target restaurant row */}
               <div className="flex items-center gap-3 py-2 border-b border-gray-100">
                 <div className="w-40 flex-shrink-0">
                   <p className="text-sm font-semibold text-gray-900">{restaurant.name}</p>
@@ -232,7 +232,6 @@ export default async function AuditDetailPage({
                   <span className="text-sm text-gray-500 w-16 text-right">{Math.round(visScore)}/100</span>
                 )}
               </div>
-              {/* Competitor rows */}
               {competitors.map((comp) => {
                 const pct = Math.min(100, (comp.mention_count / Math.max(topCompetitorMentions, myMentions, 1)) * 100)
                 const isAhead = comp.mention_count > myMentions
@@ -385,6 +384,9 @@ export default async function AuditDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Outreach Email */}
+      <OutreachEmail auditId={id} restaurantName={restaurant.name} />
 
       {/* AI Recommendations */}
       <Recommendations auditId={id} />

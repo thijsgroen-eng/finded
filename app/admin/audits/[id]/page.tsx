@@ -66,6 +66,9 @@ export default async function AuditDetailPage({
     name: string; city: string; cuisine: string | null; website: string | null
   }
 
+  const totalPrompts = audit.total_prompts ?? metrics.total_prompts
+  const totalModelRuns = audit.total_model_runs ?? data.modelRuns.length
+
   const positionLabel = metrics.position_score >= 80
     ? 'Excellent'
     : metrics.position_score >= 60
@@ -106,7 +109,7 @@ export default async function AuditDetailPage({
         <StatCard
           label="Mention frequency"
           value={formatPercent(metrics.mention_frequency)}
-          sub={`${metrics.total_mentions} of ${metrics.total_prompts} prompts`}
+          sub={`${metrics.total_mentions} of ${totalPrompts} prompts`}
         />
         <StatCard
           label="Position score"
@@ -120,8 +123,8 @@ export default async function AuditDetailPage({
         />
         <StatCard
           label="Prompts run"
-          value={metrics.total_prompts}
-          sub={`${data.modelRuns.length} model runs total`}
+          value={totalPrompts}
+          sub={`${totalModelRuns} model runs total`}
         />
       </div>
 

@@ -1,23 +1,22 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, UtensilsCrossed, ClipboardList,
-  Upload, Users, BarChart2
+  Upload, Users
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard', label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/restaurants', label: 'Restaurants', icon: UtensilsCrossed },
-  { href: '/admin/audits',     label: 'Audits',      icon: ClipboardList },
-  { href: '/admin/upload',     label: 'Bulk Upload',  icon: Upload },
+  { href: '/admin/audits',      label: 'Audits',      icon: ClipboardList },
+  { href: '/admin/leads',       label: 'Leads',       icon: Users },
+  { href: '/admin/upload',      label: 'Bulk Upload', icon: Upload },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
-
   return (
     <aside className="w-56 min-h-screen bg-gray-950 text-gray-300 flex flex-col flex-shrink-0">
       {/* Logo */}
@@ -27,7 +26,6 @@ export function AdminSidebar() {
           <span className="text-xs text-gray-500 font-medium">admin</span>
         </div>
       </div>
-
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
@@ -49,7 +47,6 @@ export function AdminSidebar() {
           )
         })}
       </nav>
-
       {/* Footer */}
       <div className="px-5 py-4 border-t border-gray-800">
         <p className="text-xs text-gray-600">Finded Platform v1.0</p>

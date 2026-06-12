@@ -24,10 +24,14 @@ export async function POST(request: NextRequest) {
     { data: mentions },
     { data: visibilityScore },
     { data: competitors },
+    { data: websiteAudit },
+    { data: promptRuns },
   ] = await Promise.all([
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', audit_id).single(),
     supabaseAdmin.from('competitors').select('name, mention_count').eq('audit_id', audit_id).order('mention_count', { ascending: false }).limit(3),
+    supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),
+    supabaseAdmin.from('prompt_runs').select('prompt_text').eq('audit_id', audit_id).limit(6),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
@@ -35,43 +39,71 @@ export async function POST(request: NextRequest) {
     name: string; city: string; cuisine: string | null; website: string | null
   }
 
-  const topCompetitor = competitors?.[0]
-  const myMentions = metrics.total_mentions
-  const opportunityScore = visibilityScore?.opportunity_score ?? null
-  const opportunityLabel = visibilityScore?.opportunity_label ?? null
-  const revenueMin = visibilityScore?.estimated_revenue_min ?? null
-  const revenueMax = visibilityScore?.estimated_revenue_max ?? null
-  const missingModels = metrics.model_breakdown
-    .filter(m => m.mentions === 0)
-    .map(m => m.model)
+  const mentioningModels = metrics.model_breakdown.filter(m => m.mentions > 0).map(m => m.model)
+  const missingModels = metrics.model_breakdown.filter(m => m.mentions === 0).map(m => m.model)
+  const topCompetitors = (competitors ?? []).slice(0, 3).map(c => c.name)
 
-  const prompt = `You are writing a cold outreach email on behalf of Finded — an AI visibility platform for restaurants.
+  const modelLabels: Record<string, string> = {
+    openai: 'ChatGPT',
+    anthropic: 'Claude',
+    gemini: 'Gemini',
+    perplexity: 'Perplexity',
+  }
 
-Write a short, compelling cold email to the owner/manager of ${restaurant.name} in ${restaurant.city}.
+  const presentModelsStr = mentioningModels.map(m => modelLabels[m] ?? m).join(', ')
+  const missingModelsStr = missingModels.map(m => modelLabels[m] ?? m).join(', ')
+  const competitorsStr = topCompetitors.join(', ')
 
-AUDIT FINDINGS TO USE:
-- Mention frequency: ${Math.round(metrics.mention_frequency * 100)}% (mentioned in ${myMentions} of ${metrics.total_prompts} AI prompts)
-- Model consensus: ${metrics.model_consensus}/4 AI models mention this restaurant
-${missingModels.length > 0 ? `- NOT mentioned by: ${missingModels.join(', ')}` : ''}
-${topCompetitor ? `- Top competitor "${topCompetitor.name}" is mentioned ${topCompetitor.mention_count}× vs their ${myMentions}×` : ''}
-${opportunityScore !== null ? `- AI opportunity score: ${Math.round(opportunityScore)}/100 (${opportunityLabel})` : ''}
-${revenueMin !== null && revenueMax !== null && revenueMax > 0 ? `- Estimated revenue opportunity: €${revenueMin.toLocaleString()}–€${revenueMax.toLocaleString()}/month` : ''}
+  const examplePrompts = (promptRuns ?? [])
+    .slice(0, 3)
+    .map(p => `* "${p.prompt_text}"`)
+    .join('\n')
 
-EMAIL REQUIREMENTS:
-- Subject line: intriguing, specific, under 10 words
-- Body: 4-5 short paragraphs, conversational Dutch-friendly English
-- Open with a specific insight about their AI visibility (not generic)
-- Mention the competitor gap if available
-- Include the revenue opportunity if available
-- End with a simple, low-friction CTA (e.g. "Would you be open to a quick 15-minute call?")
-- Do NOT use buzzwords like "leverage", "synergy", "game-changing"
-- Sound like a smart founder reaching out, not a sales robot
-- Keep total body under 200 words
+  const websiteIssues = websiteAudit ? [
+    !websiteAudit.schema_present ? 'Schema.org markup missing' : null,
+    !websiteAudit.opening_hours_present ? 'Opening hours not detected' : null,
+    !websiteAudit.menu_present ? 'Menu page not detected' : null,
+  ].filter(Boolean) : []
 
-Return ONLY a JSON object with this structure:
+  const prompt = `You are writing a cold outreach email on behalf of Finded — an AI visibility research tool for restaurants.
+
+Write a natural, human-sounding cold email from someone who was "researching" AI visibility and noticed something about this restaurant. It should feel like a smart founder reaching out with a genuine observation, not a sales email.
+
+RESTAURANT: ${restaurant.name}
+CITY: ${restaurant.city}
+CUISINE: ${restaurant.cuisine ?? 'restaurant'}
+
+AUDIT DATA:
+- Present in these AI models: ${presentModelsStr || 'none'}
+- Missing from: ${missingModelsStr || 'none'}
+- Top competitors that appear more often: ${competitorsStr || 'none found'}
+- Mention frequency: ${Math.round(metrics.mention_frequency * 100)}% (${metrics.total_mentions} of ${metrics.total_prompts} prompts)
+- Model consensus: ${metrics.model_consensus}/4 models
+${websiteIssues.length > 0 ? `- Website issues: ${websiteIssues.join(', ')}` : ''}
+
+EXAMPLE PROMPTS TESTED:
+${examplePrompts}
+
+TONE & STYLE REQUIREMENTS:
+- Open with "Hi," (no name — we don't know who we're writing to)
+- Frame it as: "I was researching how [city] restaurants appear in AI tools and noticed something about [restaurant]"
+- List 2-3 example prompts that were tested (use the actual ones above)
+- Mention which models they DO appear in (positive framing first)
+- Then mention the gap — missing from certain models or recommendation flows where competitors show up
+- Name 2-3 actual competitors from the data
+- Say you ran a visibility audit and found several opportunities
+- List 3-4 specific bullet findings (use the actual data)
+- End with: "We've put together a short report showing exactly where these gaps exist and what can be done to improve them. Would you like me to send it over? No obligation—just thought you'd find the data interesting."
+- Sign off: "Best,\n[Your Name]\nFinded"
+- DO NOT mention prices, revenue estimates, or money
+- DO NOT use words like "leverage", "game-changing", "synergy"
+- Keep it under 250 words
+- Sound like a human, not a marketing bot
+
+Return ONLY a JSON object:
 {
-  "subject": "email subject line",
-  "body": "full email body text"
+  "subject": "subject line (curious/intriguing, under 10 words, no exclamation marks)",
+  "body": "full email body"
 }`
 
   try {

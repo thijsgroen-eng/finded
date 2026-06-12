@@ -5,6 +5,20 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// Map recommendation titles to fix types
+function inferFixType(title: string, what: string): string | null {
+  const text = (title + ' ' + what).toLowerCase()
+  if (text.includes('schema') || text.includes('json-ld') || text.includes('structured data')) return 'schema_jsonld'
+  if (text.includes('faq')) return 'faq_page'
+  if (text.includes('opening hours') || text.includes('hours')) return 'opening_hours'
+  if (text.includes('description') || text.includes('meta') || text.includes('citation')) return 'optimized_description'
+  if (text.includes('authority') || text.includes('about')) return 'authority_content'
+  if (text.includes('menu')) return 'menu_structure'
+  if (text.includes('reservation') || text.includes('booking')) return 'reservation_markup'
+  if (text.includes('location') || text.includes('landing page')) return 'location_page'
+  return null
+}
+
 export async function POST(request: NextRequest) {
   const { audit_id } = await request.json()
 
@@ -27,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const metrics = computeMetrics(mentions ?? [])
   const restaurant = audit.restaurant as {
-    name: string; city: string; cuisine: string | null; website: string | null
+    id: string; name: string; city: string; cuisine: string | null; website: string | null
   }
 
   const modelBreakdown = metrics.model_breakdown
@@ -94,14 +108,47 @@ Rules:
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : ''
     const clean = text.replace(/```json|```/g, '').trim()
-    const recommendations = JSON.parse(clean)
+    const rawRecs = JSON.parse(clean)
 
+    // Delete old recommendations for this audit
+    await supabaseAdmin
+      .from('recommendations')
+      .delete()
+      .eq('audit_id', audit_id)
+
+    // Insert new recommendations with IDs
+    const { data: insertedRecs } = await supabaseAdmin
+      .from('recommendations')
+      .insert(
+        rawRecs.map((rec: any) => ({
+          audit_id,
+          restaurant_id: restaurant.id,
+          type: inferFixType(rec.title, rec.what),
+          title: rec.title,
+          description: rec.what,
+          priority: rec.priority,
+          impact: rec.impact,
+          difficulty: rec.difficulty ?? null,
+          status: 'pending',
+        }))
+      )
+      .select()
+
+    // Build response with IDs merged in
+    const recommendations = rawRecs.map((rec: any, i: number) => ({
+      ...rec,
+      id: insertedRecs?.[i]?.id ?? null,
+      type: inferFixType(rec.title, rec.what),
+      status: 'pending',
+    }))
+
+    // Also store as JSON blob for backward compat
     await supabaseAdmin
       .from('audits')
       .update({ recommendations: JSON.stringify(recommendations) })
       .eq('id', audit_id)
 
-    return NextResponse.json({ recommendations })
+    return NextResponse.json({ recommendations, restaurant_id: restaurant.id })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate recommendations' },
@@ -116,15 +163,51 @@ export async function GET(request: NextRequest) {
 
   if (!audit_id) return NextResponse.json({ error: 'audit_id required' }, { status: 400 })
 
+  // Try database first
+  const { data: dbRecs } = await supabaseAdmin
+    .from('recommendations')
+    .select('*')
+    .eq('audit_id', audit_id)
+    .order('created_at', { ascending: true })
+
+  if (dbRecs && dbRecs.length > 0) {
+    // Get the audit's restaurant_id
+    const { data: audit } = await supabaseAdmin
+      .from('audits')
+      .select('restaurant_id')
+      .eq('id', audit_id)
+      .single()
+
+    const recommendations = dbRecs.map(r => ({
+      id: r.id,
+      type: r.type,
+      priority: r.priority,
+      title: r.title,
+      what: r.description,
+      why: r.description,
+      impact: r.impact ?? '',
+      status: r.status,
+    }))
+
+    return NextResponse.json({
+      recommendations,
+      restaurant_id: audit?.restaurant_id ?? null,
+    })
+  }
+
+  // Fall back to JSON blob
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('recommendations')
+    .select('recommendations, restaurant_id')
     .eq('id', audit_id)
     .single()
 
   if (audit?.recommendations) {
-    return NextResponse.json({ recommendations: JSON.parse(audit.recommendations) })
+    return NextResponse.json({
+      recommendations: JSON.parse(audit.recommendations),
+      restaurant_id: audit.restaurant_id,
+    })
   }
 
-  return NextResponse.json({ recommendations: null })
+  return NextResponse.json({ recommendations: null, restaurant_id: null })
 }

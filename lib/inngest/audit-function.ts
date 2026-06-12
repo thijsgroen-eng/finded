@@ -317,6 +317,28 @@ export const auditFunction = inngest.createFunction(
         .eq('id', audit_id)
     })
 
+    // ── Step 6c: Save score history ─────────────────────
+    await step.run(`save-score-history-${audit_id}`, async () => {
+      const { data: vs } = await supabaseAdmin
+        .from('visibility_scores')
+        .select('*')
+        .eq('audit_id', audit_id)
+        .single()
+
+      if (!vs) return
+
+      await supabaseAdmin.from('score_history').insert({
+        restaurant_id,
+        audit_id,
+        visibility_score:   vs.visibility_score,
+        opportunity_score:  vs.opportunity_score,
+        mention_frequency:  vs.mention_frequency,
+        model_consensus:    vs.model_consensus,
+        total_mentions:     vs.total_mentions,
+        snapshot_date:      new Date().toISOString(),
+      })
+    })
+
     // ── Step 7: Complete ──────────────────────────────────────
     await step.run(`complete-${audit_id}`, async () => {
       await supabaseAdmin

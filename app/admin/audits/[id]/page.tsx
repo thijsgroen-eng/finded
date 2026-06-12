@@ -3,7 +3,7 @@ import { computeMetrics } from '@/lib/engine/metrics'
 import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
 import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { LeadStatus } from '@/components/admin/lead-status'
@@ -24,16 +24,20 @@ async function getAuditData(id: string) {
     { data: mentions },
     { data: modelRuns },
     { data: leadStatus },
+    { data: visibilityScore },
+    { data: competitors },
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', id),
     supabaseAdmin.from('model_runs').select('model, duration_ms, tokens_used').eq('audit_id', id),
     supabaseAdmin.from('lead_statuses').select('*').eq('restaurant_id', restaurant.id).single(),
+    supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
+    supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
 
-  return { audit, websiteAudit, metrics, modelRuns: modelRuns ?? [], leadStatus }
+  return { audit, websiteAudit, metrics, modelRuns: modelRuns ?? [], leadStatus, visibilityScore, competitors: competitors ?? [] }
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -66,7 +70,7 @@ export default async function AuditDetailPage({
   const data = await getAuditData(id)
   if (!data) notFound()
 
-  const { audit, websiteAudit, metrics, leadStatus } = data
+  const { audit, websiteAudit, metrics, leadStatus, visibilityScore, competitors } = data
   const restaurant = audit.restaurant as {
     id: string; name: string; city: string; cuisine: string | null; website: string | null
   }
@@ -81,6 +85,24 @@ export default async function AuditDetailPage({
     : metrics.position_score >= 30
     ? 'Fair'
     : 'Poor'
+
+  const opportunityScore = visibilityScore?.opportunity_score ?? null
+  const opportunityLabel = visibilityScore?.opportunity_label ?? null
+  const visScore = visibilityScore?.visibility_score ?? null
+  const estimatedRevenueMin = visibilityScore?.estimated_revenue_min ?? null
+  const estimatedRevenueMax = visibilityScore?.estimated_revenue_max ?? null
+  const estimatedVisitorsMin = visibilityScore?.estimated_visitors_min ?? null
+  const estimatedVisitorsMax = visibilityScore?.estimated_visitors_max ?? null
+
+  const opportunityColor = opportunityScore !== null
+    ? opportunityScore >= 75 ? 'text-red-600'
+    : opportunityScore >= 50 ? 'text-amber-600'
+    : opportunityScore >= 25 ? 'text-blue-600'
+    : 'text-gray-500'
+    : 'text-gray-400'
+
+  const topCompetitorMentions = competitors[0]?.mention_count ?? 0
+  const myMentions = metrics.total_mentions
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -132,6 +154,110 @@ export default async function AuditDetailPage({
           sub={`${totalModelRuns} model runs total`}
         />
       </div>
+
+      {/* Opportunity + Revenue */}
+      {opportunityScore !== null && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <Card className="border-amber-100 bg-amber-50/30">
+            <CardContent className="pt-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI opportunity score</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-4xl font-bold ${opportunityColor}`}>{Math.round(opportunityScore)}</span>
+                    <span className="text-gray-400 text-lg">/100</span>
+                  </div>
+                  {opportunityLabel && (
+                    <span className={`text-xs font-medium mt-1 inline-block ${opportunityColor}`}>
+                      {opportunityLabel.replace('_', ' ')} opportunity
+                    </span>
+                  )}
+                </div>
+                <TrendingUp className="w-8 h-8 text-amber-400 mt-1" />
+              </div>
+              {topCompetitorMentions > myMentions && (
+                <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-amber-100">
+                  Top competitor is mentioned <strong>{topCompetitorMentions}×</strong> vs your <strong>{myMentions}×</strong> — closing this gap is the primary growth lever.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Potential monthly opportunity</p>
+              {estimatedRevenueMin !== null && estimatedRevenueMax !== null && estimatedRevenueMax > 0 ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      €{estimatedRevenueMin.toLocaleString()} – €{estimatedRevenueMax.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">estimated additional revenue/month</p>
+                  </div>
+                  {estimatedVisitorsMin !== null && estimatedVisitorsMax !== null && (
+                    <p className="text-sm text-gray-600">
+                      {estimatedVisitorsMin}–{estimatedVisitorsMax} additional visitors/month
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400">Based on visibility gap vs top competitors</p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">Not enough data to estimate yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Competitor benchmarking */}
+      {competitors.length > 0 && (
+        <Card className="mb-5">
+          <CardHeader><CardTitle>Competitor comparison</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {/* Target restaurant row */}
+              <div className="flex items-center gap-3 py-2 border-b border-gray-100">
+                <div className="w-40 flex-shrink-0">
+                  <p className="text-sm font-semibold text-gray-900">{restaurant.name}</p>
+                  <p className="text-xs text-blue-500">You</p>
+                </div>
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gray-900"
+                    style={{ width: `${Math.min(100, (myMentions / Math.max(topCompetitorMentions, myMentions, 1)) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-gray-900 w-16 text-right">{myMentions} mentions</span>
+                {visScore !== null && (
+                  <span className="text-sm text-gray-500 w-16 text-right">{Math.round(visScore)}/100</span>
+                )}
+              </div>
+              {/* Competitor rows */}
+              {competitors.map((comp) => {
+                const pct = Math.min(100, (comp.mention_count / Math.max(topCompetitorMentions, myMentions, 1)) * 100)
+                const isAhead = comp.mention_count > myMentions
+                return (
+                  <div key={comp.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                    <div className="w-40 flex-shrink-0">
+                      <p className="text-sm text-gray-700 truncate">{comp.name}</p>
+                    </div>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${isAhead ? 'bg-red-400' : 'bg-emerald-400'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-600 w-16 text-right">{comp.mention_count} mentions</span>
+                    <span className={`text-xs w-16 text-right font-medium ${isAhead ? 'text-red-500' : 'text-emerald-500'}`}>
+                      {isAhead ? `+${comp.mention_count - myMentions}` : `-${myMentions - comp.mention_count}`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Model breakdown + sentiment + lead status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">

@@ -15,8 +15,8 @@ export const auditFunction = inngest.createFunction(
     name: 'Run Full AI Visibility Audit',
     retries: 2,
     timeouts: { finish: '15m' },
-    triggers: [{ event: 'audit/requested' }],
   },
+  { event: 'audit/requested' },
   async ({ event, step }: { event: { data: { audit_id: string; restaurant_id: string } }; step: any }) => {
     const { audit_id, restaurant_id } = event.data
 
@@ -74,7 +74,7 @@ export const auditFunction = inngest.createFunction(
       )
 
       await supabaseAdmin.from('prompt_runs').insert(
-        generated.map(p => ({
+        generated.map((p: { id: string; category: string; intent: string; prompt: string }) => ({
           audit_id,
           prompt_id:   p.id,
           category:    p.category,
@@ -95,7 +95,7 @@ export const auditFunction = inngest.createFunction(
       error?: string
     }> = []
 
-    const batches = []
+    const batches: typeof prompts[] = []
     for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
       batches.push(prompts.slice(i, i + BATCH_SIZE))
     }
@@ -107,7 +107,7 @@ export const auditFunction = inngest.createFunction(
         const results: Array<{ model: string; prompt_id: string; response: string; error?: string }> = []
 
         await Promise.all(
-          providers.map(async (provider) => {
+          providers.map(async (provider: any) => {
             for (const promptObj of batch) {
               await new Promise(r => setTimeout(r, 200))
               const result = await provider.runPrompt(promptObj.prompt)
@@ -137,7 +137,7 @@ export const auditFunction = inngest.createFunction(
       allModelRuns.push(...batchResults)
 
       if (batchIdx < batches.length - 1) {
-        await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, `${BATCH_DELAY}ms`)
+        await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, BATCH_DELAY)
       }
     }
 
@@ -153,7 +153,7 @@ export const auditFunction = inngest.createFunction(
 
     const successfulRuns = allModelRuns.filter(r => r.response && !r.error)
 
-    const extractionBatches = []
+    const extractionBatches: typeof successfulRuns[] = []
     for (let i = 0; i < successfulRuns.length; i += 10) {
       extractionBatches.push(successfulRuns.slice(i, i + 10))
     }
@@ -195,7 +195,7 @@ export const auditFunction = inngest.createFunction(
 
               if (entityRow) {
                 await supabaseAdmin.from('recommendation_reasons').insert(
-                  entity.reasons.map(reason => ({
+                  entity.reasons.map((reason: string) => ({
                     entity_id: entityRow.id,
                     audit_id,
                     reason,
@@ -247,7 +247,7 @@ export const auditFunction = inngest.createFunction(
 
       if (!entities || !mentions || mentions.length === 0) return
 
-      const mentionData = mentions.map(m => ({
+      const mentionData = mentions.map((m: any) => ({
         model:     m.model as any,
         prompt_id: m.prompt_id,
         mentioned: m.mentioned,
@@ -255,7 +255,7 @@ export const auditFunction = inngest.createFunction(
         sentiment: m.sentiment,
       }))
 
-      const entityData = entities.map(e => ({
+      const entityData = entities.map((e: any) => ({
         name:      e.name,
         position:  e.position ?? 0,
         sentiment: e.sentiment ?? 'neutral',
@@ -299,7 +299,7 @@ export const auditFunction = inngest.createFunction(
 
       if (metrics.competitors.length > 0) {
         await supabaseAdmin.from('competitors').insert(
-          metrics.competitors.map(c => ({
+          metrics.competitors.map((c: any) => ({
             audit_id,
             name:            c.name,
             mention_count:   c.mention_count,
@@ -317,7 +317,7 @@ export const auditFunction = inngest.createFunction(
         .eq('id', audit_id)
     })
 
-    // ── Step 6c: Save score history ─────────────────────
+    // ── Step 6c: Save score history ───────────────────────────
     await step.run(`save-score-history-${audit_id}`, async () => {
       const { data: vs } = await supabaseAdmin
         .from('visibility_scores')

@@ -48,9 +48,9 @@ export async function runAudit(auditId: string): Promise<void> {
     await supabaseAdmin.from('website_audits').insert({
       audit_id: auditId,
       schema_present:            websiteResult.schema_present,
-      menu_present:              websiteResult.menu_present,
-      opening_hours_present:     websiteResult.opening_hours_present,
-      reservation_links_present: websiteResult.reservation_links_present,
+      menu_present:              websiteResult.menu_or_services_present,
+      opening_hours_present:     websiteResult.hours_present,
+      reservation_links_present: websiteResult.booking_present,
       social_links_present:      websiteResult.social_links_present,
       review_count:              websiteResult.review_count,
       meta_title:                websiteResult.meta_title,

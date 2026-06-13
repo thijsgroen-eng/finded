@@ -20,8 +20,8 @@ export const auditFunction = inngest.createFunction(
   async ({ event, step }: { event: { data: { audit_id: string; restaurant_id: string } }; step: any }) => {
     const { audit_id, restaurant_id } = event.data
 
-    // ── Step 1: Load restaurant + mark running ────────────────
-    const { restaurant } = await step.run(`load-restaurant-${audit_id}`, async () => {
+    // ── Step 1: Load entity + mark running ───────────────────
+    const { entity } = await step.run(`load-entity-${audit_id}`, async () => {
       await supabaseAdmin
         .from('audits')
         .update({ status: 'running' })
@@ -33,13 +33,13 @@ export const auditFunction = inngest.createFunction(
         .eq('id', restaurant_id)
         .single()
 
-      if (!data) throw new Error(`Restaurant ${restaurant_id} not found`)
-      return { restaurant: data }
+      if (!data) throw new Error(`Entity ${restaurant_id} not found`)
+      return { entity: data }
     })
 
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {
-      const result = await auditWebsite(restaurant.website ?? '')
+      const result = await auditWebsite(entity.website ?? '')
 
       const { data: existing } = await supabaseAdmin
         .from('website_audits')
@@ -50,27 +50,42 @@ export const auditFunction = inngest.createFunction(
       if (!existing) {
         await supabaseAdmin.from('website_audits').insert({
           audit_id,
+          // Legacy restaurant columns (kept for backward compat)
           schema_present:            result.schema_present,
-          menu_present:              result.menu_present,
-          opening_hours_present:     result.opening_hours_present,
-          reservation_links_present: result.reservation_links_present,
+          menu_present:              result.menu_or_services_present,
+          opening_hours_present:     result.hours_present,
+          reservation_links_present: result.booking_present,
           social_links_present:      result.social_links_present,
           review_count:              result.review_count,
           meta_title:                result.meta_title,
           meta_description:          result.meta_description,
           raw_html_snippet:          result.raw_html_snippet,
+          // Universal columns
+          schema_types:              result.schema_types,
+          contact_present:           result.contact_present,
+          location_present:          result.location_present,
+          review_signals:            result.review_signals,
+          booking_present:           result.booking_present,
+          faq_present:               result.faq_present,
+          menu_or_services_present:  result.menu_or_services_present,
         })
       }
     })
 
     // ── Step 3: Generate prompts ──────────────────────────────
     const { prompts } = await step.run(`generate-prompts-${audit_id}`, async () => {
+      // Use business_type if available, fall back to cuisine/category, then 'restaurant'
+      const businessType = entity.business_type ?? 'restaurant'
+      const subtypes: string[] = entity.subtypes
+        ?? (entity.cuisine ? [entity.cuisine] : [businessType])
+
       const generated = getQuickPrompts(
-        restaurant.name,
-        restaurant.category ?? restaurant.cuisine ?? 'restaurant',
-        restaurant.city,
-        restaurant.country ?? 'Netherlands',
-        restaurant.cuisine ?? undefined
+        entity.name,
+        businessType,
+        entity.city,
+        entity.country ?? 'Netherlands',
+        subtypes[0],
+        subtypes,
       )
 
       await supabaseAdmin.from('prompt_runs').insert(
@@ -114,11 +129,12 @@ export const auditFunction = inngest.createFunction(
 
               await supabaseAdmin.from('model_runs').insert({
                 audit_id,
-                model:        provider.name,
-                prompt_id:    promptObj.id,
-                raw_response: result.error ? `ERROR: ${result.error}` : result.response,
-                tokens_used:  result.tokens_used ?? null,
-                duration_ms:  result.duration_ms,
+                model:          provider.name,
+                prompt_id:      '00000000-0000-0000-0000-000000000000', // placeholder uuid
+                prompt_text_id: promptObj.id,  // actual text ID from generator
+                raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
+                tokens_used:    result.tokens_used ?? null,
+                duration_ms:    result.duration_ms,
               })
 
               results.push({
@@ -170,32 +186,32 @@ export const auditFunction = inngest.createFunction(
 
           const extraction = await extractEntities(run.response, prompt.prompt, run.model)
 
-          for (const entity of extraction.entities) {
+          for (const ent of extraction.entities) {
             await supabaseAdmin.from('entities').insert({
               audit_id,
               model:      run.model,
               prompt_id:  run.prompt_id,
-              name:       entity.name,
-              type:       entity.type,
-              position:   entity.position,
-              context:    entity.context,
-              sentiment:  entity.sentiment,
-              confidence: entity.confidence,
+              name:       ent.name,
+              type:       ent.type,
+              position:   ent.position,
+              context:    ent.context,
+              sentiment:  ent.sentiment,
+              confidence: ent.confidence,
             })
 
-            if (entity.reasons.length > 0) {
+            if (ent.reasons.length > 0) {
               const { data: entityRow } = await supabaseAdmin
                 .from('entities')
                 .select('id')
                 .eq('audit_id', audit_id)
                 .eq('model', run.model)
                 .eq('prompt_id', run.prompt_id)
-                .eq('name', entity.name)
+                .eq('name', ent.name)
                 .single()
 
               if (entityRow) {
                 await supabaseAdmin.from('recommendation_reasons').insert(
-                  entity.reasons.map((reason: string) => ({
+                  ent.reasons.map((reason: string) => ({
                     entity_id: entityRow.id,
                     audit_id,
                     reason,
@@ -205,21 +221,21 @@ export const auditFunction = inngest.createFunction(
             }
 
             results.push({
-              name:      entity.name,
-              position:  entity.position,
-              sentiment: entity.sentiment,
-              reasons:   entity.reasons,
+              name:      ent.name,
+              position:  ent.position,
+              sentiment: ent.sentiment,
+              reasons:   ent.reasons,
               model:     run.model,
               prompt_id: run.prompt_id,
             })
           }
 
-          const targetEntity = findTargetInEntities(restaurant.name, extraction.entities)
+          const targetEntity = findTargetInEntities(entity.name, extraction.entities)
           await supabaseAdmin.from('mentions').insert({
             audit_id,
             model:           run.model,
-            prompt_id:       run.prompt_id,
-            restaurant_name: restaurant.name,
+            prompt_id:       '00000000-0000-0000-0000-000000000000', // placeholder uuid
+            restaurant_name: entity.name,
             mentioned:       targetEntity !== null,
             position:        targetEntity?.position ?? null,
             sentiment:       targetEntity?.sentiment ?? null,
@@ -263,11 +279,11 @@ export const auditFunction = inngest.createFunction(
         prompt_id: e.prompt_id,
       }))
 
-      const metrics = computeFullMetrics(restaurant.name, mentionData, entityData)
+      const metrics = computeFullMetrics(entity.name, mentionData, entityData)
 
       await supabaseAdmin.from('visibility_scores').insert({
         audit_id,
-        restaurant_id,
+        restaurant_id:             restaurant_id,
         visibility_score:          metrics.visibility_score,
         opportunity_score:         metrics.opportunity_score,
         opportunity_label:         metrics.opportunity_label,

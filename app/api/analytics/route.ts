@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { createAudit } from '@/lib/engine/audit-runner'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -175,43 +176,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ── Re-run audit action ───────────────────────────────────────────
+// Re-run audit action
 export async function POST(request: NextRequest) {
   try {
-    const { restaurant_id, audit_id } = await request.json()
+    const { restaurant_id } = await request.json()
 
     if (!restaurant_id) {
       return NextResponse.json({ error: 'restaurant_id required' }, { status: 400 })
     }
 
-    // Create new audit record
-    const { data: newAudit, error } = await supabaseAdmin
-      .from('audits')
-      .insert({ restaurant_id, status: 'pending' })
-      .select('id')
-      .single()
-
-    if (error || !newAudit) throw error ?? new Error('Failed to create audit')
-
-    // Mark old audit as superseded if provided
-    if (audit_id) {
-      await supabaseAdmin
-        .from('audits')
-        .update({ status: 'superseded' })
-        .eq('id', audit_id)
-    }
-
-    // Trigger Inngest
-    await fetch(`${process.env.INNGEST_EVENT_KEY ? 'https://inn.gs/e/' + process.env.INNGEST_EVENT_KEY : '/api/inngest'}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'audit/requested',
-        data: { audit_id: newAudit.id, restaurant_id },
-      }),
-    })
-
-    return NextResponse.json({ success: true, audit_id: newAudit.id })
+    const auditId = await createAudit(restaurant_id)
+    return NextResponse.json({ success: true, audit_id: auditId })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

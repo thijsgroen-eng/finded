@@ -15,8 +15,8 @@ export const auditFunction = inngest.createFunction(
     name: 'Run Full AI Visibility Audit',
     retries: 2,
     timeouts: { finish: '15m' },
+    triggers: [{ event: 'audit/requested' }],
   },
-  { event: 'audit/requested' },
   async ({ event, step }: { event: { data: { audit_id: string; restaurant_id: string } }; step: any }) => {
     const { audit_id, restaurant_id } = event.data
 
@@ -95,7 +95,7 @@ export const auditFunction = inngest.createFunction(
       error?: string
     }> = []
 
-    const batches: typeof prompts[] = []
+    const batches: any[][] = []
     for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
       batches.push(prompts.slice(i, i + BATCH_SIZE))
     }
@@ -214,7 +214,6 @@ export const auditFunction = inngest.createFunction(
             })
           }
 
-          // Insert mention for this model run — was target mentioned?
           const targetEntity = findTargetInEntities(restaurant.name, extraction.entities)
           await supabaseAdmin.from('mentions').insert({
             audit_id,

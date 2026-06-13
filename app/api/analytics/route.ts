@@ -148,9 +148,10 @@ export async function GET(request: NextRequest) {
           `)
           .limit(200)
 
-        const total = data?.length ?? 0
-        const pct = (field: keyof typeof data[0]) =>
-          total ? Math.round(((data ?? []).filter(r => r[field]).length / total) * 100) : 0
+        const rows = data ?? []
+        const total = rows.length
+        const pct = (field: 'schema_present' | 'menu_present' | 'opening_hours_present' | 'reservation_links_present' | 'social_links_present') =>
+          total ? Math.round((rows.filter(r => r[field]).length / total) * 100) : 0
 
         return NextResponse.json({
           total,
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
           reservation_pct: pct('reservation_links_present'),
           social_pct: pct('social_links_present'),
           avg_reviews: total
-            ? Math.round((data ?? []).reduce((s, r) => s + (r.review_count ?? 0), 0) / total)
+            ? Math.round(rows.reduce((s, r) => s + (r.review_count ?? 0), 0) / total)
             : 0,
         })
       }

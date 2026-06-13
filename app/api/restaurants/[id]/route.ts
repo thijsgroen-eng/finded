@@ -7,17 +7,16 @@ export async function GET(
 ) {
   const { id } = await params
 
-  const { data: restaurant, error } = await supabaseAdmin
+  const { data: entity, error } = await supabaseAdmin
     .from('restaurants')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (error || !restaurant) {
+  if (error || !entity) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // Load audit history with metrics
   const { data: audits } = await supabaseAdmin
     .from('audits')
     .select('*')
@@ -25,10 +24,9 @@ export async function GET(
     .order('created_at', { ascending: false })
     .limit(10)
 
-  // For each completed audit, load mention counts
   const auditIds = (audits ?? [])
-    .filter((a) => a.status === 'completed')
-    .map((a) => a.id)
+    .filter(a => a.status === 'completed')
+    .map(a => a.id)
 
   let mentionSummary: Record<string, number> = {}
   if (auditIds.length > 0) {
@@ -43,7 +41,7 @@ export async function GET(
     }
   }
 
-  return NextResponse.json({ data: restaurant, audits, mentionSummary })
+  return NextResponse.json({ data: entity, audits, mentionSummary })
 }
 
 export async function PATCH(
@@ -52,7 +50,7 @@ export async function PATCH(
 ) {
   const { id } = await params
   const body = await request.json()
-  const allowed = ['name', 'website', 'city', 'cuisine', 'email', 'phone']
+  const allowed = ['name', 'website', 'city', 'country', 'cuisine', 'email', 'phone', 'business_type', 'subtypes']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]

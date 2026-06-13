@@ -80,7 +80,7 @@ export function computeVisibilityScore(
     promptCoverage * 20 +
     (modelConsensus / 4) * 20
 
-  return Math.min(100, Math.round(score * 100))
+  return Math.min(100, Math.round(score))  // ← was Math.round(score * 100)
 }
 
 export function computeOpportunityScore(
@@ -92,21 +92,12 @@ export function computeOpportunityScore(
 ): { score: number; label: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY HIGH' } {
   if (totalPrompts === 0) return { score: 0, label: 'LOW' }
 
-  // How much bigger is the top competitor vs you? (ratio-based)
   const competitorRatio = topCompetitorMentions > 0
     ? topCompetitorMentions / Math.max(myMentions, 1)
     : 1
 
-  // Score from competitor gap (0-60 points)
-  // ratio of 1 = no gap = 0 points, ratio of 5+ = huge gap = 60 points
   const gapScore = Math.min(60, Math.round((competitorRatio - 1) * 15))
-
-  // Score from low share of voice (0-25 points)
-  // SOV < 5% = 25 points, SOV > 30% = 0 points
   const sovScore = Math.min(25, Math.round(Math.max(0, 0.30 - shareOfVoice) * 100))
-
-  // Score from model coverage gap (0-15 points)
-  // Missing from 2+ models = high opportunity
   const modelGapScore = Math.round((4 - modelConsensus) / 4 * 15)
 
   const score = Math.min(100, gapScore + sovScore + modelGapScore)
@@ -132,7 +123,6 @@ export function computeFullMetrics(
   const promptCoverage = totalPrompts > 0 ? promptsWithMention / totalPrompts : 0
   const mentionFrequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
 
-  // Position analysis
   const positions = targetMentions
     .filter(m => m.position !== null)
     .map(m => m.position!)
@@ -152,7 +142,6 @@ export function computeFullMetrics(
     ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
     : 0
 
-  // Model consensus
   const models = ['openai', 'anthropic', 'gemini', 'perplexity']
   const modelBreakdown = models.map(model => {
     const modelRows = mentions.filter(m => m.model === model)
@@ -172,12 +161,10 @@ export function computeFullMetrics(
   })
   const modelConsensus = modelBreakdown.filter(m => m.mentions > 0).length
 
-  // Visibility score
   const visibility_score = computeVisibilityScore(
     mentionFrequency, positionScore, promptCoverage, modelConsensus
   )
 
-  // Sentiment
   const sentimentValues: number[] = targetMentions.map(m => {
     if (m.sentiment === 'positive') return 1
     if (m.sentiment === 'negative') return -1
@@ -192,7 +179,6 @@ export function computeFullMetrics(
     negative: targetMentions.filter(m => m.sentiment === 'negative').length,
   }
 
-  // Competitor analysis
   const competitorMap = new Map<string, {
     count: number
     positions: number[]
@@ -239,7 +225,6 @@ export function computeFullMetrics(
       top_reasons: [...new Set(data.reasons)].slice(0, 5),
     }))
 
-  // Top reasons for target
   const targetEntityData = allEntities.filter(e =>
     e.name.toLowerCase().includes(targetName.toLowerCase()) ||
     targetName.toLowerCase().includes(e.name.toLowerCase())
@@ -255,7 +240,6 @@ export function computeFullMetrics(
     .slice(0, 8)
     .map(([r]) => r)
 
-  // Opportunity score — based on actual competitive gap
   const topCompetitorMentions = competitors[0]?.mention_count ?? 0
   const { score: opportunityScore, label: opportunity_label } = computeOpportunityScore(
     totalMentions,
@@ -271,13 +255,11 @@ export function computeFullMetrics(
   const visibility_gap = Math.max(0, competitorAvgMentions - totalMentions)
   const recommendation_gap = Math.max(0, topCompetitorMentions - totalMentions)
 
-  // Revenue estimates based on mention gap
-  // Each additional mention = ~5-15 extra visitors/month at a typical restaurant
   const mentionGap = recommendation_gap
   const estimated_additional_visitors_min = Math.max(0, Math.round(mentionGap * 8))
   const estimated_additional_visitors_max = Math.max(0, Math.round(mentionGap * 25))
-  const avgSpend = 45 // €45 average restaurant spend
-  const conversionRate = 0.20 // 20% of visitors make a reservation
+  const avgSpend = 45
+  const conversionRate = 0.20
   const estimated_revenue_min = Math.round(estimated_additional_visitors_min * conversionRate * avgSpend / 100) * 100
   const estimated_revenue_max = Math.round(estimated_additional_visitors_max * conversionRate * avgSpend / 100) * 100
 

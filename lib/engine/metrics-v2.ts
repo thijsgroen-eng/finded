@@ -1,5 +1,5 @@
 import { ExtractedEntity } from './entity-extractor'
-import { positionWeight } from './metrics-core'
+import { positionWeight, gradedMentionFrequency } from './metrics-core'
 
 export interface CompetitorStats {
   name: string
@@ -53,6 +53,10 @@ interface MentionData {
   model: string
   prompt_id: string
   mentioned: boolean
+  /** Fraction of sampled runs (0–1) in which the target was mentioned. When
+   *  present, mention_frequency is the graded signal; `mentioned` is the
+   *  majority-threshold boolean kept for backward compatibility. */
+  mention_frequency?: number | null
   position: number | null
   sentiment: string | null
 }
@@ -119,7 +123,8 @@ export function computeFullMetrics(
 
   const promptsWithMention = new Set(targetMentions.map(m => m.prompt_id)).size
   const promptCoverage = totalPrompts > 0 ? promptsWithMention / totalPrompts : 0
-  const mentionFrequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
+  // Graded mention frequency, shared with the read-time path (metrics.ts).
+  const mentionFrequency = gradedMentionFrequency(mentions)
 
   const positions = targetMentions
     .filter(m => m.position !== null)

@@ -9,6 +9,24 @@ import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 const BATCH_SIZE = 5
 const BATCH_DELAY = 1000
 
+// Each prompt is sampled AUDIT_SAMPLES times at AUDIT_TEMPERATURE so a mention
+// becomes a frequency (e.g. seen in 2/3 runs = 0.67) instead of a single noisy
+// boolean. Grounding is on by default per provider that supports it.
+const AUDIT_SAMPLES = Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 3))
+const AUDIT_TEMPERATURE = Number(process.env.AUDIT_TEMPERATURE ?? 0.2)
+const AUDIT_GROUNDED = (process.env.AUDIT_GROUNDED ?? 'true') !== 'false'
+
+function majoritySentiment(values: string[]): string | null {
+  if (values.length === 0) return null
+  const counts = new Map<string, number>()
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
+}
+
+function average(nums: number[]): number | null {
+  return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null
+}
+
 export const auditFunction = inngest.createFunction(
   {
     id: 'run-full-audit',
@@ -101,16 +119,12 @@ export const auditFunction = inngest.createFunction(
       return { prompts: generated }
     })
 
-    // ── Step 4: Run AI models in batches ──────────────────────
+    // ── Step 4: Run AI models in batches (N samples per prompt) ───
     const providers = getAvailableProviders()
-    const allModelRuns: Array<{
-      model: string
-      prompt_id: string
-      response: string
-      error?: string
-    }> = []
+    // One entry per (model, prompt) holding the successful sample responses.
+    const allRuns: Array<{ model: string; prompt_id: string; responses: string[]; samples: number }> = []
 
-    const batches: any[][] = []
+    const batches: typeof prompts[] = []
     for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
       batches.push(prompts.slice(i, i + BATCH_SIZE))
     }
@@ -119,30 +133,35 @@ export const auditFunction = inngest.createFunction(
       const batch = batches[batchIdx]
 
       const batchResults = await step.run(`run-prompts-batch-${audit_id}-${batchIdx}`, async () => {
-        const results: Array<{ model: string; prompt_id: string; response: string; error?: string }> = []
+        const results: Array<{ model: string; prompt_id: string; responses: string[]; samples: number }> = []
 
         await Promise.all(
           providers.map(async (provider: any) => {
             for (const promptObj of batch) {
-              await new Promise(r => setTimeout(r, 200))
-              const result = await provider.runPrompt(promptObj.prompt)
+              const responses: string[] = []
+              for (let sample = 0; sample < AUDIT_SAMPLES; sample++) {
+                await new Promise(r => setTimeout(r, 200))
+                const result = await provider.runPrompt(promptObj.prompt, {
+                  temperature: AUDIT_TEMPERATURE,
+                  grounded: AUDIT_GROUNDED && provider.supportsGrounding,
+                })
 
-              await supabaseAdmin.from('model_runs').insert({
-                audit_id,
-                model:          provider.name,
-                prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
-                prompt_text_id: promptObj.id,
-                raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
-                tokens_used:    result.tokens_used ?? null,
-                duration_ms:    result.duration_ms,
-              })
+                await supabaseAdmin.from('model_runs').insert({
+                  audit_id,
+                  model:          provider.name,
+                  prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
+                  prompt_text_id: promptObj.id,
+                  sample_index:   sample,
+                  grounded:       result.grounded ?? null,
+                  raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
+                  tokens_used:    result.tokens_used ?? null,
+                  duration_ms:    result.duration_ms,
+                })
 
-              results.push({
-                model:     provider.name,
-                prompt_id: promptObj.id,
-                response:  result.error ? '' : result.response,
-                error:     result.error,
-              })
+                if (!result.error && result.response) responses.push(result.response)
+              }
+
+              results.push({ model: provider.name, prompt_id: promptObj.id, responses, samples: AUDIT_SAMPLES })
             }
           })
         )
@@ -150,14 +169,18 @@ export const auditFunction = inngest.createFunction(
         return results
       })
 
-      allModelRuns.push(...batchResults)
+      allRuns.push(...batchResults)
 
       if (batchIdx < batches.length - 1) {
         await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, BATCH_DELAY)
       }
     }
 
-    // ── Step 5: Extract entities + insert mentions ────────────
+    // ── Step 5: Extract entities (per sample) + aggregate ─────
+    // For each (model, prompt) we extract entities from every sampled response,
+    // then aggregate: the target's mention becomes a frequency across samples,
+    // and competitor entities are deduped (one row per name) with averaged
+    // position/sentiment. This collapses N noisy samples into one stable signal.
     const allEntities: Array<{
       name: string
       position: number
@@ -167,11 +190,11 @@ export const auditFunction = inngest.createFunction(
       prompt_id: string
     }> = []
 
-    const successfulRuns = allModelRuns.filter(r => r.response && !r.error)
+    const runsWithResponses = allRuns.filter(r => r.responses.length > 0)
 
-    const extractionBatches: typeof successfulRuns[] = []
-    for (let i = 0; i < successfulRuns.length; i += 10) {
-      extractionBatches.push(successfulRuns.slice(i, i + 10))
+    const extractionBatches: typeof runsWithResponses[] = []
+    for (let i = 0; i < runsWithResponses.length; i += 10) {
+      extractionBatches.push(runsWithResponses.slice(i, i + 10))
     }
 
     for (let batchIdx = 0; batchIdx < extractionBatches.length; batchIdx++) {
@@ -184,61 +207,98 @@ export const auditFunction = inngest.createFunction(
           const prompt = prompts.find((p: { id: string }) => p.id === run.prompt_id)
           if (!prompt) continue
 
-          const extraction = await extractEntities(run.response, prompt.prompt, run.model)
+          // Extract entities from each sampled response for this (model, prompt).
+          const extractions = []
+          for (const resp of run.responses) {
+            extractions.push(await extractEntities(resp, prompt.prompt, run.model))
+          }
+          const n = run.responses.length
 
-          for (const ent of extraction.entities) {
-            await supabaseAdmin.from('entities').insert({
-              audit_id,
-              model:      run.model,
-              prompt_id:  run.prompt_id,
-              name:       ent.name,
-              type:       ent.type,
-              position:   ent.position,
-              context:    ent.context,
-              sentiment:  ent.sentiment,
-              confidence: ent.confidence,
-            })
-
-            if (ent.reasons.length > 0) {
-              const { data: entityRow } = await supabaseAdmin
-                .from('entities')
-                .select('id')
-                .eq('audit_id', audit_id)
-                .eq('model', run.model)
-                .eq('prompt_id', run.prompt_id)
-                .eq('name', ent.name)
-                .single()
-
-              if (entityRow) {
-                await supabaseAdmin.from('recommendation_reasons').insert(
-                  ent.reasons.map((reason: string) => ({
-                    entity_id: entityRow.id,
-                    audit_id,
-                    reason,
-                  }))
-                )
+          // Aggregate every entity across samples, keyed by normalized name.
+          const byName = new Map<string, {
+            name: string; type: string; positions: number[]; sentiments: string[]
+            reasons: Set<string>; confidences: number[]
+          }>()
+          for (const ex of extractions) {
+            for (const ent of ex.entities) {
+              const key = ent.name.toLowerCase().trim()
+              if (!byName.has(key)) {
+                byName.set(key, { name: ent.name, type: ent.type, positions: [], sentiments: [], reasons: new Set(), confidences: [] })
               }
+              const agg = byName.get(key)!
+              if (ent.position) agg.positions.push(ent.position)
+              if (ent.sentiment) agg.sentiments.push(ent.sentiment)
+              for (const r of ent.reasons) agg.reasons.add(r)
+              if (typeof ent.confidence === 'number') agg.confidences.push(ent.confidence)
+            }
+          }
+
+          // Persist one aggregated entity row per distinct name.
+          for (const agg of byName.values()) {
+            const avgPos = average(agg.positions)
+            const position = avgPos !== null ? Math.round(avgPos) : null
+            const sentiment = majoritySentiment(agg.sentiments) ?? 'neutral'
+
+            const { data: entityRow } = await supabaseAdmin
+              .from('entities')
+              .insert({
+                audit_id,
+                model:      run.model,
+                prompt_id:  run.prompt_id,
+                name:       agg.name,
+                type:       agg.type,
+                position,
+                context:    null,
+                sentiment,
+                confidence: average(agg.confidences),
+              })
+              .select('id')
+              .single()
+
+            if (entityRow && agg.reasons.size > 0) {
+              await supabaseAdmin.from('recommendation_reasons').insert(
+                [...agg.reasons].map((reason: string) => ({ entity_id: entityRow.id, audit_id, reason }))
+              )
             }
 
             results.push({
-              name:      ent.name,
-              position:  ent.position,
-              sentiment: ent.sentiment,
-              reasons:   ent.reasons,
+              name:      agg.name,
+              position:  position ?? 0,
+              sentiment,
+              reasons:   [...agg.reasons],
               model:     run.model,
               prompt_id: run.prompt_id,
             })
           }
 
-          const targetEntity = findTargetInEntities(entity.name, extraction.entities)
+          // Aggregate the TARGET across samples → mention frequency.
+          let mentionedCount = 0
+          const targetPositions: number[] = []
+          const targetSentiments: string[] = []
+          for (const ex of extractions) {
+            const t = findTargetInEntities(entity.name, ex.entities)
+            if (t) {
+              mentionedCount++
+              if (t.position) targetPositions.push(t.position)
+              if (t.sentiment) targetSentiments.push(t.sentiment)
+            }
+          }
+          const frequency = n > 0 ? mentionedCount / n : 0
+          const avgTargetPos = average(targetPositions)
+
           await supabaseAdmin.from('mentions').insert({
             audit_id,
-            model:           run.model,
-            prompt_id:       run.prompt_id,   // generator's text id; lets computeMetrics count prompts
-            restaurant_name: entity.name,
-            mentioned:       targetEntity !== null,
-            position:        targetEntity?.position ?? null,
-            sentiment:       targetEntity?.sentiment ?? null,
+            model:             run.model,
+            prompt_id:         run.prompt_id,   // generator's text id; lets computeMetrics count prompts
+            restaurant_name:   entity.name,
+            // `mentioned` is now a MAJORITY threshold over samples (>= 0.5). The
+            // graded signal lives in `mention_frequency`. Legacy readers that only
+            // look at `mentioned` (e.g. lib/engine/metrics.ts) still work but lose
+            // the sub-threshold nuance — see the note there.
+            mentioned:         frequency >= 0.5,
+            mention_frequency: frequency,
+            position:          avgTargetPos !== null ? Math.round(avgTargetPos) : null,
+            sentiment:         targetSentiments.length ? majoritySentiment(targetSentiments) : null,
           })
         }
 
@@ -263,11 +323,12 @@ export const auditFunction = inngest.createFunction(
       if (!entities || !mentions || mentions.length === 0) return
 
       const mentionData = mentions.map((m: any) => ({
-        model:     m.model as any,
-        prompt_id: m.prompt_id,
-        mentioned: m.mentioned,
-        position:  m.position,
-        sentiment: m.sentiment,
+        model:             m.model as any,
+        prompt_id:         m.prompt_id,
+        mentioned:         m.mentioned,
+        mention_frequency: m.mention_frequency,
+        position:          m.position,
+        sentiment:         m.sentiment,
       }))
 
       const entityData = entities.map((e: any) => ({

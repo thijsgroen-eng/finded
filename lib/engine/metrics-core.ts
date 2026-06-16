@@ -28,3 +28,17 @@ export function weightedPositionScore(positions: number[]): number {
   const sum = positions.reduce((acc, p) => acc + positionWeight(p), 0)
   return sum / positions.length
 }
+
+/**
+ * Graded mention frequency (0–1): the mean per-(model,prompt) sample frequency.
+ * Falls back to the binary `mentioned` flag for rows without a recorded
+ * frequency. Shared by the read-time (metrics.ts) and audit-time (metrics-v2.ts)
+ * paths so the report page and the dashboard report the same number.
+ */
+export function gradedMentionFrequency(
+  rows: Array<{ mentioned: boolean; mention_frequency?: number | null }>
+): number {
+  if (rows.length === 0) return 0
+  const sum = rows.reduce((acc, r) => acc + (r.mention_frequency ?? (r.mentioned ? 1 : 0)), 0)
+  return Math.min(1, sum / rows.length)
+}

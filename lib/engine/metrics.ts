@@ -1,10 +1,16 @@
 import { ModelBreakdown, ModelName, VisibilityMetrics } from '@/types/database'
-import { positionWeight } from './metrics-core'
+import { positionWeight, gradedMentionFrequency } from './metrics-core'
 
+// NOTE: as of the N-sampling change, a `mentions` row's `mentioned` boolean is a
+// MAJORITY threshold over sampled runs (>= 0.5); the graded value is
+// `mention_frequency`. mention_frequency below uses the graded value (shared with
+// metrics-v2.ts) so the report page matches the dashboard, but position/sentiment
+// and counts still derive from the majority `mentioned` flag.
 export interface MentionRow {
   model: ModelName
   prompt_id: string
   mentioned: boolean
+  mention_frequency?: number | null
   position: number | null
   sentiment: string | null
 }
@@ -44,8 +50,8 @@ export function computeMetrics(mentions: MentionRow[]): ComputedMetrics {
   const totalPrompts = new Set(mentions.map((m) => m.prompt_id)).size
   const totalMentions = allMentions.length
 
-  // Mention frequency
-  const mention_frequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
+  // Mention frequency — graded, shared with metrics-v2.ts (see metrics-core.ts).
+  const mention_frequency = gradedMentionFrequency(mentions)
 
   // Position score — weighted average over all mentioned rows
   const positionScores = allMentions

@@ -37,7 +37,7 @@ async function getAuditData(id: string) {
     { data: signalGaps },
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', id),
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', id),
     supabaseAdmin.from('model_runs').select('model, duration_ms, tokens_used').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),

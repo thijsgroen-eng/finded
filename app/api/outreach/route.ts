@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     { data: websiteAudit },
     { data: promptRuns },
   ] = await Promise.all([
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', audit_id),
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', audit_id).single(),
     supabaseAdmin.from('competitors').select('name, mention_count').eq('audit_id', audit_id).order('mention_count', { ascending: false }).limit(3),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),

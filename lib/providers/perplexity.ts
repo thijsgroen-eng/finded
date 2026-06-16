@@ -1,7 +1,9 @@
-import { ModelProvider, ModelResponse } from './types'
+import { ModelProvider, ModelResponse, RunOptions } from './types'
 
 export class PerplexityProvider implements ModelProvider {
   name = 'perplexity' as const
+  // Sonar models are search-grounded by default, so Perplexity is always grounded.
+  supportsGrounding = true
   private apiKey: string
 
   constructor() {
@@ -9,7 +11,7 @@ export class PerplexityProvider implements ModelProvider {
     this.apiKey = process.env.PERPLEXITY_API_KEY
   }
 
-  async runPrompt(prompt: string): Promise<ModelResponse> {
+  async runPrompt(prompt: string, options: RunOptions = {}): Promise<ModelResponse> {
     const start = Date.now()
     const timestamp = new Date().toISOString()
 
@@ -21,7 +23,9 @@ export class PerplexityProvider implements ModelProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-small-128k-online',
+          // 'sonar' is the current search-grounded base model. The previous
+          // 'llama-3.1-sonar-*' identifiers were deprecated after 2025-02-22.
+          model: 'sonar',
           messages: [
             {
               role: 'system',
@@ -31,7 +35,7 @@ export class PerplexityProvider implements ModelProvider {
             { role: 'user', content: prompt },
           ],
           max_tokens: 600,
-          temperature: 0.7,
+          temperature: options.temperature ?? 0.7,
         }),
       })
 
@@ -50,6 +54,7 @@ export class PerplexityProvider implements ModelProvider {
         timestamp,
         duration_ms: Date.now() - start,
         tokens_used,
+        grounded: true,
       }
     } catch (error) {
       return {
@@ -57,6 +62,7 @@ export class PerplexityProvider implements ModelProvider {
         response: '',
         timestamp,
         duration_ms: Date.now() - start,
+        grounded: true,
         error: error instanceof Error ? error.message : 'Unknown error',
       }
     }

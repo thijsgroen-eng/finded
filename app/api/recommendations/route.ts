@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
 
   const [{ data: mentions }, { data: websiteAudit }] = await Promise.all([
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', audit_id),
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),
   ])
 

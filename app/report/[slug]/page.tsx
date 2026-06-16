@@ -40,7 +40,7 @@ async function getReportData(slug: string) {
 
   const { data: mentions } = await supabaseAdmin
     .from('mentions')
-    .select('model, prompt_id, mentioned, position, sentiment')
+    .select('model, prompt_id, mentioned, mention_frequency, position, sentiment')
     .eq('audit_id', audit.id)
 
   const { data: websiteAudit } = await supabaseAdmin

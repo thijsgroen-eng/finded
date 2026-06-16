@@ -54,7 +54,7 @@ export default function LandingPage() {
             { step: '1', title: 'Enter your URL', desc: 'Paste your website. We detect your business type automatically.' },
             { step: '2', title: 'AI audit runs', desc: 'We query ChatGPT, Claude, Gemini and Perplexity with 50+ real searches.' },
             { step: '3', title: 'See your gaps', desc: 'Find out exactly why competitors get recommended and you don\'t.' },
-            { step: '4', title: 'Fix Now', desc: 'Generate schema, FAQ pages, and content — publish directly to WordPress.' },
+            { step: '4', title: 'Fix Now', desc: 'Generate schema, FAQ pages, and content — copy-paste ready to add to your site.' },
           ].map(({ step, title, desc }) => (
             <div key={step} style={{ textAlign: 'center' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#111110', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, margin: '0 auto 16px' }}>{step}</div>

@@ -25,9 +25,10 @@ A production-ready Next.js 15 platform that:
 
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to **SQL Editor** in your Supabase dashboard
-3. Run `supabase/migrations/001_initial_schema.sql` — creates all tables, indexes, views, and RLS policies
+3. Run `supabase/migrations/001_initial_schema.sql` — base tables, indexes, views, and RLS
 4. Run `supabase/migrations/002_seed_prompts.sql` — seeds prompt templates
-5. Note your project URL and keys from **Settings → API**
+5. Run `supabase/migrations/003_v2_schema.sql` — the v2 tables/columns the app actually uses (entities, visibility_scores, competitors, signal gaps, monitoring, leads, …) and tightened RLS. **Required** — the app will error against 001 alone.
+6. Note your project URL and keys from **Settings → API**
 
 ---
 
@@ -115,7 +116,7 @@ Add to `vercel.json`:
 }
 ```
 
-Note: Vercel crons don't support custom headers, so set `CRON_SECRET` to empty string in this case.
+Vercel Cron automatically sends an `Authorization: Bearer $CRON_SECRET` header when `CRON_SECRET` is set in the project's environment variables — the endpoints accept that as well as the `x-cron-secret` header used by the pg_cron job above. **Always set a real `CRON_SECRET`.** In production these endpoints fail closed: if `CRON_SECRET` is unset they return `503`, and if it's set every caller must present the matching secret (so the manual "Process queue" button in the admin UI works only in local development, or behind an authenticated admin layer you add).
 
 ---
 

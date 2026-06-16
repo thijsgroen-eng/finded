@@ -4,6 +4,8 @@
  * Detects structured data, contact signals, content signals, and social presence.
  */
 
+import { assertPublicHttpUrl } from './url-guard'
+
 export interface WebsiteAuditResult {
   // Universal signals
   schema_present: boolean
@@ -121,10 +123,9 @@ export async function auditWebsite(url: string): Promise<WebsiteAuditResult> {
 
   let parsedUrl: URL
   try {
-    const withProtocol = url.startsWith('http') ? url : `https://${url}`
-    parsedUrl = new URL(withProtocol)
-  } catch {
-    result.error = `Invalid URL: ${url}`
+    parsedUrl = assertPublicHttpUrl(url)
+  } catch (e) {
+    result.error = e instanceof Error ? e.message : `Invalid URL: ${url}`
     return result
   }
 

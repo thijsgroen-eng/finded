@@ -130,8 +130,8 @@ export const auditFunction = inngest.createFunction(
               await supabaseAdmin.from('model_runs').insert({
                 audit_id,
                 model:          provider.name,
-                prompt_id:      '00000000-0000-0000-0000-000000000000', // placeholder uuid
-                prompt_text_id: promptObj.id,  // actual text ID from generator
+                prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
+                prompt_text_id: promptObj.id,
                 raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
                 tokens_used:    result.tokens_used ?? null,
                 duration_ms:    result.duration_ms,
@@ -234,7 +234,7 @@ export const auditFunction = inngest.createFunction(
           await supabaseAdmin.from('mentions').insert({
             audit_id,
             model:           run.model,
-            prompt_id:       '00000000-0000-0000-0000-000000000000', // placeholder uuid
+            prompt_id:       run.prompt_id,   // generator's text id; lets computeMetrics count prompts
             restaurant_name: entity.name,
             mentioned:       targetEntity !== null,
             position:        targetEntity?.position ?? null,

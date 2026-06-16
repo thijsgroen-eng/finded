@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { runAudit } from '@/lib/engine/audit-runner'
+import { verifyCronRequest } from '@/lib/auth/cron'
 
 const WORKER_ID = `worker-${process.pid}-${Date.now()}`
 
@@ -15,10 +16,8 @@ const WORKER_ID = `worker-${process.pid}-${Date.now()}`
  * Protected by CRON_SECRET header.
  */
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get('x-cron-secret')
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = verifyCronRequest(request)
+  if (denied) return denied
 
   // Claim next available queue item (atomic-ish via update+select)
   const { data: claimed } = await supabaseAdmin
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
     .is('locked_at', null)
     .lt('attempts', 3)
     .lte('scheduled_at', new Date().toISOString())
-    .select('audit_id')
+    .select('audit_id, attempts')
     .limit(1)
     .single()
 
@@ -35,17 +34,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'No audits in queue', processed: 0 })
   }
 
-  const { audit_id } = claimed
+  const { audit_id, attempts } = claimed
 
   try {
     await runAudit(audit_id)
     return NextResponse.json({ message: 'Audit completed', audit_id, processed: 1 })
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
-    // Unlock so it can be retried
+    // Increment attempts and unlock so it can be retried — but not forever
+    // (the claim query above skips rows once attempts reaches the cap).
     await supabaseAdmin
       .from('audit_queue')
-      .update({ locked_at: null, locked_by: null })
+      .update({ locked_at: null, locked_by: null, attempts: attempts + 1 })
       .eq('audit_id', audit_id)
 
     return NextResponse.json(

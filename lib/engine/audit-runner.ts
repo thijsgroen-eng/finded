@@ -152,10 +152,21 @@ export async function runAudit(auditId: string): Promise<void> {
       })
       .eq('id', auditId)
 
-    // Increment attempt count so failed audits don't loop forever
+    // Increment attempt count so failed audits don't loop forever.
+    // The queue claim query skips rows once attempts reaches its cap.
+    const { data: queueRow } = await supabaseAdmin
+      .from('audit_queue')
+      .select('attempts')
+      .eq('audit_id', auditId)
+      .single()
+
     await supabaseAdmin
       .from('audit_queue')
-      .update({ locked_at: null, locked_by: null })
+      .update({
+        locked_at: null,
+        locked_by: null,
+        attempts: (queueRow?.attempts ?? 0) + 1,
+      })
       .eq('audit_id', auditId)
   }
 }

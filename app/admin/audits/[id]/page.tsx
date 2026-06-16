@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
-import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
+import { formatDateTime, formatPercent, statusVariant, ESTIMATE_CAVEAT } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -194,7 +194,7 @@ export default async function AuditDetailPage({
                   {visitorsMin && visitorsMax && (
                     <p className="text-sm text-gray-600">{visitorsMin}–{visitorsMax} additional visitors/month</p>
                   )}
-                  <p className="text-xs text-gray-400">Based on visibility gap vs top competitors</p>
+                  <p className="text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400">Not enough data to estimate yet</p>

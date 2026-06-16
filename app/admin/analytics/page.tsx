@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, Clock, Eye
 } from 'lucide-react'
 import Link from 'next/link'
+import { ESTIMATE_CAVEAT } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Overview {
@@ -321,8 +322,8 @@ export default function AnalyticsPage() {
                       </td>
                       <td className="px-4 py-3"><ScoreBadge score={row.visibility_score} /></td>
                       <td className="px-4 py-3"><ScoreBadge score={row.opportunity_score} /></td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">
-                        €{(row.estimated_revenue_min ?? 0).toLocaleString()} – €{(row.estimated_revenue_max ?? 0).toLocaleString()}
+                      <td className="px-4 py-3 text-gray-600 text-xs" title={ESTIMATE_CAVEAT}>
+                        ~€{(row.estimated_revenue_min ?? 0).toLocaleString()} – €{(row.estimated_revenue_max ?? 0).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -343,6 +344,7 @@ export default function AnalyticsPage() {
               </table>
             </div>
           )}
+          <p className="mt-2 text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
         </div>
       )}
 

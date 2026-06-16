@@ -27,6 +27,13 @@ export function formatNumber(value: number): string {
   return new Intl.NumberFormat('en-GB').format(value)
 }
 
+// Caveat shown wherever the illustrative revenue/visitor estimates appear.
+// Keep in sync with DEFAULT_ESTIMATE_ASSUMPTIONS / estimateCaveat() in
+// lib/engine/metrics-v2.ts. Duplicated here as a plain string so client
+// components can render it without importing the server-only metrics module.
+export const ESTIMATE_CAVEAT =
+  'Illustrative estimate based on an assumed 20% conversion rate and €45 average spend — not measured.'
+
 export function statusVariant(status: string) {
   switch (status) {
     case 'completed': return 'success'

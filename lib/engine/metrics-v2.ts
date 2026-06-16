@@ -70,6 +70,58 @@ interface EntityData {
   prompt_id: string
 }
 
+/**
+ * ⚠️ ILLUSTRATIVE, NOT EMPIRICALLY VALIDATED. These assumptions convert a
+ * "mention gap" (how many more times competitors are recommended than the
+ * target) into a rough business-impact range. The multipliers are storytelling
+ * assumptions, NOT measured conversion data, and must always be shown with a
+ * visible caveat in the UI. Override per deployment when real data exists.
+ */
+export interface EstimateAssumptions {
+  /** Assumed extra monthly visitors gained per additional AI recommendation. */
+  visitorsPerMentionMin: number
+  visitorsPerMentionMax: number
+  /** Assumed visitor → paying customer conversion rate (0–1). */
+  conversionRate: number
+  /** Assumed average spend per converted customer, in euros. */
+  avgSpendEur: number
+}
+
+export const DEFAULT_ESTIMATE_ASSUMPTIONS: EstimateAssumptions = {
+  visitorsPerMentionMin: 8,
+  visitorsPerMentionMax: 25,
+  conversionRate: 0.20,
+  avgSpendEur: 45,
+}
+
+/** Human-readable summary of the assumptions, for UI caveats. */
+export function estimateCaveat(a: EstimateAssumptions = DEFAULT_ESTIMATE_ASSUMPTIONS): string {
+  return `Illustrative estimate based on an assumed ${Math.round(a.conversionRate * 100)}% conversion rate and €${a.avgSpendEur} average spend — not measured.`
+}
+
+export interface OpportunityEstimate {
+  visitors_min: number
+  visitors_max: number
+  revenue_min: number
+  revenue_max: number
+}
+
+/** Illustrative only — see EstimateAssumptions. */
+export function estimateOpportunity(
+  mentionGap: number,
+  a: EstimateAssumptions = DEFAULT_ESTIMATE_ASSUMPTIONS
+): OpportunityEstimate {
+  const gap = Math.max(0, mentionGap)
+  const visitors_min = Math.round(gap * a.visitorsPerMentionMin)
+  const visitors_max = Math.round(gap * a.visitorsPerMentionMax)
+  return {
+    visitors_min,
+    visitors_max,
+    revenue_min: Math.round((visitors_min * a.conversionRate * a.avgSpendEur) / 100) * 100,
+    revenue_max: Math.round((visitors_max * a.conversionRate * a.avgSpendEur) / 100) * 100,
+  }
+}
+
 export function computeVisibilityScore(
   mentionFrequency: number,
   positionScore: number,
@@ -258,13 +310,11 @@ export function computeFullMetrics(
   const visibility_gap = Math.max(0, competitorAvgMentions - totalMentions)
   const recommendation_gap = Math.max(0, topCompetitorMentions - totalMentions)
 
-  const mentionGap = recommendation_gap
-  const estimated_additional_visitors_min = Math.max(0, Math.round(mentionGap * 8))
-  const estimated_additional_visitors_max = Math.max(0, Math.round(mentionGap * 25))
-  const avgSpend = 45
-  const conversionRate = 0.20
-  const estimated_revenue_min = Math.round(estimated_additional_visitors_min * conversionRate * avgSpend / 100) * 100
-  const estimated_revenue_max = Math.round(estimated_additional_visitors_max * conversionRate * avgSpend / 100) * 100
+  const est = estimateOpportunity(recommendation_gap)
+  const estimated_additional_visitors_min = est.visitors_min
+  const estimated_additional_visitors_max = est.visitors_max
+  const estimated_revenue_min = est.revenue_min
+  const estimated_revenue_max = est.revenue_max
 
   return {
     visibility_score,

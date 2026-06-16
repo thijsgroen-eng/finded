@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { StatCard, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
-import { formatDateTime, statusVariant } from '@/lib/utils'
+import { formatDateTime, statusVariant, ESTIMATE_CAVEAT } from '@/lib/utils'
 import {
   UtensilsCrossed, ClipboardList, TrendingUp,
   CheckCircle2, Clock, AlertCircle, Loader2,
@@ -180,8 +180,8 @@ export default async function DashboardPage() {
                           {Math.round(opp.opportunity_score ?? 0)}/100
                         </div>
                         {opp.estimated_revenue_max > 0 && (
-                          <div className="text-xs text-gray-400">
-                            €{(opp.estimated_revenue_min ?? 0).toLocaleString()}–€{(opp.estimated_revenue_max ?? 0).toLocaleString()}/mo
+                          <div className="text-xs text-gray-400" title={ESTIMATE_CAVEAT}>
+                            ~€{(opp.estimated_revenue_min ?? 0).toLocaleString()}–€{(opp.estimated_revenue_max ?? 0).toLocaleString()}/mo est.
                           </div>
                         )}
                       </div>

@@ -31,6 +31,11 @@ alter table audits add column if not exists recommendations  text;
 -- model_runs / mentions: the v2 pipeline keys rows by the prompt generator's
 -- text id, not a prompts(id) uuid. Drop the FK and widen the column so both the
 -- v1 (real prompts.id uuid) and v2 (generator text id) pipelines are valid.
+-- The unused audit_visibility view from 001 reads mentions.prompt_id, which
+-- blocks the type change, so drop it first (code computes metrics in the app,
+-- not from this view).
+drop view if exists audit_visibility;
+
 alter table model_runs drop constraint if exists model_runs_prompt_id_fkey;
 alter table model_runs alter column prompt_id drop not null;
 alter table model_runs alter column prompt_id type text using prompt_id::text;

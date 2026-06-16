@@ -131,6 +131,24 @@ Vercel Cron automatically sends an `Authorization: Bearer $CRON_SECRET` header w
 
 ---
 
+## Verifying it works
+
+Two checks run without any external accounts:
+
+- **Metric consistency** (`npm run verify:metrics`): asserts the read-time
+  metrics (report page / API routes) and the audit-time metrics
+  (`visibility_scores`) produce identical scores for the same data.
+- **Schema** (`scripts/verify-schema.sql`): apply all three migrations to any
+  Postgres, then `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/verify-schema.sql`
+  to confirm the schema accepts every write the app makes.
+
+A full end-to-end run additionally needs your own credentials: a Supabase
+project (run the three migrations), at least one provider API key, and Inngest
+(`npx inngest-cli@latest dev` locally, or dashboard keys in production). With
+those in `.env.local`, `npm run dev` → upload a CSV at `/admin/upload` → the
+Inngest run populates `visibility_scores`, and the dashboard + report page read
+from it.
+
 ## Architecture notes
 
 ### Audit pipeline

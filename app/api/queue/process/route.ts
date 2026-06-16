@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
-import { runAudit } from '@/lib/engine/audit-runner'
+import { inngest } from '@/lib/inngest/client'
 import { verifyCronRequest } from '@/lib/auth/cron'
 
 const WORKER_ID = `worker-${process.pid}-${Date.now()}`
 
 /**
  * POST /api/queue/process
- * Picks up the next queued audit and runs it.
- * Called by:
- * - Supabase cron job (every 2 minutes)
- * - Internal trigger after bulk upload
- * - Manual trigger from admin UI
  *
- * Protected by CRON_SECRET header.
+ * Drains the fallback queue. `audit_queue` only holds audits whose initial
+ * Inngest dispatch failed (see createAudit), so this worker re-dispatches the
+ * claimed audit to the single Inngest pipeline rather than running a separate
+ * engine. Inngest owns execution + retries and removes the queue row when the
+ * audit completes.
+ *
+ * Called by the Supabase pg_cron job / Vercel Cron. Protected by CRON_SECRET.
  */
 export async function POST(request: NextRequest) {
   const denied = verifyCronRequest(request)
@@ -36,9 +37,30 @@ export async function POST(request: NextRequest) {
 
   const { audit_id, attempts } = claimed
 
+  // Look up the restaurant the audit belongs to so we can build the event.
+  const { data: audit } = await supabaseAdmin
+    .from('audits')
+    .select('restaurant_id')
+    .eq('id', audit_id)
+    .single()
+
+  if (!audit) {
+    // Orphaned queue row — drop it.
+    await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+    return NextResponse.json({ message: 'Orphaned queue item removed', audit_id, processed: 0 })
+  }
+
   try {
-    await runAudit(audit_id)
-    return NextResponse.json({ message: 'Audit completed', audit_id, processed: 1 })
+    await inngest.send({
+      name: 'audit/requested',
+      data: { audit_id, restaurant_id: audit.restaurant_id },
+    })
+
+    // Hand-off complete. Remove the queue row so the cron doesn't dispatch a
+    // duplicate run; the Inngest function deletes it on completion as well.
+    await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+
+    return NextResponse.json({ message: 'Audit dispatched to Inngest', audit_id, processed: 1 })
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
     // Increment attempts and unlock so it can be retried — but not forever
@@ -48,10 +70,7 @@ export async function POST(request: NextRequest) {
       .update({ locked_at: null, locked_by: null, attempts: attempts + 1 })
       .eq('audit_id', audit_id)
 
-    return NextResponse.json(
-      { error: msg, audit_id },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: msg, audit_id }, { status: 500 })
   }
 }
 

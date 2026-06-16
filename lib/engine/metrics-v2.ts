@@ -1,4 +1,5 @@
 import { ExtractedEntity } from './entity-extractor'
+import { positionWeight } from './metrics-core'
 
 export interface CompetitorStats {
   name: string
@@ -64,9 +65,6 @@ interface EntityData {
   model: string
   prompt_id: string
 }
-
-const POSITION_WEIGHTS: Record<number, number> = { 1: 100, 2: 85, 3: 70, 4: 55, 5: 40 }
-const POSITION_DEFAULT = 20
 
 export function computeVisibilityScore(
   mentionFrequency: number,
@@ -137,7 +135,7 @@ export function computeFullMetrics(
   const bestPosition = positions.length > 0 ? Math.min(...positions) : null
   const worstPosition = positions.length > 0 ? Math.max(...positions) : null
 
-  const positionScores = positions.map(p => POSITION_WEIGHTS[p] ?? POSITION_DEFAULT)
+  const positionScores = positions.map(p => positionWeight(p))
   const positionScore = positionScores.length > 0
     ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
     : 0

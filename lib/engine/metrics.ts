@@ -1,4 +1,5 @@
 import { ModelBreakdown, ModelName, VisibilityMetrics } from '@/types/database'
+import { positionWeight } from './metrics-core'
 
 export interface MentionRow {
   model: ModelName
@@ -21,13 +22,6 @@ export interface ComputedMetrics {
     negative: number
   }
 }
-
-const POSITION_WEIGHTS: Record<number, number> = {
-  1: 100,
-  2: 70,
-  3: 50,
-}
-const POSITION_WEIGHT_DEFAULT = 20
 
 /**
  * Compute all visibility metrics from a flat array of mention rows.
@@ -56,7 +50,7 @@ export function computeMetrics(mentions: MentionRow[]): ComputedMetrics {
   // Position score — weighted average over all mentioned rows
   const positionScores = allMentions
     .filter((m) => m.position !== null)
-    .map((m) => POSITION_WEIGHTS[m.position!] ?? POSITION_WEIGHT_DEFAULT)
+    .map((m) => positionWeight(m.position!))
 
   const position_score =
     positionScores.length > 0

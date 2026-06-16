@@ -135,20 +135,29 @@ Vercel Cron automatically sends an `Authorization: Bearer $CRON_SECRET` header w
 
 ### Audit pipeline
 
+There is a single audit engine: the Inngest function in
+`lib/inngest/audit-function.ts`. `createAudit` dispatches an `audit/requested`
+event; if that send fails the audit is parked in `audit_queue` and the cron
+worker at `/api/queue/process` re-dispatches it to Inngest (it does not run a
+separate engine). Inngest owns execution and retries.
+
 ```
-CSV Upload → restaurant row → audit record → audit_queue entry
+createAudit → audit record → inngest.send('audit/requested')
+   (on send failure → audit_queue → /api/queue/process re-dispatches)
                                                      ↓
-                                          Queue processor picks up
+                                  Inngest function (durable, batched steps)
                                                      ↓
                                           Website crawler runs
                                                      ↓
-                                    Prompts generated for city+cuisine
+                              Prompts generated for business type + city
                                                      ↓
-                               Each provider runs each prompt (rate-limited)
+                          Each provider runs each prompt (batched)
                                                      ↓
-                              Mention extractor parses each response
+                      Claude extracts entities (target + competitors)
                                                      ↓
-                           model_runs + mentions rows written to Supabase
+        entities + mentions + model_runs written to Supabase
+                                                     ↓
+        visibility_scores + competitors + score_history computed
                                                      ↓
                                      audit.status = 'completed'
 ```
@@ -158,26 +167,28 @@ CSV Upload → restaurant row → audit record → audit_queue entry
 | Metric | Formula |
 |--------|---------|
 | Mention frequency | `mentions / total_prompts` |
-| Position score | Weighted avg: pos 1=100, pos 2=70, pos 3=50, pos 4+=20 |
+| Position score | Weighted avg: pos 1=100, 2=85, 3=70, 4=55, 5=40, 6+=20 |
 | Model consensus | Count of distinct models that mentioned the restaurant |
 | Share of voice | `restaurant_mentions / cohort_total_mentions` |
 
+The position weights live in one place — `lib/engine/metrics-core.ts` — and are
+shared by both the audit-time metrics (`metrics-v2.ts`, which persists
+`visibility_scores`) and the read-time metrics (`metrics.ts`, used by the report
+page and several API routes), so scores match no matter which path computes them.
+
 ### Rate limiting
 
-The audit runner has a 500ms delay between provider calls to avoid hitting rate limits. For bulk uploads of 100+ restaurants, audits are queued and processed one at a time by the cron job.
+The Inngest function runs prompts in batches with a short delay between calls
+and relies on Inngest's step retries. Bulk uploads create one audit per row;
+each is dispatched as its own Inngest run.
 
 ---
 
-## Adding more prompts
+## Prompts
 
-Prompts are stored in the `prompts` table. Add new ones directly in Supabase or via SQL:
-
-```sql
-insert into prompts (category, prompt, city)
-values ('casual', 'Best casual dinner spot in {city}', '{city}');
-```
-
-The engine auto-generates city-specific versions when a new city is first audited.
+Prompts are generated per audit from the business type and city by
+`lib/engine/prompt-generator.ts` (no manual prompt seeding required). The
+generated set for each audit is recorded in the `prompt_runs` table.
 
 ---
 
@@ -200,11 +211,14 @@ finded/
 │       └── metrics/dashboard/     # Dashboard aggregates
 ├── lib/
 │   ├── engine/
-│   │   ├── audit-runner.ts        # Orchestrates full audit
-│   │   ├── mention-extractor.ts   # Parses AI responses
-│   │   ├── metrics.ts             # Computes visibility metrics
-│   │   ├── prompt-engine.ts       # City-aware prompt generation
-│   │   └── website-auditor.ts     # Website crawler
+│   │   ├── audit-runner.ts        # createAudit — dispatches to Inngest
+│   │   ├── entity-extractor.ts    # Claude-based entity extraction
+│   │   ├── metrics-core.ts        # Shared metric primitives (position weights)
+│   │   ├── metrics.ts             # Read-time visibility metrics
+│   │   ├── metrics-v2.ts          # Audit-time metrics → visibility_scores
+│   │   ├── prompt-generator.ts    # Business-type + city prompt generation
+│   │   ├── signal-gap-engine.ts   # External signal / gap analysis
+│   │   └── website-auditor.ts     # Website crawler (SSRF-guarded)
 │   ├── providers/
 │   │   ├── openai.ts
 │   │   ├── anthropic.ts

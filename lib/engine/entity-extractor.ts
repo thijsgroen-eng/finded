@@ -17,6 +17,10 @@ export interface ExtractionResult {
   total_mentioned: number
   prompt: string
   model: string
+  /** True when the LLM extraction call itself failed (network/parse error), so
+   *  callers can fall back to keyword detection rather than treat it as "no
+   *  entities found". */
+  failed: boolean
 }
 
 /**
@@ -30,7 +34,7 @@ export async function extractEntities(
   model: string
 ): Promise<ExtractionResult> {
   if (!response || response.startsWith('ERROR:')) {
-    return { entities: [], total_mentioned: 0, prompt, model }
+    return { entities: [], total_mentioned: 0, prompt, model, failed: false }
   }
 
   const extractionPrompt = `Extract all restaurant and business names mentioned in this AI response to the query: "${prompt}"
@@ -80,10 +84,67 @@ Rules:
       total_mentioned: parsed.entities?.length ?? 0,
       prompt,
       model,
+      failed: false,
     }
   } catch {
-    return { entities: [], total_mentioned: 0, prompt, model }
+    return { entities: [], total_mentioned: 0, prompt, model, failed: true }
   }
+}
+
+// ── Cheap keyword fallback ──────────────────────────────────────────────────
+// Used only when the LLM extractor above fails, to still detect whether the
+// TARGET business was mentioned (it can't reliably enumerate competitors).
+
+const POSITIVE_WORDS = ['best', 'top', 'great', 'excellent', 'popular', 'recommend', 'favorite', 'favourite', 'must', 'amazing', 'loved', 'renowned', 'acclaimed', 'michelin']
+const NEGATIVE_WORDS = ['avoid', 'disappointing', 'poor', 'bad', 'terrible', 'overpriced', 'mediocre', 'closed', 'no longer']
+
+function normalizeText(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9\s'&-]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function nameVariants(name: string): string[] {
+  const variants = [name]
+  const noArticle = name.replace(/^(the|le|la|de|het|een)\s+/i, '')
+  if (noArticle !== name) variants.push(noArticle)
+  const words = name.split(/\s+/).filter(w => w.length > 2)
+  if (words.length >= 2) variants.push(words.slice(0, 2).join(' '))
+  return [...new Set(variants.map(normalizeText))].filter(Boolean)
+}
+
+/**
+ * Keyword-based detection of whether the target business appears in a response.
+ * Returns null if not found. Position is the numbered/bulleted list index when
+ * detectable, else null; sentiment is a coarse window-based guess.
+ */
+export function keywordTargetMention(
+  targetName: string,
+  response: string
+): { position: number | null; sentiment: 'positive' | 'neutral' | 'negative' } | null {
+  if (!response || !targetName) return null
+  const variants = nameVariants(targetName)
+  const norm = normalizeText(response)
+  if (!variants.some(v => norm.includes(v))) return null
+
+  // Position via numbered / bulleted list lines.
+  let position: number | null = null
+  let counter = 0
+  for (const line of response.split('\n')) {
+    const numbered = line.match(/^\s*(\d+)[.)]\s+/)
+    const bulleted = /^\s*[-•*]\s+/.test(line)
+    if (numbered) counter = parseInt(numbered[1], 10)
+    else if (bulleted) counter++
+    else continue
+    if (variants.some(v => normalizeText(line).includes(v))) { position = counter; break }
+  }
+
+  // Coarse sentiment from a window around the first mention.
+  const idx = Math.min(...variants.map(v => norm.indexOf(v)).filter(i => i >= 0))
+  const window = norm.slice(Math.max(0, idx - 60), idx + 200)
+  const pos = POSITIVE_WORDS.filter(w => window.includes(w)).length
+  const neg = NEGATIVE_WORDS.filter(w => window.includes(w)).length
+  const sentiment = pos > neg ? 'positive' : neg > pos ? 'negative' : 'neutral'
+
+  return { position, sentiment }
 }
 
 /**

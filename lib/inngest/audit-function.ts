@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
 import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPrompts } from '@/lib/engine/prompt-generator'
-import { extractEntities, findTargetInEntities } from '@/lib/engine/entity-extractor'
+import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 
 const BATCH_SIZE = 5
@@ -207,10 +207,17 @@ export const auditFunction = inngest.createFunction(
           const prompt = prompts.find((p: { id: string }) => p.id === run.prompt_id)
           if (!prompt) continue
 
-          // Extract entities from each sampled response for this (model, prompt).
+          // Extract entities from each sampled response. Cache identical samples
+          // (common at low temperature) so we don't pay for duplicate extractions.
+          const cache = new Map<string, Awaited<ReturnType<typeof extractEntities>>>()
           const extractions = []
           for (const resp of run.responses) {
-            extractions.push(await extractEntities(resp, prompt.prompt, run.model))
+            let ex = cache.get(resp)
+            if (!ex) {
+              ex = await extractEntities(resp, prompt.prompt, run.model)
+              cache.set(resp, ex)
+            }
+            extractions.push(ex)
           }
           const n = run.responses.length
 
@@ -275,12 +282,22 @@ export const auditFunction = inngest.createFunction(
           let mentionedCount = 0
           const targetPositions: number[] = []
           const targetSentiments: string[] = []
-          for (const ex of extractions) {
+          for (let i = 0; i < extractions.length; i++) {
+            const ex = extractions[i]
             const t = findTargetInEntities(entity.name, ex.entities)
             if (t) {
               mentionedCount++
               if (t.position) targetPositions.push(t.position)
               if (t.sentiment) targetSentiments.push(t.sentiment)
+            } else if (ex.failed) {
+              // LLM extraction failed for this sample — fall back to cheap keyword
+              // detection for the target so we don't silently drop a mention.
+              const kw = keywordTargetMention(entity.name, run.responses[i])
+              if (kw) {
+                mentionedCount++
+                if (kw.position) targetPositions.push(kw.position)
+                targetSentiments.push(kw.sentiment)
+              }
             }
           }
           const frequency = n > 0 ? mentionedCount / n : 0

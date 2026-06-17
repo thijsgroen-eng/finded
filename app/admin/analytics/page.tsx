@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Clock, Eye
 } from 'lucide-react'
 import Link from 'next/link'
-import { ESTIMATE_CAVEAT } from '@/lib/utils'
+import { ESTIMATE_CAVEAT } from '@/lib/estimates'
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Overview {

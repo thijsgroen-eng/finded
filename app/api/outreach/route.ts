@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
+import { asLanguage, languageForCountry, LANGUAGE_NAME_EN } from '@/lib/i18n'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(request: NextRequest) {
-  const { audit_id } = await request.json()
+  const body = await request.json()
+  const { audit_id } = body
 
   if (!audit_id) {
     return NextResponse.json({ error: 'audit_id required' }, { status: 400 })
@@ -36,8 +38,15 @@ export async function POST(request: NextRequest) {
 
   const metrics = computeMetrics(mentions ?? [])
   const restaurant = audit.restaurant as {
-    name: string; city: string; cuisine: string | null; website: string | null
+    name: string; city: string; cuisine: string | null; website: string | null; country: string | null
   }
+
+  // Email language: explicit request body wins, else derive from the restaurant's
+  // country (NL/BE → Dutch). Dutch is the default for the NL restaurant focus.
+  const language = body.language
+    ? asLanguage(body.language)
+    : languageForCountry(restaurant.country)
+  const langName = LANGUAGE_NAME_EN[language]
 
   const mentioningModels = metrics.model_breakdown.filter(m => m.mentions > 0).map(m => m.model)
   const missingModels = metrics.model_breakdown.filter(m => m.mentions === 0).map(m => m.model)
@@ -69,6 +78,8 @@ export async function POST(request: NextRequest) {
 
 Write a natural, human-sounding cold email from someone who was "researching" AI visibility and noticed something about this restaurant. It should feel like a smart founder reaching out with a genuine observation, not a sales email.
 
+LANGUAGE: Write the ENTIRE email — subject, greeting, body and sign-off — in ${langName}. It must read as if written by a native ${langName} speaker (idiomatic, not translated).
+
 RESTAURANT: ${restaurant.name}
 CITY: ${restaurant.city}
 CUISINE: ${restaurant.cuisine ?? 'restaurant'}
@@ -85,7 +96,7 @@ EXAMPLE PROMPTS TESTED:
 ${examplePrompts}
 
 TONE & STYLE REQUIREMENTS:
-- Open with "Hi," (no name — we don't know who we're writing to)
+- Open with a natural ${langName} greeting (no name — we don't know who we're writing to)
 - Frame it as: "I was researching how [city] restaurants appear in AI tools and noticed something about [restaurant]"
 - List 2-3 example prompts that were tested (use the actual ones above)
 - Mention which models they DO appear in (positive framing first)
@@ -93,8 +104,8 @@ TONE & STYLE REQUIREMENTS:
 - Name 2-3 actual competitors from the data
 - Say you ran a visibility audit and found several opportunities
 - List 3-4 specific bullet findings (use the actual data)
-- End with: "We've put together a short report showing exactly where these gaps exist and what can be done to improve them. Would you like me to send it over? No obligation—just thought you'd find the data interesting."
-- Sign off: "Best,\n[Your Name]\nFinded"
+- End with a short, no-obligation offer (in ${langName}) to send over a brief report showing exactly where the gaps are and what can be done — framed as "thought you'd find the data interesting", not a hard sell
+- Sign off naturally in ${langName}, then a new line "[Your Name]", then "Finded"
 - DO NOT mention prices, revenue estimates, or money
 - DO NOT use words like "leverage", "game-changing", "synergy"
 - Keep it under 250 words

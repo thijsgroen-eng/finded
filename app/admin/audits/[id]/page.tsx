@@ -7,13 +7,15 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
+import { OutreachEmail } from '@/components/admin/outreach-email'
 import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
+import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, preview_slug)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, preview_slug, country)')
     .eq('id', id)
     .single()
 
@@ -27,6 +29,7 @@ async function getAuditData(id: string) {
     business_type: string | null
     website: string | null
     preview_slug: string | null
+    country: string | null
   }
 
   const [
@@ -365,6 +368,9 @@ export default async function AuditDetailPage({
 
       {/* Recommendations + Fix Now */}
       <Recommendations auditId={id} />
+
+      {/* Outreach email (NL/EN) */}
+      <OutreachEmail auditId={id} restaurantName={entity.name} defaultLanguage={languageForCountry(entity.country)} />
 
       {audit.error_message && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 mt-4">

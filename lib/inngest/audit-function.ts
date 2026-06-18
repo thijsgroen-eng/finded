@@ -35,6 +35,21 @@ export const auditFunction = inngest.createFunction(
     retries: 2,
     timeouts: { finish: '15m' },
     triggers: [{ event: 'audit/requested' }],
+    // After all retries are exhausted, mark the audit failed with the error so it
+    // doesn't sit on "running" forever with no explanation.
+    onFailure: async ({ event, error }: { event: any; error: any }) => {
+      const auditId = event?.data?.event?.data?.audit_id
+      if (!auditId) return
+      await supabaseAdmin
+        .from('audits')
+        .update({
+          status: 'failed',
+          error_message: String(error?.message ?? 'Audit failed').slice(0, 500),
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', auditId)
+      await supabaseAdmin.from('audit_queue').delete().eq('audit_id', auditId)
+    },
   },
   async ({ event, step }: { event: { data: { audit_id: string; restaurant_id: string } }; step: any }) => {
     const { audit_id, restaurant_id } = event.data
@@ -182,6 +197,25 @@ export const auditFunction = inngest.createFunction(
       if (batchIdx < batches.length - 1) {
         await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, BATCH_DELAY)
       }
+    }
+
+    // If every model call failed (e.g. missing/invalid API key or no provider
+    // credit), fail the audit with a clear reason instead of "completing" with
+    // silent zeros — the raw errors are in model_runs.raw_response.
+    const successfulResponses = allRuns.reduce((sum, r) => sum + r.responses.length, 0)
+    if (successfulResponses === 0) {
+      await step.run(`no-successful-runs-${audit_id}`, async () => {
+        await supabaseAdmin
+          .from('audits')
+          .update({
+            status: 'failed',
+            error_message: 'All model calls failed — check provider API keys and credit balance (see model_runs for details).',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', audit_id)
+        await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+      })
+      return { success: false, audit_id, reason: 'no successful model responses' }
     }
 
     // ── Step 5: Extract entities (per sample) + aggregate ─────

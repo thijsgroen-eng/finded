@@ -422,24 +422,19 @@ function fillTemplate(
 
 // ── Importance scoring ─────────────────────────────────────────────────────────
 
-function scoreImportance(category: string, intent: string): number {
-  const scores: Record<string, number> = {
-    'discovery:general':     95,
-    'category:specific':     90,
-    'trust:rating':          85,
-    'occasions:high_value':  80,
-    'problem:solution':      75,
-    'geographic:local':      70,
-    'local:hidden':          60,
-    'longtail:specific':     50,
+function scoreImportance(category: string): number {
+  // Cuisine/category and occasion queries are the winnable, actionable surface,
+  // so they rank highest. Generic "best restaurants" discovery is kept only as a
+  // benchmark / competitor-discovery signal, at a lower weight.
+  switch (category) {
+    case 'category':   return 95   // cuisine-specific — the core, winnable
+    case 'occasions':  return 82
+    case 'discovery':  return 76   // generic — benchmark only
+    case 'geographic': return 74
+    case 'problem':    return 72
+    case 'trust':      return 70
+    default:           return 60
   }
-  if (category === 'discovery') return 95
-  if (category === 'category') return 88
-  if (category === 'trust') return 82
-  if (category === 'occasions') return 78
-  if (category === 'problemSolution') return 72
-  if (category === 'geographic') return 65
-  return 55
 }
 
 function getTier(importance: number): 1 | 2 | 3 {
@@ -457,7 +452,7 @@ export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
   let idx = 0
 
   function add(category: string, intent: string, text: string) {
-    const importance = scoreImportance(category, intent)
+    const importance = scoreImportance(category)
     prompts.push({
       id: `gen-${++idx}`,
       category,
@@ -504,9 +499,23 @@ export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
   return prompts.sort((a, b) => b.importance - a.importance)
 }
 
+// Quick audit: a cuisine-forward mix. Generic "best restaurants" discovery is
+// capped (kept only as a benchmark + competitor-discovery signal); the winnable
+// cuisine / occasion / neighbourhood queries dominate. Quotas are applied in
+// priority order, then any leftover slots are filled by importance — never adding
+// more generic discovery than its cap.
+const QUICK_TARGET = 14
+const QUICK_QUOTAS: Array<[string, number]> = [
+  ['category', 6],    // cuisine-specific — the winnable core
+  ['occasions', 3],
+  ['geographic', 2],
+  ['problem', 1],
+  ['discovery', 2],   // generic — benchmark / competitor mapping only
+  ['trust', 1],
+]
+
 /**
- * Quick audit subset — picks the highest-importance prompts
- * balanced across categories, respecting API cost constraints.
+ * Quick audit subset — cuisine/intent-forward, capped generic discovery.
  */
 export function getQuickPrompts(
   businessName: string,
@@ -526,10 +535,8 @@ export function getQuickPrompts(
     language,
   }
 
-  const all = generatePrompts(profile)
+  const all = generatePrompts(profile) // sorted by importance desc
 
-  // Take top 3 Tier 1, top 3 Tier 2, top 2 Tier 3 = 8 prompts minimum
-  // Plus ensure each category is represented at least once
   const byCategory: Record<string, GeneratedPrompt[]> = {}
   for (const p of all) {
     if (!byCategory[p.category]) byCategory[p.category] = []
@@ -539,22 +546,23 @@ export function getQuickPrompts(
   const selected = new Set<string>()
   const result: GeneratedPrompt[] = []
 
-  // One from each category first
-  for (const cat of Object.keys(byCategory)) {
-    const best = byCategory[cat][0]
-    if (!selected.has(best.id)) {
-      selected.add(best.id)
-      result.push(best)
+  // Apply per-category quotas in priority order (cuisine first).
+  for (const [cat, quota] of QUICK_QUOTAS) {
+    for (const p of (byCategory[cat] ?? []).slice(0, quota)) {
+      if (result.length >= QUICK_TARGET) break
+      if (!selected.has(p.id)) {
+        selected.add(p.id)
+        result.push(p)
+      }
     }
   }
 
-  // Fill up to 14 with highest importance
+  // Fill remaining slots by importance, but never beyond the generic-discovery cap.
   for (const p of all) {
-    if (result.length >= 14) break
-    if (!selected.has(p.id)) {
-      selected.add(p.id)
-      result.push(p)
-    }
+    if (result.length >= QUICK_TARGET) break
+    if (selected.has(p.id) || p.category === 'discovery') continue
+    selected.add(p.id)
+    result.push(p)
   }
 
   return result.sort((a, b) => b.importance - a.importance)

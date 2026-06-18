@@ -5,6 +5,7 @@ import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
+import { languageForCountry, asLanguage } from '@/lib/i18n'
 
 const BATCH_SIZE = 5
 const BATCH_DELAY = 1000
@@ -97,6 +98,12 @@ export const auditFunction = inngest.createFunction(
       const subtypes: string[] = entity.subtypes
         ?? (entity.cuisine ? [entity.cuisine] : [businessType])
 
+      // Prompt language: AUDIT_LANGUAGE env override, else derived from country
+      // (NL/BE → Dutch). Dutch is the default for the NL restaurant focus.
+      const language = process.env.AUDIT_LANGUAGE
+        ? asLanguage(process.env.AUDIT_LANGUAGE)
+        : languageForCountry(entity.country)
+
       const generated = getQuickPrompts(
         entity.name,
         businessType,
@@ -104,6 +111,7 @@ export const auditFunction = inngest.createFunction(
         entity.country ?? 'Netherlands',
         subtypes[0],
         subtypes,
+        language,
       )
 
       await supabaseAdmin.from('prompt_runs').insert(

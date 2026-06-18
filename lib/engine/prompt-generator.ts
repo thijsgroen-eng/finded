@@ -2,7 +2,13 @@
  * Universal Intent Engine
  * Generates AI visibility evaluation prompts for any business type.
  * Works for restaurants, dentists, lawyers, hotels, agencies, SaaS, etc.
+ *
+ * Prompts are generated per language. Dutch is the default for NL businesses
+ * (most real restaurant searches in the Netherlands are in Dutch); English is
+ * the fallback and is used for the future "any country" generalization.
  */
+
+import { Language } from '@/lib/i18n'
 
 export interface GeneratedPrompt {
   id: string
@@ -20,18 +26,21 @@ export interface BusinessProfile {
   location: string          // city
   country?: string
   specialties?: string[]    // optional extra signals
+  language?: Language       // prompt language; defaults to English
 }
 
-// ── Intent templates per business type ────────────────────────────────────────
-
-const BUSINESS_TEMPLATES: Record<string, {
+type TemplateSet = {
   discovery: string[]
   category: string[]
   occasions: string[]
   problemSolution: string[]
   trust: string[]
   geographic: string[]
-}> = {
+}
+
+// ── Intent templates per business type ────────────────────────────────────────
+
+const BUSINESS_TEMPLATES: Record<string, TemplateSet> = {
 
   restaurant: {
     discovery: [
@@ -276,6 +285,109 @@ const BUSINESS_TEMPLATES: Record<string, {
   },
 }
 
+// ── Dutch templates (restaurant-first; default for other types) ───────────────
+
+const BUSINESS_TEMPLATES_NL: Record<string, TemplateSet> = {
+  restaurant: {
+    discovery: [
+      'Beste restaurants in {location}',
+      'Leukste restaurants in {location}',
+      'Waar kun je goed eten in {location}',
+      'Beste plekken om te eten in {location}',
+      'Populaire restaurants in {location}',
+      'Aanraders om uit eten te gaan in {location}',
+      'Tips voor uit eten in {location}',
+    ],
+    category: [
+      'Beste {subtype} restaurant {location}',
+      'Top {subtype} restaurants in {location}',
+      'Waar kun je {subtype} eten in {location}',
+      'Authentiek {subtype} restaurant {location}',
+    ],
+    occasions: [
+      'Romantisch restaurant {location}',
+      'Restaurant voor een date in {location}',
+      'Zakelijk diner {location}',
+      'Restaurant voor een verjaardag {location}',
+      'Familierestaurant {location}',
+      'Restaurant voor een groep {location}',
+      'Restaurant voor een speciale gelegenheid {location}',
+    ],
+    problemSolution: [
+      'Waar kun je eten met kinderen in {location}',
+      'Goed restaurant voor toeristen in {location}',
+      'Restaurant voor een zakenlunch {location}',
+      'Waar kun je {subtype} eten in {location}',
+      'Restaurants die laat open zijn in {location}',
+      'Restaurant met terras {location}',
+    ],
+    trust: [
+      'Best beoordeelde restaurants {location}',
+      'Hoogst gewaardeerde restaurants {location}',
+      'Lokale favoriete restaurants {location}',
+      'Verborgen parels restaurants {location}',
+      'Bekroonde restaurants {location}',
+    ],
+    geographic: [
+      'Beste {subtype} restaurant in het centrum van {location}',
+      'Beste restaurants in de buurt van {location}',
+      '{subtype} restaurant centrum {location}',
+    ],
+  },
+
+  // Generic Dutch fallback for non-restaurant types (until each is localized).
+  default: {
+    discovery: [
+      'Beste {businessType} in {location}',
+      'Top {businessType} {location}',
+      'Aanrader {businessType} {location}',
+      'Goede {businessType} in de buurt van {location}',
+    ],
+    category: [
+      'Beste {subtype} {businessType} {location}',
+      '{subtype} diensten {location}',
+      'Top {subtype} aanbieder {location}',
+    ],
+    occasions: [
+      '{businessType} met spoed {location}',
+      '{businessType} voor bedrijven {location}',
+      '{businessType} voor particulieren {location}',
+    ],
+    problemSolution: [
+      'Waar vind je {subtype} in {location}',
+      'Wie biedt {subtype} aan in {location}',
+      'Beste {businessType} voor {subtype} {location}',
+      'Betaalbare {businessType} {location}',
+    ],
+    trust: [
+      'Best beoordeelde {businessType} {location}',
+      'Meest gewaardeerde {businessType} {location}',
+      'Betrouwbare {businessType} {location}',
+    ],
+    geographic: [
+      '{businessType} in het centrum van {location}',
+      '{subtype} {businessType} in de buurt van {location}',
+    ],
+  },
+}
+
+// Template sets by language. English covers all business types; Dutch is
+// restaurant-first and falls back to its generic default, then to English.
+const TEMPLATES_BY_LANGUAGE: Record<Language, Record<string, TemplateSet>> = {
+  en: BUSINESS_TEMPLATES,
+  nl: BUSINESS_TEMPLATES_NL,
+}
+
+function selectTemplate(businessType: string, language: Language): TemplateSet {
+  const lang = TEMPLATES_BY_LANGUAGE[language] ?? BUSINESS_TEMPLATES
+  return (
+    lang[businessType] ??
+    lang.default ??
+    BUSINESS_TEMPLATES[businessType] ??
+    BUSINESS_TEMPLATES.default
+  )
+}
+
 // ── Natural language variations ────────────────────────────────────────────────
 
 function generateVariations(basePrompt: string): string[] {
@@ -339,8 +451,7 @@ function getTier(importance: number): 1 | 2 | 3 {
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
-  const template = BUSINESS_TEMPLATES[profile.businessType.toLowerCase()]
-    ?? BUSINESS_TEMPLATES.default
+  const template = selectTemplate(profile.businessType.toLowerCase(), profile.language ?? 'en')
 
   const prompts: GeneratedPrompt[] = []
   let idx = 0
@@ -403,7 +514,8 @@ export function getQuickPrompts(
   location: string,
   country: string = 'Netherlands',
   subtype?: string,
-  subtypes?: string[]
+  subtypes?: string[],
+  language: Language = 'en'
 ): GeneratedPrompt[] {
   const profile: BusinessProfile = {
     name: businessName,
@@ -411,6 +523,7 @@ export function getQuickPrompts(
     subtypes: subtypes ?? (subtype ? [subtype] : [businessType]),
     location,
     country,
+    language,
   }
 
   const all = generatePrompts(profile)

@@ -24,8 +24,11 @@ export class OpenAIProvider implements ModelProvider {
       // with web_search_options. Those models do NOT accept `temperature`, so we
       // only send temperature on the ungrounded path.
       // (Verified against the installed openai SDK + platform.openai.com web-search docs.)
+      const modelVersion = grounded ? 'gpt-4o-mini-search-preview' : 'gpt-4o-mini'
+      const temperature = grounded ? null : (options.temperature ?? 0.7)
+
       const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
-        model: grounded ? 'gpt-4o-mini-search-preview' : 'gpt-4o-mini',
+        model: modelVersion,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: prompt },
@@ -34,14 +37,21 @@ export class OpenAIProvider implements ModelProvider {
       }
       if (grounded) {
         params.web_search_options = {}
-      } else {
-        params.temperature = options.temperature ?? 0.7
+      } else if (temperature !== null) {
+        params.temperature = temperature
       }
 
       const completion = await this.client.chat.completions.create(params)
 
-      const response = completion.choices[0]?.message?.content ?? ''
+      const message = completion.choices[0]?.message
+      const response = message?.content ?? ''
       const tokens_used = completion.usage?.total_tokens
+      // Web-search responses attach url_citation annotations.
+      const annotations = (message as { annotations?: Array<{ type?: string; url_citation?: { url?: string } }> })?.annotations ?? []
+      const sources = annotations
+        .filter((a) => a?.type === 'url_citation')
+        .map((a) => a?.url_citation?.url)
+        .filter((u): u is string => !!u)
 
       return {
         model: this.name,
@@ -50,6 +60,9 @@ export class OpenAIProvider implements ModelProvider {
         duration_ms: Date.now() - start,
         tokens_used,
         grounded,
+        model_version: modelVersion,
+        temperature,
+        sources,
       }
     } catch (error) {
       return {

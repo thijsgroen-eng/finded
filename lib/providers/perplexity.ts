@@ -14,6 +14,8 @@ export class PerplexityProvider implements ModelProvider {
   async runPrompt(prompt: string, options: RunOptions = {}): Promise<ModelResponse> {
     const start = Date.now()
     const timestamp = new Date().toISOString()
+    const modelVersion = 'sonar'
+    const temperature = options.temperature ?? 0.7
 
     try {
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -25,7 +27,7 @@ export class PerplexityProvider implements ModelProvider {
         body: JSON.stringify({
           // 'sonar' is the current search-grounded base model. The previous
           // 'llama-3.1-sonar-*' identifiers were deprecated after 2025-02-22.
-          model: 'sonar',
+          model: modelVersion,
           messages: [
             {
               role: 'system',
@@ -35,7 +37,7 @@ export class PerplexityProvider implements ModelProvider {
             { role: 'user', content: prompt },
           ],
           max_tokens: 600,
-          temperature: options.temperature ?? 0.7,
+          temperature,
         }),
       })
 
@@ -47,6 +49,12 @@ export class PerplexityProvider implements ModelProvider {
       const data = await response.json()
       const text = data.choices?.[0]?.message?.content ?? ''
       const tokens_used = data.usage?.total_tokens
+      // Sonar returns citations as an array of URL strings (fall back to search_results).
+      const sources: string[] = Array.isArray(data.citations)
+        ? data.citations.filter((u: unknown): u is string => typeof u === 'string')
+        : Array.isArray(data.search_results)
+          ? data.search_results.map((s: { url?: string }) => s?.url).filter((u: unknown): u is string => typeof u === 'string')
+          : []
 
       return {
         model: this.name,
@@ -55,6 +63,9 @@ export class PerplexityProvider implements ModelProvider {
         duration_ms: Date.now() - start,
         tokens_used,
         grounded: true,
+        model_version: modelVersion,
+        temperature,
+        sources,
       }
     } catch (error) {
       return {

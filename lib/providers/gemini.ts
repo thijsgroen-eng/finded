@@ -15,10 +15,12 @@ export class GeminiProvider implements ModelProvider {
     const start = Date.now()
     const timestamp = new Date().toISOString()
     const grounded = options.grounded ?? false
+    const modelVersion = 'gemini-2.5-flash'
+    const temperature = options.temperature ?? null
 
     try {
       const model = this.client.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: modelVersion,
         systemInstruction:
           'You are a helpful local guide. When asked about restaurants, provide specific, real recommendations with names. List restaurants clearly, typically as numbered lists or clearly named suggestions.',
         ...(options.temperature !== undefined
@@ -34,6 +36,12 @@ export class GeminiProvider implements ModelProvider {
 
       const result = await model.generateContent(prompt)
       const response = result.response.text()
+      // Grounded responses expose source URIs in groundingMetadata.groundingChunks.
+      const meta = (result.response as { candidates?: Array<{ groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string } }> } }> })
+        ?.candidates?.[0]?.groundingMetadata
+      const sources = (meta?.groundingChunks ?? [])
+        .map((c) => c?.web?.uri)
+        .filter((u): u is string => !!u)
 
       return {
         model: this.name,
@@ -41,6 +49,9 @@ export class GeminiProvider implements ModelProvider {
         timestamp,
         duration_ms: Date.now() - start,
         grounded,
+        model_version: modelVersion,
+        temperature,
+        sources,
       }
     } catch (error) {
       return {

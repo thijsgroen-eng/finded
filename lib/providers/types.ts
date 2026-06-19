@@ -18,6 +18,12 @@ export interface ModelResponse {
   error?: string
   /** Whether this response was produced with web-search grounding actually enabled. */
   grounded?: boolean
+  /** Exact model identifier used for this call (e.g. "claude-haiku-4-5-20251001"). */
+  model_version?: string
+  /** Temperature actually applied, or null when the model doesn't accept one. */
+  temperature?: number | null
+  /** Parsed citation / grounding source URLs from the response (empty if none). */
+  sources?: string[]
 }
 
 export interface ModelProvider {

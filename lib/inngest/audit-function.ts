@@ -71,6 +71,12 @@ export const auditFunction = inngest.createFunction(
       return { entity: data }
     })
 
+    // Audit language (NL/BE → Dutch, else English; AUDIT_LANGUAGE overrides).
+    // Computed once so both prompt generation and model_runs provenance use it.
+    const language = process.env.AUDIT_LANGUAGE
+      ? asLanguage(process.env.AUDIT_LANGUAGE)
+      : languageForCountry(entity.country)
+
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {
       const result = await auditWebsite(entity.website ?? '')
@@ -112,12 +118,6 @@ export const auditFunction = inngest.createFunction(
       const businessType = entity.business_type ?? 'restaurant'
       const subtypes: string[] = entity.subtypes
         ?? (entity.cuisine ? [entity.cuisine] : [businessType])
-
-      // Prompt language: AUDIT_LANGUAGE env override, else derived from country
-      // (NL/BE → Dutch). Dutch is the default for the NL restaurant focus.
-      const language = process.env.AUDIT_LANGUAGE
-        ? asLanguage(process.env.AUDIT_LANGUAGE)
-        : languageForCountry(entity.country)
 
       const generated = getQuickPrompts(
         entity.name,
@@ -176,6 +176,10 @@ export const auditFunction = inngest.createFunction(
                   prompt_text_id: promptObj.id,
                   sample_index:   sample,
                   grounded:       result.grounded ?? null,
+                  model_version:  result.model_version ?? null,
+                  temperature:    result.temperature ?? null,
+                  locale:         language,
+                  sources:        result.sources && result.sources.length ? result.sources : null,
                   raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
                   tokens_used:    result.tokens_used ?? null,
                   duration_ms:    result.duration_ms,

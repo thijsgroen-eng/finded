@@ -264,3 +264,41 @@ finded/
 - **Stripe payments** — unlock full reports for €29
 - **Email notifications** — alert when audit completes
 - **Trend charts** — recharts is already installed, just needs the UI
+
+---
+
+## Reliability test (proof the score isn't random)
+
+`/api/reliability-test` runs the **same restaurant through the full audit K times**
+and reports how stable the headline `visibility_score` is across those runs — the
+number to show a buyer. (This is *between-audit* variance; each audit already
+samples each prompt N times internally.)
+
+Requires migration `007_reliability_group.sql` applied, and the endpoint is gated
+by `CRON_SECRET` (send it as `x-cron-secret` or `Authorization: Bearer`).
+
+**1. Kick off K runs** (default 3, clamped 1..5):
+```bash
+curl -s -X POST https://YOUR_APP/api/reliability-test \
+  -H "x-cron-secret: $CRON_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"restaurant_id":"<uuid>","runs":3}'
+```
+Returns immediately with `group_id`, an `estimated_api_calls` cost figure
+(`runs × samples × providers × prompts` answering + ~the same for extraction), and
+a `poll_url`.
+
+**2. Poll until done:**
+```bash
+curl -s -H "x-cron-secret: $CRON_SECRET" \
+  "https://YOUR_APP/api/reliability-test?group_id=<group_id>"
+```
+While running: `{ "status":"running", "completed":1, "total":3 }`.
+
+**3. Read the verdict** (when `status:"complete"`): `visibility_score` and
+`mention_frequency` each report `per_run`, mean, median, min/max, `range`, stddev
+and `coefficient_of_variation`, plus a `per_model` breakdown to spot a noisy
+provider. The headline is `verdict`, based on the `visibility_score` range:
+- `range ≤ 5` → **STABLE — defensible**
+- `range ≤ 10` → **ACCEPTABLE — note the band when presenting**
+- `range > 10` → **UNSTABLE — increase SAMPLES or pin temperature lower**

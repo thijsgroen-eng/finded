@@ -1,4 +1,4 @@
-import { ModelProvider, ModelResponse, RunOptions } from './types'
+import { ModelProvider, ModelResponse, RunOptions, AUDIT_TEMPERATURE, extractUrlsFromText } from './types'
 
 export class PerplexityProvider implements ModelProvider {
   name = 'perplexity' as const
@@ -15,7 +15,7 @@ export class PerplexityProvider implements ModelProvider {
     const start = Date.now()
     const timestamp = new Date().toISOString()
     const modelVersion = 'sonar'
-    const temperature = options.temperature ?? 0.7
+    const temperature = options.temperature ?? AUDIT_TEMPERATURE
 
     try {
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -32,7 +32,7 @@ export class PerplexityProvider implements ModelProvider {
             {
               role: 'system',
               content:
-                'You are a helpful local guide. When asked about restaurants, provide specific, real recommendations with names. List restaurants clearly, typically as numbered lists or clearly named suggestions.',
+                'You are a helpful local guide. When asked to recommend businesses or places, give specific, real recommendations by name — typically as a clear numbered list.',
             },
             { role: 'user', content: prompt },
           ],
@@ -49,12 +49,14 @@ export class PerplexityProvider implements ModelProvider {
       const data = await response.json()
       const text = data.choices?.[0]?.message?.content ?? ''
       const tokens_used = data.usage?.total_tokens
-      // Sonar returns citations as an array of URL strings (fall back to search_results).
-      const sources: string[] = Array.isArray(data.citations)
+      // Sonar returns citations as an array of URL strings (fall back to search_results),
+      // unioned with any URLs found in the text.
+      const cited: string[] = Array.isArray(data.citations)
         ? data.citations.filter((u: unknown): u is string => typeof u === 'string')
         : Array.isArray(data.search_results)
           ? data.search_results.map((s: { url?: string }) => s?.url).filter((u: unknown): u is string => typeof u === 'string')
           : []
+      const sources = [...new Set([...cited, ...extractUrlsFromText(text)])]
 
       return {
         model: this.name,

@@ -1,8 +1,10 @@
 import OpenAI from 'openai'
-import { ModelProvider, ModelResponse, RunOptions } from './types'
+import { ModelProvider, ModelResponse, RunOptions, AUDIT_TEMPERATURE, extractUrlsFromText } from './types'
 
+// Neutral local-recommendations persona (no restaurant wording) so non-restaurant
+// audits aren't contaminated.
 const SYSTEM_PROMPT =
-  'You are a helpful local guide. When asked about restaurants, provide specific, real recommendations with names. List restaurants clearly, typically as numbered lists or clearly named suggestions.'
+  'You are a helpful local guide. When asked to recommend businesses or places, give specific, real recommendations by name — typically as a clear numbered list.'
 
 export class OpenAIProvider implements ModelProvider {
   name = 'openai' as const
@@ -25,7 +27,7 @@ export class OpenAIProvider implements ModelProvider {
       // only send temperature on the ungrounded path.
       // (Verified against the installed openai SDK + platform.openai.com web-search docs.)
       const modelVersion = grounded ? 'gpt-4o-mini-search-preview' : 'gpt-4o-mini'
-      const temperature = grounded ? null : (options.temperature ?? 0.7)
+      const temperature = grounded ? null : (options.temperature ?? AUDIT_TEMPERATURE)
 
       const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
         model: modelVersion,
@@ -48,10 +50,11 @@ export class OpenAIProvider implements ModelProvider {
       const tokens_used = completion.usage?.total_tokens
       // Web-search responses attach url_citation annotations.
       const annotations = (message as { annotations?: Array<{ type?: string; url_citation?: { url?: string } }> })?.annotations ?? []
-      const sources = annotations
+      const cited = annotations
         .filter((a) => a?.type === 'url_citation')
         .map((a) => a?.url_citation?.url)
         .filter((u): u is string => !!u)
+      const sources = [...new Set([...cited, ...extractUrlsFromText(response)])]
 
       return {
         model: this.name,

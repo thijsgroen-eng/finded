@@ -1,32 +1,20 @@
 import { inngest } from '@/lib/inngest/client'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
+import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
 
-const BATCH_SIZE = 5
-const BATCH_DELAY = 1000
-
-// Each prompt is sampled AUDIT_SAMPLES times at AUDIT_TEMPERATURE so a mention
-// becomes a frequency (e.g. seen in 2/3 runs = 0.67) instead of a single noisy
-// boolean. Grounding is on by default per provider that supports it.
-const AUDIT_SAMPLES = Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 3))
-const AUDIT_TEMPERATURE = Number(process.env.AUDIT_TEMPERATURE ?? 0.2)
+// Each prompt is sampled SAMPLES times at the pinned AUDIT_TEMPERATURE (0.7);
+// every sample is written + parsed independently so metrics-v2 can report a
+// frequency band. The quick prompt set is capped at MAX_PROMPTS to bound cost
+// and stay within the serverless timeout. AUDIT_SAMPLES=1 → cheap single-shot.
+const SAMPLES = Math.min(5, Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 3)))
+const MAX_PROMPTS = 8
 const AUDIT_GROUNDED = (process.env.AUDIT_GROUNDED ?? 'true') !== 'false'
-
-function majoritySentiment(values: string[]): string | null {
-  if (values.length === 0) return null
-  const counts = new Map<string, number>()
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
-}
-
-function average(nums: number[]): number | null {
-  return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null
-}
 
 export const auditFunction = inngest.createFunction(
   {
@@ -119,6 +107,8 @@ export const auditFunction = inngest.createFunction(
       const subtypes: string[] = entity.subtypes
         ?? (entity.cuisine ? [entity.cuisine] : [businessType])
 
+      // Cap at MAX_PROMPTS: sampling multiplies calls by SAMPLES × providers, so
+      // we use the top of the (cuisine-forward) quick set to bound cost/timeout.
       const generated = getQuickPrompts(
         entity.name,
         businessType,
@@ -127,7 +117,7 @@ export const auditFunction = inngest.createFunction(
         subtypes[0],
         subtypes,
         language,
-      )
+      ).slice(0, MAX_PROMPTS)
 
       await supabaseAdmin.from('prompt_runs').insert(
         generated.map((p: { id: string; category: string; intent: string; prompt: string }) => ({
@@ -142,72 +132,107 @@ export const auditFunction = inngest.createFunction(
       return { prompts: generated }
     })
 
-    // ── Step 4: Run AI models in batches (N samples per prompt) ───
+    // ── Steps 4+5: sample each prompt N×, parsing every sample independently ──
+    // For each (prompt, sample) we run all providers in parallel and write one
+    // model_runs + per-sample entities + one target mentions row, each tagged with
+    // sample_index. The Inngest step name includes audit_id + prompt id + sample so
+    // results are never cached (otherwise every "sample" would be identical).
     const providers = getAvailableProviders()
-    // One entry per (model, prompt) holding the successful sample responses.
-    const allRuns: Array<{ model: string; prompt_id: string; responses: string[]; samples: number }> = []
+    let totalSuccessful = 0
 
-    const batches: typeof prompts[] = []
-    for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
-      batches.push(prompts.slice(i, i + BATCH_SIZE))
-    }
+    for (const promptObj of prompts) {
+      for (let sample = 0; sample < SAMPLES; sample++) {
+        const { ok } = await step.run(`sample-${audit_id}-${promptObj.id}-s${sample}`, async () => {
+          let ok = 0
 
-    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-      const batch = batches[batchIdx]
+          await Promise.all(
+            providers.map(async (provider: any) => {
+              const result = await provider.runPrompt(promptObj.prompt, {
+                temperature: AUDIT_TEMPERATURE,
+                grounded: AUDIT_GROUNDED && provider.supportsGrounding,
+              })
 
-      const batchResults = await step.run(`run-prompts-batch-${audit_id}-${batchIdx}`, async () => {
-        const results: Array<{ model: string; prompt_id: string; responses: string[]; samples: number }> = []
+              await supabaseAdmin.from('model_runs').insert({
+                audit_id,
+                model:          provider.name,
+                prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
+                prompt_text_id: promptObj.id,
+                sample_index:   sample,
+                grounded:       result.grounded ?? null,
+                model_version:  result.model_version ?? null,
+                temperature:    result.temperature ?? null,
+                locale:         language,
+                sources:        result.sources && result.sources.length ? result.sources : null,
+                raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
+                tokens_used:    result.tokens_used ?? null,
+                duration_ms:    result.duration_ms,
+              })
 
-        await Promise.all(
-          providers.map(async (provider: any) => {
-            for (const promptObj of batch) {
-              const responses: string[] = []
-              for (let sample = 0; sample < AUDIT_SAMPLES; sample++) {
-                await new Promise(r => setTimeout(r, 200))
-                const result = await provider.runPrompt(promptObj.prompt, {
-                  temperature: AUDIT_TEMPERATURE,
-                  grounded: AUDIT_GROUNDED && provider.supportsGrounding,
-                })
+              if (result.error || !result.response) return
+              ok++
 
-                await supabaseAdmin.from('model_runs').insert({
-                  audit_id,
-                  model:          provider.name,
-                  prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
-                  prompt_text_id: promptObj.id,
-                  sample_index:   sample,
-                  grounded:       result.grounded ?? null,
-                  model_version:  result.model_version ?? null,
-                  temperature:    result.temperature ?? null,
-                  locale:         language,
-                  sources:        result.sources && result.sources.length ? result.sources : null,
-                  raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
-                  tokens_used:    result.tokens_used ?? null,
-                  duration_ms:    result.duration_ms,
-                })
+              // Parse THIS sample independently (no cross-sample caching).
+              const extraction = await extractEntities(result.response, promptObj.prompt, provider.name)
 
-                if (!result.error && result.response) responses.push(result.response)
+              for (const ent of extraction.entities) {
+                const { data: entityRow } = await supabaseAdmin
+                  .from('entities')
+                  .insert({
+                    audit_id,
+                    model:        provider.name,
+                    prompt_id:    promptObj.id,
+                    sample_index: sample,
+                    name:         ent.name,
+                    type:         ent.type,
+                    position:     ent.position,
+                    context:      ent.context,
+                    sentiment:    ent.sentiment,
+                    confidence:   ent.confidence,
+                  })
+                  .select('id')
+                  .single()
+
+                if (entityRow && ent.reasons.length > 0) {
+                  await supabaseAdmin.from('recommendation_reasons').insert(
+                    ent.reasons.map((reason: string) => ({ entity_id: entityRow.id, audit_id, reason }))
+                  )
+                }
               }
 
-              results.push({ model: provider.name, prompt_id: promptObj.id, responses, samples: AUDIT_SAMPLES })
-            }
-          })
-        )
+              // Target mention for this sample (keyword fallback if extraction failed).
+              const target = findTargetInEntities(entity.name, extraction.entities)
+              let mentioned = target !== null
+              let position = target?.position ?? null
+              let sentiment: string | null = target?.sentiment ?? null
+              if (!target && extraction.failed) {
+                const kw = keywordTargetMention(entity.name, result.response)
+                if (kw) { mentioned = true; position = kw.position; sentiment = kw.sentiment }
+              }
 
-        return results
-      })
+              await supabaseAdmin.from('mentions').insert({
+                audit_id,
+                model:             provider.name,
+                prompt_id:         promptObj.id,
+                sample_index:      sample,
+                restaurant_name:   entity.name,
+                mentioned,
+                mention_frequency: null, // per-sample row; the band is computed in metrics-v2
+                position,
+                sentiment,
+              })
+            })
+          )
 
-      allRuns.push(...batchResults)
+          return { ok }
+        })
 
-      if (batchIdx < batches.length - 1) {
-        await step.sleep(`batch-delay-${audit_id}-${batchIdx}`, BATCH_DELAY)
+        totalSuccessful += ok
       }
     }
 
-    // If every model call failed (e.g. missing/invalid API key or no provider
-    // credit), fail the audit with a clear reason instead of "completing" with
-    // silent zeros — the raw errors are in model_runs.raw_response.
-    const successfulResponses = allRuns.reduce((sum, r) => sum + r.responses.length, 0)
-    if (successfulResponses === 0) {
+    // If every model call failed (bad/missing key or no credit), fail with a clear
+    // reason instead of completing with silent zeros (raw errors are in model_runs).
+    if (totalSuccessful === 0) {
       await step.run(`no-successful-runs-${audit_id}`, async () => {
         await supabaseAdmin
           .from('audits')
@@ -220,155 +245,6 @@ export const auditFunction = inngest.createFunction(
         await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
       })
       return { success: false, audit_id, reason: 'no successful model responses' }
-    }
-
-    // ── Step 5: Extract entities (per sample) + aggregate ─────
-    // For each (model, prompt) we extract entities from every sampled response,
-    // then aggregate: the target's mention becomes a frequency across samples,
-    // and competitor entities are deduped (one row per name) with averaged
-    // position/sentiment. This collapses N noisy samples into one stable signal.
-    const allEntities: Array<{
-      name: string
-      position: number
-      sentiment: string
-      reasons: string[]
-      model: string
-      prompt_id: string
-    }> = []
-
-    const runsWithResponses = allRuns.filter(r => r.responses.length > 0)
-
-    const extractionBatches: typeof runsWithResponses[] = []
-    for (let i = 0; i < runsWithResponses.length; i += 10) {
-      extractionBatches.push(runsWithResponses.slice(i, i + 10))
-    }
-
-    for (let batchIdx = 0; batchIdx < extractionBatches.length; batchIdx++) {
-      const batch = extractionBatches[batchIdx]
-
-      const extractedBatch = await step.run(`extract-entities-batch-${audit_id}-${batchIdx}`, async () => {
-        const results: Array<{ name: string; position: number; sentiment: string; reasons: string[]; model: string; prompt_id: string }> = []
-
-        for (const run of batch) {
-          const prompt = prompts.find((p: { id: string }) => p.id === run.prompt_id)
-          if (!prompt) continue
-
-          // Extract entities from each sampled response. Cache identical samples
-          // (common at low temperature) so we don't pay for duplicate extractions.
-          const cache = new Map<string, Awaited<ReturnType<typeof extractEntities>>>()
-          const extractions = []
-          for (const resp of run.responses) {
-            let ex = cache.get(resp)
-            if (!ex) {
-              ex = await extractEntities(resp, prompt.prompt, run.model)
-              cache.set(resp, ex)
-            }
-            extractions.push(ex)
-          }
-          const n = run.responses.length
-
-          // Aggregate every entity across samples, keyed by normalized name.
-          const byName = new Map<string, {
-            name: string; type: string; positions: number[]; sentiments: string[]
-            reasons: Set<string>; confidences: number[]
-          }>()
-          for (const ex of extractions) {
-            for (const ent of ex.entities) {
-              const key = ent.name.toLowerCase().trim()
-              if (!byName.has(key)) {
-                byName.set(key, { name: ent.name, type: ent.type, positions: [], sentiments: [], reasons: new Set(), confidences: [] })
-              }
-              const agg = byName.get(key)!
-              if (ent.position) agg.positions.push(ent.position)
-              if (ent.sentiment) agg.sentiments.push(ent.sentiment)
-              for (const r of ent.reasons) agg.reasons.add(r)
-              if (typeof ent.confidence === 'number') agg.confidences.push(ent.confidence)
-            }
-          }
-
-          // Persist one aggregated entity row per distinct name.
-          for (const agg of byName.values()) {
-            const avgPos = average(agg.positions)
-            const position = avgPos !== null ? Math.round(avgPos) : null
-            const sentiment = majoritySentiment(agg.sentiments) ?? 'neutral'
-
-            const { data: entityRow } = await supabaseAdmin
-              .from('entities')
-              .insert({
-                audit_id,
-                model:      run.model,
-                prompt_id:  run.prompt_id,
-                name:       agg.name,
-                type:       agg.type,
-                position,
-                context:    null,
-                sentiment,
-                confidence: average(agg.confidences),
-              })
-              .select('id')
-              .single()
-
-            if (entityRow && agg.reasons.size > 0) {
-              await supabaseAdmin.from('recommendation_reasons').insert(
-                [...agg.reasons].map((reason: string) => ({ entity_id: entityRow.id, audit_id, reason }))
-              )
-            }
-
-            results.push({
-              name:      agg.name,
-              position:  position ?? 0,
-              sentiment,
-              reasons:   [...agg.reasons],
-              model:     run.model,
-              prompt_id: run.prompt_id,
-            })
-          }
-
-          // Aggregate the TARGET across samples → mention frequency.
-          let mentionedCount = 0
-          const targetPositions: number[] = []
-          const targetSentiments: string[] = []
-          for (let i = 0; i < extractions.length; i++) {
-            const ex = extractions[i]
-            const t = findTargetInEntities(entity.name, ex.entities)
-            if (t) {
-              mentionedCount++
-              if (t.position) targetPositions.push(t.position)
-              if (t.sentiment) targetSentiments.push(t.sentiment)
-            } else if (ex.failed) {
-              // LLM extraction failed for this sample — fall back to cheap keyword
-              // detection for the target so we don't silently drop a mention.
-              const kw = keywordTargetMention(entity.name, run.responses[i])
-              if (kw) {
-                mentionedCount++
-                if (kw.position) targetPositions.push(kw.position)
-                targetSentiments.push(kw.sentiment)
-              }
-            }
-          }
-          const frequency = n > 0 ? mentionedCount / n : 0
-          const avgTargetPos = average(targetPositions)
-
-          await supabaseAdmin.from('mentions').insert({
-            audit_id,
-            model:             run.model,
-            prompt_id:         run.prompt_id,   // generator's text id; lets computeMetrics count prompts
-            restaurant_name:   entity.name,
-            // `mentioned` is now a MAJORITY threshold over samples (>= 0.5). The
-            // graded signal lives in `mention_frequency`. Legacy readers that only
-            // look at `mentioned` (e.g. lib/engine/metrics.ts) still work but lose
-            // the sub-threshold nuance — see the note there.
-            mentioned:         frequency >= 0.5,
-            mention_frequency: frequency,
-            position:          avgTargetPos !== null ? Math.round(avgTargetPos) : null,
-            sentiment:         targetSentiments.length ? majoritySentiment(targetSentiments) : null,
-          })
-        }
-
-        return results
-      })
-
-      allEntities.push(...extractedBatch)
     }
 
     // ── Step 6: Compute scores ────────────────────────────────
@@ -412,6 +288,9 @@ export const auditFunction = inngest.createFunction(
         opportunity_score:         metrics.opportunity_score,
         opportunity_label:         metrics.opportunity_label,
         mention_frequency:         metrics.mention_frequency,
+        confidence_lo:             metrics.confidence_lo,
+        confidence_hi:             metrics.confidence_hi,
+        sample_count:              metrics.sample_count,
         prompt_coverage:           metrics.prompt_coverage,
         avg_position:              metrics.avg_position,
         median_position:           metrics.median_position,

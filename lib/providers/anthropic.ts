@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { ModelProvider, ModelResponse, RunOptions } from './types'
+import { ModelProvider, ModelResponse, RunOptions, AUDIT_TEMPERATURE, extractUrlsFromText } from './types'
 
+// Neutral local-recommendations persona (no restaurant wording).
 const SYSTEM_PROMPT =
-  'You are a helpful local guide. When asked about restaurants, provide specific, real recommendations with names. List restaurants clearly, typically as numbered lists or clearly named suggestions.'
+  'You are a helpful local guide. When asked to recommend businesses or places, give specific, real recommendations by name — typically as a clear numbered list.'
 
 export class AnthropicProvider implements ModelProvider {
   name = 'anthropic' as const
@@ -21,15 +22,15 @@ export class AnthropicProvider implements ModelProvider {
 
     try {
       const modelVersion = 'claude-haiku-4-5-20251001'
-      const temperature = options.temperature ?? null
+      const temperature = options.temperature ?? AUDIT_TEMPERATURE
 
       const params: Anthropic.MessageCreateParamsNonStreaming = {
         model: modelVersion,
         max_tokens: 600,
+        temperature,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],
       }
-      if (temperature !== null) params.temperature = temperature
       if (grounded) {
         // Native server-side web search tool (verified against the installed
         // @anthropic-ai/sdk + Claude web-search-tool docs).
@@ -46,13 +47,14 @@ export class AnthropicProvider implements ModelProvider {
         .join('\n')
         .trim()
       const tokens_used = message.usage.input_tokens + message.usage.output_tokens
-      // Collect URLs from web_search_tool_result blocks.
-      const sources: string[] = []
+      // Collect URLs from web_search_tool_result blocks, plus any in the text.
+      const cited: string[] = []
       for (const block of message.content as Array<{ type: string; content?: Array<{ url?: string }> }>) {
         if (block?.type === 'web_search_tool_result' && Array.isArray(block.content)) {
-          for (const r of block.content) if (r?.url) sources.push(r.url)
+          for (const r of block.content) if (r?.url) cited.push(r.url)
         }
       }
+      const sources = [...new Set([...cited, ...extractUrlsFromText(response)])]
 
       return {
         model: this.name,

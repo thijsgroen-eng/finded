@@ -15,6 +15,11 @@ export interface VisibilityMetricsV2 {
   visibility_score: number
   opportunity_score: number
   mention_frequency: number
+  /** Wilson score 95% confidence interval for mention_frequency (0–1). */
+  confidence_lo: number
+  confidence_hi: number
+  /** Total sampled (model × prompt × sample) cells the frequency is over. */
+  sample_count: number
   prompt_coverage: number
   avg_position: number | null
   median_position: number | null
@@ -118,6 +123,21 @@ export function computeOpportunityScore(
   return { score, label }
 }
 
+/**
+ * Wilson score interval for a binomial proportion (95% by default). Gives a
+ * defensible confidence band for "appears in X% of responses" — narrows as the
+ * number of samples grows. Returns {lo, hi} clamped to [0, 1].
+ */
+export function wilsonInterval(successes: number, n: number, z = 1.96): { lo: number; hi: number } {
+  if (n <= 0) return { lo: 0, hi: 0 }
+  const phat = successes / n
+  const z2 = z * z
+  const denom = 1 + z2 / n
+  const center = (phat + z2 / (2 * n)) / denom
+  const margin = (z * Math.sqrt((phat * (1 - phat) + z2 / (4 * n)) / n)) / denom
+  return { lo: Math.max(0, center - margin), hi: Math.min(1, center + margin) }
+}
+
 export function computeFullMetrics(
   targetName: string,
   mentions: MentionData[],
@@ -131,6 +151,9 @@ export function computeFullMetrics(
   const promptCoverage = totalPrompts > 0 ? promptsWithMention / totalPrompts : 0
   // Graded mention frequency, shared with the read-time path (metrics.ts).
   const mentionFrequency = gradedMentionFrequency(mentions)
+  // Confidence band over all sampled cells (one mentions row per model×prompt×sample).
+  const sample_count = mentions.length
+  const { lo: confidence_lo, hi: confidence_hi } = wilsonInterval(totalMentions, sample_count)
 
   const positions = targetMentions
     .filter(m => m.position !== null)
@@ -272,6 +295,9 @@ export function computeFullMetrics(
 
   return {
     visibility_score,
+    confidence_lo,
+    confidence_hi,
+    sample_count,
     opportunity_score: opportunityScore,
     mention_frequency: mentionFrequency,
     prompt_coverage: promptCoverage,

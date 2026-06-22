@@ -19,6 +19,7 @@ export interface ReportStrings {
   neutral: string
   negative: string
   competitors: string
+  mentions: string
   competitorsHiddenNote: (n: number) => string
   recommendations: string
   recommendationsHiddenNote: (n: number) => string
@@ -50,6 +51,7 @@ const EN: ReportStrings = {
   neutral: 'Neutral',
   negative: 'Negative',
   competitors: 'Competitors recommended more often',
+  mentions: 'Mentions',
   competitorsHiddenNote: (n) => `${n} competitors outrank you. Names and details are in the full report.`,
   recommendations: 'Recommendations',
   recommendationsHiddenNote: (n) => `${n} specific fixes identified. The step-by-step actions are in the full report.`,
@@ -81,6 +83,7 @@ const NL: ReportStrings = {
   neutral: 'Neutraal',
   negative: 'Negatief',
   competitors: 'Concurrenten die vaker worden aanbevolen',
+  mentions: 'Vermeldingen',
   competitorsHiddenNote: (n) => `${n} concurrenten scoren hoger dan jij. Namen en details staan in het volledige rapport.`,
   recommendations: 'Aanbevelingen',
   recommendationsHiddenNote: (n) => `${n} concrete verbeterpunten gevonden. De stappenplannen staan in het volledige rapport.`,

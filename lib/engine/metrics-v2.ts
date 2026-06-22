@@ -1,4 +1,6 @@
 import { ExtractedEntity } from './entity-extractor'
+import { positionWeight, gradedMentionFrequency } from './metrics-core'
+import { estimateOpportunity } from '@/lib/estimates'
 
 export interface CompetitorStats {
   name: string
@@ -13,6 +15,11 @@ export interface VisibilityMetricsV2 {
   visibility_score: number
   opportunity_score: number
   mention_frequency: number
+  /** Wilson score 95% confidence interval for mention_frequency (0–1). */
+  confidence_lo: number
+  confidence_hi: number
+  /** Total sampled (model × prompt × sample) cells the frequency is over. */
+  sample_count: number
   prompt_coverage: number
   avg_position: number | null
   median_position: number | null
@@ -52,6 +59,10 @@ interface MentionData {
   model: string
   prompt_id: string
   mentioned: boolean
+  /** Fraction of sampled runs (0–1) in which the target was mentioned. When
+   *  present, mention_frequency is the graded signal; `mentioned` is the
+   *  majority-threshold boolean kept for backward compatibility. */
+  mention_frequency?: number | null
   position: number | null
   sentiment: string | null
 }
@@ -65,8 +76,10 @@ interface EntityData {
   prompt_id: string
 }
 
-const POSITION_WEIGHTS: Record<number, number> = { 1: 100, 2: 85, 3: 70, 4: 55, 5: 40 }
-const POSITION_DEFAULT = 20
+/**
+ * ⚠️ ILLUSTRATIVE, NOT EMPIRICALLY VALIDATED. The revenue/visitor estimate
+ * assumptions and their caveat string live in one place — see @/lib/estimates.
+ */
 
 export function computeVisibilityScore(
   mentionFrequency: number,
@@ -110,6 +123,21 @@ export function computeOpportunityScore(
   return { score, label }
 }
 
+/**
+ * Wilson score interval for a binomial proportion (95% by default). Gives a
+ * defensible confidence band for "appears in X% of responses" — narrows as the
+ * number of samples grows. Returns {lo, hi} clamped to [0, 1].
+ */
+export function wilsonInterval(successes: number, n: number, z = 1.96): { lo: number; hi: number } {
+  if (n <= 0) return { lo: 0, hi: 0 }
+  const phat = successes / n
+  const z2 = z * z
+  const denom = 1 + z2 / n
+  const center = (phat + z2 / (2 * n)) / denom
+  const margin = (z * Math.sqrt((phat * (1 - phat) + z2 / (4 * n)) / n)) / denom
+  return { lo: Math.max(0, center - margin), hi: Math.min(1, center + margin) }
+}
+
 export function computeFullMetrics(
   targetName: string,
   mentions: MentionData[],
@@ -121,7 +149,11 @@ export function computeFullMetrics(
 
   const promptsWithMention = new Set(targetMentions.map(m => m.prompt_id)).size
   const promptCoverage = totalPrompts > 0 ? promptsWithMention / totalPrompts : 0
-  const mentionFrequency = totalPrompts > 0 ? Math.min(1, totalMentions / totalPrompts) : 0
+  // Graded mention frequency, shared with the read-time path (metrics.ts).
+  const mentionFrequency = gradedMentionFrequency(mentions)
+  // Confidence band over all sampled cells (one mentions row per model×prompt×sample).
+  const sample_count = mentions.length
+  const { lo: confidence_lo, hi: confidence_hi } = wilsonInterval(totalMentions, sample_count)
 
   const positions = targetMentions
     .filter(m => m.position !== null)
@@ -137,7 +169,7 @@ export function computeFullMetrics(
   const bestPosition = positions.length > 0 ? Math.min(...positions) : null
   const worstPosition = positions.length > 0 ? Math.max(...positions) : null
 
-  const positionScores = positions.map(p => POSITION_WEIGHTS[p] ?? POSITION_DEFAULT)
+  const positionScores = positions.map(p => positionWeight(p))
   const positionScore = positionScores.length > 0
     ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
     : 0
@@ -255,16 +287,17 @@ export function computeFullMetrics(
   const visibility_gap = Math.max(0, competitorAvgMentions - totalMentions)
   const recommendation_gap = Math.max(0, topCompetitorMentions - totalMentions)
 
-  const mentionGap = recommendation_gap
-  const estimated_additional_visitors_min = Math.max(0, Math.round(mentionGap * 8))
-  const estimated_additional_visitors_max = Math.max(0, Math.round(mentionGap * 25))
-  const avgSpend = 45
-  const conversionRate = 0.20
-  const estimated_revenue_min = Math.round(estimated_additional_visitors_min * conversionRate * avgSpend / 100) * 100
-  const estimated_revenue_max = Math.round(estimated_additional_visitors_max * conversionRate * avgSpend / 100) * 100
+  const est = estimateOpportunity(recommendation_gap)
+  const estimated_additional_visitors_min = est.visitors_min
+  const estimated_additional_visitors_max = est.visitors_max
+  const estimated_revenue_min = est.revenue_min
+  const estimated_revenue_max = est.revenue_max
 
   return {
     visibility_score,
+    confidence_lo,
+    confidence_hi,
+    sample_count,
     opportunity_score: opportunityScore,
     mention_frequency: mentionFrequency,
     prompt_coverage: promptCoverage,

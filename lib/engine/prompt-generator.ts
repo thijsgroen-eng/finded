@@ -2,7 +2,13 @@
  * Universal Intent Engine
  * Generates AI visibility evaluation prompts for any business type.
  * Works for restaurants, dentists, lawyers, hotels, agencies, SaaS, etc.
+ *
+ * Prompts are generated per language. Dutch is the default for NL businesses
+ * (most real restaurant searches in the Netherlands are in Dutch); English is
+ * the fallback and is used for the future "any country" generalization.
  */
+
+import { Language } from '@/lib/i18n'
 
 export interface GeneratedPrompt {
   id: string
@@ -20,18 +26,21 @@ export interface BusinessProfile {
   location: string          // city
   country?: string
   specialties?: string[]    // optional extra signals
+  language?: Language       // prompt language; defaults to English
 }
 
-// ── Intent templates per business type ────────────────────────────────────────
-
-const BUSINESS_TEMPLATES: Record<string, {
+type TemplateSet = {
   discovery: string[]
   category: string[]
   occasions: string[]
   problemSolution: string[]
   trust: string[]
   geographic: string[]
-}> = {
+}
+
+// ── Intent templates per business type ────────────────────────────────────────
+
+const BUSINESS_TEMPLATES: Record<string, TemplateSet> = {
 
   restaurant: {
     discovery: [
@@ -276,6 +285,109 @@ const BUSINESS_TEMPLATES: Record<string, {
   },
 }
 
+// ── Dutch templates (restaurant-first; default for other types) ───────────────
+
+const BUSINESS_TEMPLATES_NL: Record<string, TemplateSet> = {
+  restaurant: {
+    discovery: [
+      'Beste restaurants in {location}',
+      'Leukste restaurants in {location}',
+      'Waar kun je goed eten in {location}',
+      'Beste plekken om te eten in {location}',
+      'Populaire restaurants in {location}',
+      'Aanraders om uit eten te gaan in {location}',
+      'Tips voor uit eten in {location}',
+    ],
+    category: [
+      'Beste {subtype} restaurant {location}',
+      'Top {subtype} restaurants in {location}',
+      'Waar kun je {subtype} eten in {location}',
+      'Authentiek {subtype} restaurant {location}',
+    ],
+    occasions: [
+      'Romantisch restaurant {location}',
+      'Restaurant voor een date in {location}',
+      'Zakelijk diner {location}',
+      'Restaurant voor een verjaardag {location}',
+      'Familierestaurant {location}',
+      'Restaurant voor een groep {location}',
+      'Restaurant voor een speciale gelegenheid {location}',
+    ],
+    problemSolution: [
+      'Waar kun je eten met kinderen in {location}',
+      'Goed restaurant voor toeristen in {location}',
+      'Restaurant voor een zakenlunch {location}',
+      'Waar kun je {subtype} eten in {location}',
+      'Restaurants die laat open zijn in {location}',
+      'Restaurant met terras {location}',
+    ],
+    trust: [
+      'Best beoordeelde restaurants {location}',
+      'Hoogst gewaardeerde restaurants {location}',
+      'Lokale favoriete restaurants {location}',
+      'Verborgen parels restaurants {location}',
+      'Bekroonde restaurants {location}',
+    ],
+    geographic: [
+      'Beste {subtype} restaurant in het centrum van {location}',
+      'Beste restaurants in de buurt van {location}',
+      '{subtype} restaurant centrum {location}',
+    ],
+  },
+
+  // Generic Dutch fallback for non-restaurant types (until each is localized).
+  default: {
+    discovery: [
+      'Beste {businessType} in {location}',
+      'Top {businessType} {location}',
+      'Aanrader {businessType} {location}',
+      'Goede {businessType} in de buurt van {location}',
+    ],
+    category: [
+      'Beste {subtype} {businessType} {location}',
+      '{subtype} diensten {location}',
+      'Top {subtype} aanbieder {location}',
+    ],
+    occasions: [
+      '{businessType} met spoed {location}',
+      '{businessType} voor bedrijven {location}',
+      '{businessType} voor particulieren {location}',
+    ],
+    problemSolution: [
+      'Waar vind je {subtype} in {location}',
+      'Wie biedt {subtype} aan in {location}',
+      'Beste {businessType} voor {subtype} {location}',
+      'Betaalbare {businessType} {location}',
+    ],
+    trust: [
+      'Best beoordeelde {businessType} {location}',
+      'Meest gewaardeerde {businessType} {location}',
+      'Betrouwbare {businessType} {location}',
+    ],
+    geographic: [
+      '{businessType} in het centrum van {location}',
+      '{subtype} {businessType} in de buurt van {location}',
+    ],
+  },
+}
+
+// Template sets by language. English covers all business types; Dutch is
+// restaurant-first and falls back to its generic default, then to English.
+const TEMPLATES_BY_LANGUAGE: Record<Language, Record<string, TemplateSet>> = {
+  en: BUSINESS_TEMPLATES,
+  nl: BUSINESS_TEMPLATES_NL,
+}
+
+function selectTemplate(businessType: string, language: Language): TemplateSet {
+  const lang = TEMPLATES_BY_LANGUAGE[language] ?? BUSINESS_TEMPLATES
+  return (
+    lang[businessType] ??
+    lang.default ??
+    BUSINESS_TEMPLATES[businessType] ??
+    BUSINESS_TEMPLATES.default
+  )
+}
+
 // ── Natural language variations ────────────────────────────────────────────────
 
 function generateVariations(basePrompt: string): string[] {
@@ -310,24 +422,19 @@ function fillTemplate(
 
 // ── Importance scoring ─────────────────────────────────────────────────────────
 
-function scoreImportance(category: string, intent: string): number {
-  const scores: Record<string, number> = {
-    'discovery:general':     95,
-    'category:specific':     90,
-    'trust:rating':          85,
-    'occasions:high_value':  80,
-    'problem:solution':      75,
-    'geographic:local':      70,
-    'local:hidden':          60,
-    'longtail:specific':     50,
+function scoreImportance(category: string): number {
+  // Cuisine/category and occasion queries are the winnable, actionable surface,
+  // so they rank highest. Generic "best restaurants" discovery is kept only as a
+  // benchmark / competitor-discovery signal, at a lower weight.
+  switch (category) {
+    case 'category':   return 95   // cuisine-specific — the core, winnable
+    case 'occasions':  return 82
+    case 'discovery':  return 76   // generic — benchmark only
+    case 'geographic': return 74
+    case 'problem':    return 72
+    case 'trust':      return 70
+    default:           return 60
   }
-  if (category === 'discovery') return 95
-  if (category === 'category') return 88
-  if (category === 'trust') return 82
-  if (category === 'occasions') return 78
-  if (category === 'problemSolution') return 72
-  if (category === 'geographic') return 65
-  return 55
 }
 
 function getTier(importance: number): 1 | 2 | 3 {
@@ -339,14 +446,13 @@ function getTier(importance: number): 1 | 2 | 3 {
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
-  const template = BUSINESS_TEMPLATES[profile.businessType.toLowerCase()]
-    ?? BUSINESS_TEMPLATES.default
+  const template = selectTemplate(profile.businessType.toLowerCase(), profile.language ?? 'en')
 
   const prompts: GeneratedPrompt[] = []
   let idx = 0
 
   function add(category: string, intent: string, text: string) {
-    const importance = scoreImportance(category, intent)
+    const importance = scoreImportance(category)
     prompts.push({
       id: `gen-${++idx}`,
       category,
@@ -393,9 +499,23 @@ export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
   return prompts.sort((a, b) => b.importance - a.importance)
 }
 
+// Quick audit: a cuisine-forward mix. Generic "best restaurants" discovery is
+// capped (kept only as a benchmark + competitor-discovery signal); the winnable
+// cuisine / occasion / neighbourhood queries dominate. Quotas are applied in
+// priority order, then any leftover slots are filled by importance — never adding
+// more generic discovery than its cap.
+const QUICK_TARGET = 14
+const QUICK_QUOTAS: Array<[string, number]> = [
+  ['category', 6],    // cuisine-specific — the winnable core
+  ['occasions', 3],
+  ['geographic', 2],
+  ['problem', 1],
+  ['discovery', 2],   // generic — benchmark / competitor mapping only
+  ['trust', 1],
+]
+
 /**
- * Quick audit subset — picks the highest-importance prompts
- * balanced across categories, respecting API cost constraints.
+ * Quick audit subset — cuisine/intent-forward, capped generic discovery.
  */
 export function getQuickPrompts(
   businessName: string,
@@ -403,7 +523,8 @@ export function getQuickPrompts(
   location: string,
   country: string = 'Netherlands',
   subtype?: string,
-  subtypes?: string[]
+  subtypes?: string[],
+  language: Language = 'en'
 ): GeneratedPrompt[] {
   const profile: BusinessProfile = {
     name: businessName,
@@ -411,12 +532,11 @@ export function getQuickPrompts(
     subtypes: subtypes ?? (subtype ? [subtype] : [businessType]),
     location,
     country,
+    language,
   }
 
-  const all = generatePrompts(profile)
+  const all = generatePrompts(profile) // sorted by importance desc
 
-  // Take top 3 Tier 1, top 3 Tier 2, top 2 Tier 3 = 8 prompts minimum
-  // Plus ensure each category is represented at least once
   const byCategory: Record<string, GeneratedPrompt[]> = {}
   for (const p of all) {
     if (!byCategory[p.category]) byCategory[p.category] = []
@@ -426,22 +546,23 @@ export function getQuickPrompts(
   const selected = new Set<string>()
   const result: GeneratedPrompt[] = []
 
-  // One from each category first
-  for (const cat of Object.keys(byCategory)) {
-    const best = byCategory[cat][0]
-    if (!selected.has(best.id)) {
-      selected.add(best.id)
-      result.push(best)
+  // Apply per-category quotas in priority order (cuisine first).
+  for (const [cat, quota] of QUICK_QUOTAS) {
+    for (const p of (byCategory[cat] ?? []).slice(0, quota)) {
+      if (result.length >= QUICK_TARGET) break
+      if (!selected.has(p.id)) {
+        selected.add(p.id)
+        result.push(p)
+      }
     }
   }
 
-  // Fill up to 14 with highest importance
+  // Fill remaining slots by importance, but never beyond the generic-discovery cap.
   for (const p of all) {
-    if (result.length >= 14) break
-    if (!selected.has(p.id)) {
-      selected.add(p.id)
-      result.push(p)
-    }
+    if (result.length >= QUICK_TARGET) break
+    if (selected.has(p.id) || p.category === 'discovery') continue
+    selected.add(p.id)
+    result.push(p)
   }
 
   return result.sort((a, b) => b.importance - a.importance)

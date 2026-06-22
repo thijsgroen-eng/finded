@@ -3,17 +3,20 @@
 import { useState } from 'react'
 import { Mail, RefreshCw, Copy, Check } from 'lucide-react'
 import { Spinner } from '@/components/ui'
+import { Language, LANGUAGES, LANGUAGE_LABELS } from '@/lib/i18n'
 
 interface Props {
   auditId: string
   restaurantName: string
+  defaultLanguage?: Language
 }
 
-export function OutreachEmail({ auditId, restaurantName }: Props) {
+export function OutreachEmail({ auditId, restaurantName, defaultLanguage = 'nl' }: Props) {
   const [email, setEmail] = useState<{ subject: string; body: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [language, setLanguage] = useState<Language>(defaultLanguage)
 
   async function generate() {
     setLoading(true)
@@ -22,7 +25,7 @@ export function OutreachEmail({ auditId, restaurantName }: Props) {
       const res = await fetch('/api/outreach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audit_id: auditId }),
+        body: JSON.stringify({ audit_id: auditId, language }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -48,7 +51,17 @@ export function OutreachEmail({ auditId, restaurantName }: Props) {
           <Mail className="w-4 h-4 text-blue-500" />
           <h3 className="text-sm font-semibold text-gray-900">Outreach email</h3>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-600 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            aria-label="Email language"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l}>{LANGUAGE_LABELS[l]}</option>
+            ))}
+          </select>
           {email && (
             <button
               onClick={copyEmail}

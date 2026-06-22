@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { StatCard, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
 import { formatDateTime, statusVariant } from '@/lib/utils'
+import { ESTIMATE_CAVEAT } from '@/lib/estimates'
 import {
   UtensilsCrossed, ClipboardList, TrendingUp,
   CheckCircle2, Clock, AlertCircle, Loader2,
@@ -163,6 +164,7 @@ export default async function DashboardPage() {
             {d.topOpportunities.length === 0 ? (
               <p className="text-sm text-gray-400 py-4">No audits completed yet</p>
             ) : (
+              <>
               <div className="space-y-2">
                 {d.topOpportunities.map((opp: any) => {
                   const restaurant = Array.isArray(opp.restaurant) ? opp.restaurant[0] : opp.restaurant
@@ -180,8 +182,8 @@ export default async function DashboardPage() {
                           {Math.round(opp.opportunity_score ?? 0)}/100
                         </div>
                         {opp.estimated_revenue_max > 0 && (
-                          <div className="text-xs text-gray-400">
-                            €{(opp.estimated_revenue_min ?? 0).toLocaleString()}–€{(opp.estimated_revenue_max ?? 0).toLocaleString()}/mo
+                          <div className="text-xs text-gray-400" title={ESTIMATE_CAVEAT}>
+                            ~€{(opp.estimated_revenue_min ?? 0).toLocaleString()}–€{(opp.estimated_revenue_max ?? 0).toLocaleString()}/mo est.
                           </div>
                         )}
                       </div>
@@ -189,6 +191,8 @@ export default async function DashboardPage() {
                   )
                 })}
               </div>
+              <p className="mt-3 text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
+              </>
             )}
           </CardContent>
         </Card>

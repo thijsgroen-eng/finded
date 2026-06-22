@@ -5,6 +5,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { assertPublicHttpUrl } from './url-guard'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -74,24 +75,34 @@ function extractMeta(html: string): { title: string | null; description: string 
 }
 
 export async function detectBusiness(url: string): Promise<DetectedBusiness> {
-  const normalizedUrl = url.startsWith('http') ? url : `https://${url}`
+  // Validate before fetching to avoid SSRF against internal/reserved hosts.
+  // If invalid, skip the fetch and let Claude classify from the URL alone.
+  let safeUrl: URL | null = null
+  try {
+    safeUrl = assertPublicHttpUrl(url)
+  } catch {
+    safeUrl = null
+  }
+  const normalizedUrl = safeUrl?.href ?? (url.startsWith('http') ? url : `https://${url}`)
 
   // Fetch the website
   let html = ''
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
-    const res = await fetch(normalizedUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; FindedBot/1.0)',
-        'Accept': 'text/html',
-      },
-    })
-    clearTimeout(timeout)
-    if (res.ok) html = await res.text()
-  } catch {
-    // Continue with empty html — Claude will still try to classify from URL
+  if (safeUrl) {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
+      const res = await fetch(safeUrl.href, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; FindedBot/1.0)',
+          'Accept': 'text/html',
+        },
+      })
+      clearTimeout(timeout)
+      if (res.ok) html = await res.text()
+    } catch {
+      // Continue with empty html — Claude will still try to classify from URL
+    }
   }
 
   const meta = extractMeta(html)

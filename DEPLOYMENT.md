@@ -25,9 +25,10 @@ A production-ready Next.js 15 platform that:
 
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to **SQL Editor** in your Supabase dashboard
-3. Run `supabase/migrations/001_initial_schema.sql` — creates all tables, indexes, views, and RLS policies
+3. Run `supabase/migrations/001_initial_schema.sql` — base tables, indexes, views, and RLS
 4. Run `supabase/migrations/002_seed_prompts.sql` — seeds prompt templates
-5. Note your project URL and keys from **Settings → API**
+5. Run `supabase/migrations/003_v2_schema.sql` — the v2 tables/columns the app actually uses (entities, visibility_scores, competitors, signal gaps, monitoring, leads, …) and tightened RLS. **Required** — the app will error against 001 alone.
+6. Note your project URL and keys from **Settings → API**
 
 ---
 
@@ -115,7 +116,7 @@ Add to `vercel.json`:
 }
 ```
 
-Note: Vercel crons don't support custom headers, so set `CRON_SECRET` to empty string in this case.
+Vercel Cron automatically sends an `Authorization: Bearer $CRON_SECRET` header when `CRON_SECRET` is set in the project's environment variables — the endpoints accept that as well as the `x-cron-secret` header used by the pg_cron job above. **Always set a real `CRON_SECRET`.** In production these endpoints fail closed: if `CRON_SECRET` is unset they return `503`, and if it's set every caller must present the matching secret (so the manual "Process queue" button in the admin UI works only in local development, or behind an authenticated admin layer you add).
 
 ---
 
@@ -130,24 +131,51 @@ Note: Vercel crons don't support custom headers, so set `CRON_SECRET` to empty s
 
 ---
 
+## Verifying it works
+
+Two checks run without any external accounts:
+
+- **Metric consistency** (`npm run verify:metrics`): asserts the read-time
+  metrics (report page / API routes) and the audit-time metrics
+  (`visibility_scores`) produce identical scores for the same data.
+- **Schema** (`scripts/verify-schema.sql`): apply all three migrations to any
+  Postgres, then `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/verify-schema.sql`
+  to confirm the schema accepts every write the app makes.
+
+A full end-to-end run additionally needs your own credentials: a Supabase
+project (run the three migrations), at least one provider API key, and Inngest
+(`npx inngest-cli@latest dev` locally, or dashboard keys in production). With
+those in `.env.local`, `npm run dev` → upload a CSV at `/admin/upload` → the
+Inngest run populates `visibility_scores`, and the dashboard + report page read
+from it.
+
 ## Architecture notes
 
 ### Audit pipeline
 
+There is a single audit engine: the Inngest function in
+`lib/inngest/audit-function.ts`. `createAudit` dispatches an `audit/requested`
+event; if that send fails the audit is parked in `audit_queue` and the cron
+worker at `/api/queue/process` re-dispatches it to Inngest (it does not run a
+separate engine). Inngest owns execution and retries.
+
 ```
-CSV Upload → restaurant row → audit record → audit_queue entry
+createAudit → audit record → inngest.send('audit/requested')
+   (on send failure → audit_queue → /api/queue/process re-dispatches)
                                                      ↓
-                                          Queue processor picks up
+                                  Inngest function (durable, batched steps)
                                                      ↓
                                           Website crawler runs
                                                      ↓
-                                    Prompts generated for city+cuisine
+                              Prompts generated for business type + city
                                                      ↓
-                               Each provider runs each prompt (rate-limited)
+                          Each provider runs each prompt (batched)
                                                      ↓
-                              Mention extractor parses each response
+                      Claude extracts entities (target + competitors)
                                                      ↓
-                           model_runs + mentions rows written to Supabase
+        entities + mentions + model_runs written to Supabase
+                                                     ↓
+        visibility_scores + competitors + score_history computed
                                                      ↓
                                      audit.status = 'completed'
 ```
@@ -157,26 +185,28 @@ CSV Upload → restaurant row → audit record → audit_queue entry
 | Metric | Formula |
 |--------|---------|
 | Mention frequency | `mentions / total_prompts` |
-| Position score | Weighted avg: pos 1=100, pos 2=70, pos 3=50, pos 4+=20 |
+| Position score | Weighted avg: pos 1=100, 2=85, 3=70, 4=55, 5=40, 6+=20 |
 | Model consensus | Count of distinct models that mentioned the restaurant |
 | Share of voice | `restaurant_mentions / cohort_total_mentions` |
 
+The position weights live in one place — `lib/engine/metrics-core.ts` — and are
+shared by both the audit-time metrics (`metrics-v2.ts`, which persists
+`visibility_scores`) and the read-time metrics (`metrics.ts`, used by the report
+page and several API routes), so scores match no matter which path computes them.
+
 ### Rate limiting
 
-The audit runner has a 500ms delay between provider calls to avoid hitting rate limits. For bulk uploads of 100+ restaurants, audits are queued and processed one at a time by the cron job.
+The Inngest function runs prompts in batches with a short delay between calls
+and relies on Inngest's step retries. Bulk uploads create one audit per row;
+each is dispatched as its own Inngest run.
 
 ---
 
-## Adding more prompts
+## Prompts
 
-Prompts are stored in the `prompts` table. Add new ones directly in Supabase or via SQL:
-
-```sql
-insert into prompts (category, prompt, city)
-values ('casual', 'Best casual dinner spot in {city}', '{city}');
-```
-
-The engine auto-generates city-specific versions when a new city is first audited.
+Prompts are generated per audit from the business type and city by
+`lib/engine/prompt-generator.ts` (no manual prompt seeding required). The
+generated set for each audit is recorded in the `prompt_runs` table.
 
 ---
 
@@ -199,11 +229,14 @@ finded/
 │       └── metrics/dashboard/     # Dashboard aggregates
 ├── lib/
 │   ├── engine/
-│   │   ├── audit-runner.ts        # Orchestrates full audit
-│   │   ├── mention-extractor.ts   # Parses AI responses
-│   │   ├── metrics.ts             # Computes visibility metrics
-│   │   ├── prompt-engine.ts       # City-aware prompt generation
-│   │   └── website-auditor.ts     # Website crawler
+│   │   ├── audit-runner.ts        # createAudit — dispatches to Inngest
+│   │   ├── entity-extractor.ts    # Claude-based entity extraction
+│   │   ├── metrics-core.ts        # Shared metric primitives (position weights)
+│   │   ├── metrics.ts             # Read-time visibility metrics
+│   │   ├── metrics-v2.ts          # Audit-time metrics → visibility_scores
+│   │   ├── prompt-generator.ts    # Business-type + city prompt generation
+│   │   ├── signal-gap-engine.ts   # External signal / gap analysis
+│   │   └── website-auditor.ts     # Website crawler (SSRF-guarded)
 │   ├── providers/
 │   │   ├── openai.ts
 │   │   ├── anthropic.ts
@@ -231,3 +264,41 @@ finded/
 - **Stripe payments** — unlock full reports for €29
 - **Email notifications** — alert when audit completes
 - **Trend charts** — recharts is already installed, just needs the UI
+
+---
+
+## Reliability test (proof the score isn't random)
+
+`/api/reliability-test` runs the **same restaurant through the full audit K times**
+and reports how stable the headline `visibility_score` is across those runs — the
+number to show a buyer. (This is *between-audit* variance; each audit already
+samples each prompt N times internally.)
+
+Requires migration `007_reliability_group.sql` applied, and the endpoint is gated
+by `CRON_SECRET` (send it as `x-cron-secret` or `Authorization: Bearer`).
+
+**1. Kick off K runs** (default 3, clamped 1..5):
+```bash
+curl -s -X POST https://YOUR_APP/api/reliability-test \
+  -H "x-cron-secret: $CRON_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"restaurant_id":"<uuid>","runs":3}'
+```
+Returns immediately with `group_id`, an `estimated_api_calls` cost figure
+(`runs × samples × providers × prompts` answering + ~the same for extraction), and
+a `poll_url`.
+
+**2. Poll until done:**
+```bash
+curl -s -H "x-cron-secret: $CRON_SECRET" \
+  "https://YOUR_APP/api/reliability-test?group_id=<group_id>"
+```
+While running: `{ "status":"running", "completed":1, "total":3 }`.
+
+**3. Read the verdict** (when `status:"complete"`): `visibility_score` and
+`mention_frequency` each report `per_run`, mean, median, min/max, `range`, stddev
+and `coefficient_of_variation`, plus a `per_model` breakdown to spot a noisy
+provider. The headline is `verdict`, based on the `visibility_score` range:
+- `range ≤ 5` → **STABLE — defensible**
+- `range ≤ 10` → **ACCEPTABLE — note the band when presenting**
+- `range > 10` → **UNSTABLE — increase SAMPLES or pin temperature lower**

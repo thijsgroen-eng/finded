@@ -4,6 +4,18 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// Appended to every fix's system prompt. These assets are about REAL businesses,
+// so the model must never invent verifiable facts (founding dates, awards,
+// chef names, review counts, prices, quotes, addresses). Anything the business
+// must supply is emitted as an explicit [PLACEHOLDER: ...] marker for the owner
+// to fill in.
+const NO_FABRICATION_RULE = `
+
+CRITICAL — DO NOT FABRICATE FACTS:
+- This content is for a real business. Never invent specific facts: founding year/story, awards, recognition, press mentions, chef or staff names, prices, ratings, review counts, addresses, phone numbers, opening hours, or quotes.
+- For any factual claim the business must provide, output an explicit placeholder like [PLACEHOLDER: founding year] or [PLACEHOLDER: head chef name] instead of guessing.
+- Only state things that are clearly supported by the input provided. When unsure, use a placeholder rather than a plausible-sounding invention.`
+
 const FIX_CONFIGS: Record<string, {
   title: string
   format: string
@@ -88,14 +100,14 @@ Return a <script type="application/ld+json"> block with clear TODO comments for 
 Current description: ${wa?.meta_description ?? 'none'}
 
 Create a 600-word page that includes:
-- Restaurant founding story (use plausible template with clear placeholders)
-- Chef/team background section (template with placeholders)
-- Philosophy and sourcing approach
-- What makes them a top choice in ${r.city}
-- Awards or recognition section (template)
-- Community involvement
+- Founding story — use [PLACEHOLDER: founding year] and [PLACEHOLDER: founding story] markers; do NOT invent dates or events
+- Chef/team background — use [PLACEHOLDER: chef name] / [PLACEHOLDER: team background] markers
+- Philosophy and sourcing approach (general, non-fabricated language is fine here)
+- What makes them a top choice in ${r.city} (frame as positioning, not invented facts)
+- Awards or recognition — only as [PLACEHOLDER: awards / recognition]; never invent awards
+- Community involvement — use [PLACEHOLDER: community involvement]
 
-Write in a way that AI models will extract and cite specific facts. Use concrete language, not generic marketing.
+Structure it so the owner can fill placeholders and AI models can then cite real facts.
 Return complete HTML with proper heading structure.`,
   },
 
@@ -208,7 +220,7 @@ export const fixFunction = inngest.createFunction(
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 4000,
-        system: config.systemPrompt,
+        system: config.systemPrompt + NO_FABRICATION_RULE,
         messages: [{
           role: 'user',
           content: config.buildPrompt(restaurant, websiteAudit, null),

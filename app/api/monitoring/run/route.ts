@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { createAudit } from '@/lib/engine/audit-runner'
+import { verifyCronRequest } from '@/lib/auth/cron'
 
 /**
  * POST /api/monitoring/run
@@ -8,10 +9,8 @@ import { createAudit } from '@/lib/engine/audit-runner'
  * Called by Vercel cron daily — only runs restaurants actually due.
  */
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get('x-cron-secret')
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = verifyCronRequest(request)
+  if (denied) return denied
 
   // Find all monitoring schedules that are due
   const { data: due, error } = await supabaseAdmin

@@ -11,6 +11,7 @@ interface RestaurantRow {
   cuisine?: string
   email?: string
   phone?: string
+  country?: string
 }
 
 function normaliseRow(raw: Record<string, string>): RestaurantRow {
@@ -26,6 +27,7 @@ function normaliseRow(raw: Record<string, string>): RestaurantRow {
     cuisine: row.cuisine || row.type || row.food_type || undefined,
     email:   row.email   || row.email_address || undefined,
     phone:   row.phone   || row.phone_number || row.telephone || undefined,
+    country: row.country || undefined,
   }
 }
 
@@ -116,12 +118,16 @@ export async function POST(request: NextRequest) {
         const { data: inserted, error } = await supabaseAdmin
           .from('restaurants')
           .insert({
-            name:    row.name,
-            website: row.website || null,
-            city:    row.city,
-            cuisine: row.cuisine || null,
-            email:   row.email || null,
-            phone:   row.phone || null,
+            name:          row.name,
+            website:       row.website || null,
+            city:          row.city,
+            cuisine:       row.cuisine || null,
+            email:         row.email || null,
+            phone:         row.phone || null,
+            // NL restaurant focus: default country (drives Dutch prompts via
+            // languageForCountry) and business_type so uploaded rows audit correctly.
+            country:       row.country || 'Netherlands',
+            business_type: 'restaurant',
           })
           .select('id')
           .single()

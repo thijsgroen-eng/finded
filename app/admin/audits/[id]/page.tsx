@@ -2,17 +2,20 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
 import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
+import { ESTIMATE_CAVEAT } from '@/lib/estimates'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
+import { OutreachEmail } from '@/components/admin/outreach-email'
 import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
+import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, preview_slug)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, preview_slug, country)')
     .eq('id', id)
     .single()
 
@@ -26,6 +29,7 @@ async function getAuditData(id: string) {
     business_type: string | null
     website: string | null
     preview_slug: string | null
+    country: string | null
   }
 
   const [
@@ -37,7 +41,7 @@ async function getAuditData(id: string) {
     { data: signalGaps },
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', id),
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', id),
     supabaseAdmin.from('model_runs').select('model, duration_ms, tokens_used').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),
@@ -194,7 +198,7 @@ export default async function AuditDetailPage({
                   {visitorsMin && visitorsMax && (
                     <p className="text-sm text-gray-600">{visitorsMin}–{visitorsMax} additional visitors/month</p>
                   )}
-                  <p className="text-xs text-gray-400">Based on visibility gap vs top competitors</p>
+                  <p className="text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400">Not enough data to estimate yet</p>
@@ -364,6 +368,9 @@ export default async function AuditDetailPage({
 
       {/* Recommendations + Fix Now */}
       <Recommendations auditId={id} />
+
+      {/* Outreach email (NL/EN) */}
+      <OutreachEmail auditId={id} restaurantName={entity.name} defaultLanguage={languageForCountry(entity.country)} />
 
       {audit.error_message && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 mt-4">

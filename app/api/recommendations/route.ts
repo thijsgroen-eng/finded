@@ -34,15 +34,35 @@ export async function POST(request: NextRequest) {
 
   if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
 
-  const [{ data: mentions }, { data: websiteAudit }] = await Promise.all([
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, position, sentiment').eq('audit_id', audit_id),
+  const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }] = await Promise.all([
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),
+    supabaseAdmin.from('prompt_runs').select('prompt_id, category, prompt_text').eq('audit_id', audit_id),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
   const restaurant = audit.restaurant as {
     id: string; name: string; city: string; cuisine: string | null; website: string | null
   }
+
+  // Cuisine-specific visibility: the queries this restaurant can realistically
+  // win. A miss here is the most actionable signal (the cuisine isn't associated
+  // with the business in AI training/retrieval data).
+  const appeared = new Map<string, boolean>()
+  for (const m of mentions ?? []) {
+    const did = m.mentioned || (m.mention_frequency ?? 0) > 0
+    appeared.set(m.prompt_id, (appeared.get(m.prompt_id) ?? false) || did)
+  }
+  const cuisinePrompts = (promptRuns ?? []).filter(p => p.category === 'category')
+  const wonCuisine = cuisinePrompts.filter(p => appeared.get(p.prompt_id)).map(p => p.prompt_text)
+  const missedCuisine = cuisinePrompts.filter(p => !appeared.get(p.prompt_id)).map(p => p.prompt_text)
+  const cuisineLabel = restaurant.cuisine ?? 'its cuisine'
+
+  const cuisineAnalysis = cuisinePrompts.length === 0 ? '' : `
+
+CUISINE-SPECIFIC VISIBILITY (the queries a ${cuisineLabel} restaurant should win):
+- Appears for: ${wonCuisine.length ? wonCuisine.map(q => `"${q}"`).join(', ') : 'NONE'}
+- MISSING from: ${missedCuisine.length ? missedCuisine.map(q => `"${q}"`).join(', ') : 'none — good coverage'}`
 
   const modelBreakdown = metrics.model_breakdown
     .map(m => `${m.model}: ${Math.round(m.frequency * 100)}% (${m.mentions} mentions)`)
@@ -77,6 +97,7 @@ SENTIMENT: ${metrics.sentiment_breakdown.positive} positive, ${metrics.sentiment
 
 WEBSITE SIGNALS:
 ${websiteSignals}
+${cuisineAnalysis}
 
 Generate exactly 5 specific, prioritised recommendations to improve this restaurant's AI visibility.
 
@@ -97,6 +118,8 @@ Rules:
 - Give concrete actions, not vague advice
 - If a model shows 0%, explain specifically why and what to do
 - Reference real platforms (Google Business Profile, TripAdvisor, etc.)
+- PRIORITISE the cuisine-specific gaps above — a ${cuisineLabel} restaurant should appear for those queries. If it is MISSING from them, the top recommendations must make the cuisine explicit and machine-readable: state ${cuisineLabel} clearly in the homepage copy and meta description, add Restaurant schema with servesCuisine="${restaurant.cuisine ?? '...'}", and ensure the menu is crawlable (not an image/PDF).
+- Do NOT recommend competing for generic "best restaurants in ${restaurant.city}" — that is not where a typical ${cuisineLabel} restaurant wins; focus on cuisine, occasion and neighbourhood queries.
 - Return ONLY the JSON array, no other text`
 
   try {

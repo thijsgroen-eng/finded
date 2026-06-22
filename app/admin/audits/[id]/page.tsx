@@ -372,6 +372,27 @@ export default async function AuditDetailPage({
       {/* Outreach email (NL/EN) */}
       <OutreachEmail auditId={id} restaurantName={entity.name} defaultLanguage={languageForCountry(entity.country)} />
 
+      {/* PDF report (NL/EN · full vs client preview) */}
+      <Card>
+        <CardHeader><CardTitle>PDF report</CardTitle></CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Full report — your copy</p>
+            <div className="flex gap-2">
+              <a href={`/api/report/${id}/pdf?variant=full&lang=nl`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-gray-900 text-white hover:bg-gray-700">Nederlands ↓</a>
+              <a href={`/api/report/${id}/pdf?variant=full&lang=en`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-gray-900 text-white hover:bg-gray-700">English ↓</a>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Client preview — hides competitors &amp; fixes</p>
+            <div className="flex gap-2">
+              <a href={`/api/report/${id}/pdf?variant=teaser&lang=nl`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-700 hover:border-gray-400">Nederlands ↓</a>
+              <a href={`/api/report/${id}/pdf?variant=teaser&lang=en`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-700 hover:border-gray-400">English ↓</a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {audit.error_message && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 mt-4">
           <strong>Error:</strong> {audit.error_message}

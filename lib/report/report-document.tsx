@@ -73,25 +73,25 @@ const s = StyleSheet.create({
   coverFootnote: { fontSize: 9, color: '#6f8298' },
 
   // Content
-  page: { padding: 40, paddingBottom: 64, fontSize: 10, color: INK, fontFamily: 'Helvetica', lineHeight: 1.45 },
+  page: { padding: 40, paddingBottom: 72, fontSize: 10, color: INK, fontFamily: 'Helvetica', lineHeight: 1.45 },
 
   // Hero score
-  hero: { flexDirection: 'row', backgroundColor: NAVY, borderRadius: 10, padding: 20, marginBottom: 18, alignItems: 'center' },
+  hero: { flexDirection: 'row', backgroundColor: NAVY, borderRadius: 10, padding: 26, marginBottom: 24, alignItems: 'center' },
   ringWrap: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   ringCenter: { position: 'absolute', top: 0, left: 0, width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
   ringScore: { fontSize: 34, fontFamily: 'Helvetica-Bold', color: WHITE },
   ringOf: { fontSize: 8, color: '#9fb3c8', marginTop: 1 },
-  heroRight: { flex: 1, paddingLeft: 22 },
+  heroRight: { flex: 1, minWidth: 0, paddingLeft: 26 },
   heroLabel: { fontSize: 9, color: ORANGE, fontFamily: 'Helvetica-Bold', letterSpacing: 1, textTransform: 'uppercase' },
-  heroHeadline: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: WHITE, marginTop: 4, marginBottom: 10 },
-  heroStatRow: { flexDirection: 'row', gap: 22 },
-  heroStat: { },
+  heroHeadline: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: WHITE, marginTop: 4, marginBottom: 12 },
+  heroStatRow: { flexDirection: 'row', gap: 16 },
+  heroStat: { flex: 1, minWidth: 0 },
   heroStatVal: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: WHITE },
   heroStatLbl: { fontSize: 8, color: '#9fb3c8', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
-  heroStatNote: { fontSize: 7.5, color: '#6f8298', marginTop: 1 },
+  heroStatNote: { fontSize: 7.5, color: '#6f8298', marginTop: 2 },
 
   // Sections
-  section: { marginBottom: 16 },
+  section: { marginBottom: 22 },
   sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
 
   // Model cards
@@ -132,9 +132,9 @@ const s = StyleSheet.create({
   unlockBody: { fontSize: 9, color: '#cdd9e5' },
 
   // Footer
-  footer: { position: 'absolute', bottom: 26, left: 40, right: 40, borderTop: `1pt solid ${LINE}`, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  footerBrand: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: NAVY },
-  footerDisclaimer: { fontSize: 6.5, color: FAINT, maxWidth: 360, lineHeight: 1.3 },
+  footer: { position: 'absolute', bottom: 28, left: 40, right: 40, borderTop: `1pt solid ${LINE}`, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  footerBrand: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: FAINT, marginLeft: 12 },
+  footerDisclaimer: { fontSize: 6.5, color: FAINT, maxWidth: 380, lineHeight: 1.3 },
 })
 
 function priorityColor(p: string) {
@@ -170,7 +170,7 @@ function Footer({ disclaimer }: { disclaimer: string }) {
       <Text
         style={s.footerBrand}
         render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) =>
-          `Finded  ·  ${pageNumber}/${totalPages}`
+          `finded.vercel.app  ·  ${pageNumber}/${totalPages}`
         }
       />
     </View>
@@ -289,7 +289,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             <View style={s.table}>
               <View style={s.tHead}>
                 <Text style={[s.tHeadCell, { width: 22 }]}>#</Text>
-                <Text style={[s.tHeadCell, { flex: 1 }]}>{t.competitors}</Text>
+                <Text style={[s.tHeadCell, { flex: 1 }]}>{t.competitorColumn}</Text>
                 <Text style={s.tHeadCell}>{t.mentions}</Text>
               </View>
               {data.competitors.map((c, i) => (
@@ -304,7 +304,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
         </View>
 
         {/* Recommendations */}
-        <View style={s.section} wrap={false}>
+        <View style={[s.section, { marginBottom: 28 }]}>
           <Text style={s.sectionTitle}>{t.recommendations}</Text>
           {data.recommendations.length === 0 ? (
             <Text style={s.tCount}>—</Text>

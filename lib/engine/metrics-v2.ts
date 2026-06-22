@@ -1,4 +1,4 @@
-import { ExtractedEntity } from './entity-extractor'
+import type { ExtractedEntity } from './entity-extractor'
 import { positionWeight, gradedMentionFrequency } from './metrics-core'
 import { estimateOpportunity } from '@/lib/estimates'
 

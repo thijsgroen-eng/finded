@@ -1,268 +1,278 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { StatCard, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
-import { formatDateTime, statusVariant } from '@/lib/utils'
-import { ESTIMATE_CAVEAT } from '@/lib/estimates'
+import { formatDateTime } from '@/lib/utils'
 import {
-  UtensilsCrossed, ClipboardList, TrendingUp,
-  CheckCircle2, Clock, AlertCircle, Loader2,
-  Users, Euro, Target, Mail
+  onlyRestaurants, dataQualityWarnings, findDuplicateGroups,
+  displayCity, type EntityRow,
+} from '@/lib/engine/dashboard'
+import {
+  UtensilsCrossed, AlertCircle, Loader2, Clock,
+  Send, CalendarClock, Sparkles, ShieldAlert,
 } from 'lucide-react'
 import Link from 'next/link'
 
-async function getDashboardData() {
+const CONTACTED = new Set(['email_sent', 'opened', 'replied', 'interested', 'demo_scheduled', 'customer', 'lost'])
+
+async function getDashboard() {
   const [
-    { count: totalRestaurants },
-    { count: totalAudits },
-    { count: completedAudits },
-    { count: queuedAudits },
-    { count: runningAudits },
-    { count: failedAudits },
-    { data: recentAudits },
-    { data: leadStatusData },
-    { data: topOpportunities },
-    { data: customers },
+    { data: restaurants },
+    { data: audits },
+    { data: scores },
+    { data: leads },
   ] = await Promise.all([
-    supabaseAdmin.from('restaurants').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('audits').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('audits').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-    supabaseAdmin.from('audits').select('id', { count: 'exact', head: true }).eq('status', 'queued'),
-    supabaseAdmin.from('audits').select('id', { count: 'exact', head: true }).eq('status', 'running'),
-    supabaseAdmin.from('audits').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
-    supabaseAdmin
-      .from('audits')
-      .select('id, status, created_at, completed_at, restaurant:restaurants(name, city)')
-      .order('created_at', { ascending: false })
-      .limit(8),
-    supabaseAdmin
-      .from('lead_statuses')
-      .select('status'),
-    supabaseAdmin
-      .from('visibility_scores')
-      .select('restaurant_id, opportunity_score, visibility_score, estimated_revenue_min, estimated_revenue_max, audit_id, restaurant:restaurants(name, city)')
-      .order('opportunity_score', { ascending: false })
-      .limit(5),
-    supabaseAdmin
-      .from('customers')
-      .select('id, plan, status')
-      .eq('status', 'active'),
+    supabaseAdmin.from('restaurants').select('id, name, city, cuisine, business_type, website, domain'),
+    supabaseAdmin.from('audits').select('id, restaurant_id, status, error_message, created_at').order('created_at', { ascending: false }),
+    supabaseAdmin.from('visibility_scores').select('restaurant_id, audit_id, opportunity_score, visibility_score'),
+    supabaseAdmin.from('lead_statuses').select('restaurant_id, status, next_followup_at'),
   ])
 
-  // Lead pipeline counts
-  const leads = leadStatusData ?? []
-  const pipeline = {
-    not_contacted: leads.filter(l => l.status === 'not_contacted').length,
-    contacted: leads.filter(l => ['email_sent', 'opened', 'replied'].includes(l.status)).length,
-    interested: leads.filter(l => ['interested', 'demo_scheduled'].includes(l.status)).length,
-    customer: leads.filter(l => l.status === 'customer').length,
-    lost: leads.filter(l => l.status === 'lost').length,
+  const allEntities = (restaurants ?? []) as EntityRow[]
+  const restRows = onlyRestaurants(allEntities)
+  const restById = new Map(restRows.map((r) => [r.id, r]))
+  const leadByRest = new Map((leads ?? []).map((l) => [l.restaurant_id, l]))
+
+  // Best (highest-opportunity) completed audit per restaurant. visibility_scores
+  // only exist for completed audits, so presence here means "report ready".
+  const bestByRest = new Map<string, { audit_id: string; opportunity_score: number; visibility_score: number }>()
+  for (const s of scores ?? []) {
+    if (!restById.has(s.restaurant_id)) continue
+    const cur = bestByRest.get(s.restaurant_id)
+    if (!cur || Number(s.opportunity_score ?? 0) > cur.opportunity_score) {
+      bestByRest.set(s.restaurant_id, {
+        audit_id: s.audit_id,
+        opportunity_score: Number(s.opportunity_score ?? 0),
+        visibility_score: Number(s.visibility_score ?? 0),
+      })
+    }
   }
 
-  // MRR estimate
-  const activeCustomers = customers ?? []
-  const mrr = activeCustomers.reduce((sum, c) => {
-    if (c.plan === 'pro') return sum + 299
-    if (c.plan === 'platform') return sum + 2000
-    return sum + 99
-  }, 0)
+  const allAudits = audits ?? []
+  const health = {
+    completed: allAudits.filter((a) => a.status === 'completed').length,
+    running: allAudits.filter((a) => a.status === 'running').length,
+    queued: allAudits.filter((a) => a.status === 'queued').length,
+    failed: allAudits.filter((a) => a.status === 'failed').length,
+    total: allAudits.length,
+  }
+
+  // ── Action queues ──
+  const failedAudits = allAudits
+    .filter((a) => a.status === 'failed')
+    .slice(0, 6)
+    .map((a) => ({ ...a, restaurant: restById.get(a.restaurant_id) ?? null }))
+
+  const now = Date.now()
+  const followUpsDue = (leads ?? [])
+    .filter((l) => l.next_followup_at && new Date(l.next_followup_at).getTime() <= now && restById.has(l.restaurant_id))
+    .map((l) => ({ ...l, restaurant: restById.get(l.restaurant_id)! }))
+
+  const interestedNoNext = (leads ?? [])
+    .filter((l) => ['interested', 'demo_scheduled'].includes(l.status) && !l.next_followup_at && restById.has(l.restaurant_id))
+    .map((l) => ({ ...l, restaurant: restById.get(l.restaurant_id)! }))
+
+  // Reports ready but lead not yet contacted, highest opportunity first.
+  const readyToSend = [...bestByRest.entries()]
+    .filter(([rid]) => !CONTACTED.has(leadByRest.get(rid)?.status ?? 'not_contacted'))
+    .map(([rid, s]) => ({ restaurant: restById.get(rid)!, ...s }))
+    .sort((a, b) => b.opportunity_score - a.opportunity_score)
+    .slice(0, 6)
+
+  // Top opportunities (deduped by restaurant) with their current lead status.
+  const topOpportunities = [...bestByRest.entries()]
+    .map(([rid, s]) => ({ restaurant: restById.get(rid)!, lead: leadByRest.get(rid)?.status ?? 'not_contacted', ...s }))
+    .sort((a, b) => b.opportunity_score - a.opportunity_score)
+    .slice(0, 6)
+
+  const warnings = dataQualityWarnings(allEntities)
+  const duplicateNames = findDuplicateGroups(allEntities)
+    .slice(0, 5)
+    .map((g) => g[0].name)
 
   return {
-    totalRestaurants: totalRestaurants ?? 0,
-    totalAudits: totalAudits ?? 0,
-    completedAudits: completedAudits ?? 0,
-    queuedAudits: queuedAudits ?? 0,
-    runningAudits: runningAudits ?? 0,
-    failedAudits: failedAudits ?? 0,
-    recentAudits: recentAudits ?? [],
-    pipeline,
-    topOpportunities: topOpportunities ?? [],
-    activeCustomers: activeCustomers.length,
-    mrr,
+    totalRestaurants: restRows.length,
+    health, failedAudits, followUpsDue, interestedNoNext, readyToSend, topOpportunities,
+    warnings, duplicateNames,
   }
 }
 
-const PIPELINE_STAGES = [
-  { key: 'not_contacted', label: 'Not contacted', color: 'bg-gray-100 text-gray-600' },
-  { key: 'contacted', label: 'Contacted', color: 'bg-blue-50 text-blue-600' },
-  { key: 'interested', label: 'Interested', color: 'bg-amber-50 text-amber-600' },
-  { key: 'customer', label: 'Customer', color: 'bg-emerald-50 text-emerald-600' },
-  { key: 'lost', label: 'Lost', color: 'bg-red-50 text-red-500' },
-]
+function OppBadge({ score }: { score: number }) {
+  const color = score >= 75 ? 'text-red-600' : score >= 50 ? 'text-amber-600' : score >= 25 ? 'text-blue-600' : 'text-gray-500'
+  return <span className={`font-bold ${color}`}>{Math.round(score)}/100</span>
+}
 
 export default async function DashboardPage() {
-  const d = await getDashboardData()
+  const d = await getDashboard()
+  const hasWarnings = d.warnings.nonRestaurants + d.warnings.duplicateGroups + d.warnings.missingCity + d.warnings.missingCuisine > 0
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Sales pipeline and platform overview</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Command center</h1>
+        <p className="text-sm text-gray-500 mt-1">What needs action today — audit health, outreach queue, and data quality.</p>
       </div>
 
-      {/* Revenue + sales stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label="Monthly recurring revenue"
-          value={`€${d.mrr.toLocaleString()}`}
-          sub={`${d.activeCustomers} active customers`}
-          icon={<Euro className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Interested leads"
-          value={d.pipeline.interested}
-          sub="demo scheduled or interested"
-          icon={<Target className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Contacted"
-          value={d.pipeline.contacted}
-          sub="email sent / opened / replied"
-          icon={<Mail className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Total restaurants"
-          value={d.totalRestaurants}
-          sub={`${d.completedAudits} audited`}
-          icon={<UtensilsCrossed className="w-4 h-4" />}
-        />
+      {/* Operational stats (no fabricated revenue) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <StatCard label="Restaurants" value={d.totalRestaurants} sub={`${d.health.completed} audited`} icon={<UtensilsCrossed className="w-4 h-4" />} />
+        <StatCard label="Ready to send" value={d.readyToSend.length} sub="report done, not contacted" icon={<Send className="w-4 h-4" />} />
+        <StatCard label="Follow-ups due" value={d.followUpsDue.length} sub="overdue or due today" icon={<CalendarClock className="w-4 h-4" />} />
+        <StatCard label="Failed audits" value={d.health.failed} sub="need retry" icon={<AlertCircle className="w-4 h-4" />} />
+        <StatCard label="In progress" value={d.health.running + d.health.queued} sub={`${d.health.running} running · ${d.health.queued} queued`} icon={<Loader2 className="w-4 h-4" />} />
       </div>
 
-      {/* Lead pipeline funnel */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Lead pipeline</CardTitle>
-            <Link href="/admin/leads" className="text-xs text-blue-500 hover:underline">View all →</Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex gap-2">
-            {PIPELINE_STAGES.map(stage => {
-              const count = d.pipeline[stage.key as keyof typeof d.pipeline]
-              return (
-                <div key={stage.key} className="flex-1 text-center">
-                  <div className={`rounded-lg py-3 px-2 mb-2 ${stage.color}`}>
-                    <div className="text-xl font-bold">{count}</div>
-                  </div>
-                  <div className="text-xs text-gray-500">{stage.label}</div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Top opportunities */}
-        <Card>
+      {/* Data quality warnings */}
+      {hasWarnings && (
+        <Card className="mb-6 border-amber-200 bg-amber-50/40">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Top opportunities</CardTitle>
-              <Link href="/admin/leads?status=not_contacted" className="text-xs text-blue-500 hover:underline">View all →</Link>
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600" />
+              <CardTitle>Data quality</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {d.topOpportunities.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4">No audits completed yet</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-700">
+              {d.warnings.nonRestaurants > 0 && <span><strong>{d.warnings.nonRestaurants}</strong> non-restaurant entities</span>}
+              {d.warnings.duplicateGroups > 0 && <span><strong>{d.warnings.duplicateGroups}</strong> duplicate groups</span>}
+              {d.warnings.missingCity > 0 && <span><strong>{d.warnings.missingCity}</strong> missing city</span>}
+              {d.warnings.missingCuisine > 0 && <span><strong>{d.warnings.missingCuisine}</strong> missing cuisine</span>}
+            </div>
+            {d.duplicateNames.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">Possible duplicates: {d.duplicateNames.join(', ')}</p>
+            )}
+            <Link href="/admin/restaurants" className="text-xs text-blue-500 hover:underline mt-2 inline-block">Review entities →</Link>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Ready to send */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Send className="w-4 h-4 text-gray-400" /><CardTitle>Ready for outreach</CardTitle></div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {d.readyToSend.length === 0 ? (
+              <p className="text-sm text-gray-400 py-3">Nothing waiting — every completed audit has been contacted.</p>
             ) : (
-              <>
-              <div className="space-y-2">
-                {d.topOpportunities.map((opp: any) => {
-                  const restaurant = Array.isArray(opp.restaurant) ? opp.restaurant[0] : opp.restaurant
-                  return (
-                    <div key={opp.audit_id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{restaurant?.name ?? '—'}</p>
-                        <p className="text-xs text-gray-400">{restaurant?.city ?? ''}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-sm font-bold ${
-                          opp.opportunity_score >= 75 ? 'text-red-600' :
-                          opp.opportunity_score >= 50 ? 'text-amber-600' : 'text-gray-600'
-                        }`}>
-                          {Math.round(opp.opportunity_score ?? 0)}/100
-                        </div>
-                        {opp.estimated_revenue_max > 0 && (
-                          <div className="text-xs text-gray-400" title={ESTIMATE_CAVEAT}>
-                            ~€{(opp.estimated_revenue_min ?? 0).toLocaleString()}–€{(opp.estimated_revenue_max ?? 0).toLocaleString()}/mo est.
-                          </div>
-                        )}
-                      </div>
+              <div className="space-y-1">
+                {d.readyToSend.map((r) => (
+                  <Link key={r.audit_id} href={`/admin/audits/${r.audit_id}`} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{r.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{displayCity(r.restaurant.city)}</p>
                     </div>
-                  )
-                })}
+                    <OppBadge score={r.opportunity_score} />
+                  </Link>
+                ))}
               </div>
-              <p className="mt-3 text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
-              </>
             )}
           </CardContent>
         </Card>
 
-        {/* Audit status */}
+        {/* Failed audits */}
         <Card>
-          <CardHeader><CardTitle>Audit status</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-400" /><CardTitle>Failed audits — retry</CardTitle></div>
+          </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 py-2 border-b border-gray-50">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-gray-600 flex-1">Completed</span>
-                <span className="text-sm font-bold text-gray-900">{d.completedAudits}</span>
+            {d.failedAudits.length === 0 ? (
+              <p className="text-sm text-gray-400 py-3">No failed audits.</p>
+            ) : (
+              <div className="space-y-1">
+                {d.failedAudits.map((a) => (
+                  <Link key={a.id} href={`/admin/audits/${a.id}`} className="block py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">{a.restaurant?.name ?? 'Unknown'}</p>
+                      <span className="text-xs text-gray-400">{formatDateTime(a.created_at)}</span>
+                    </div>
+                    {a.error_message && <p className="text-xs text-red-500 truncate mt-0.5">{a.error_message}</p>}
+                  </Link>
+                ))}
               </div>
-              <div className="flex items-center gap-3 py-2 border-b border-gray-50">
-                <Loader2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span className="text-sm text-gray-600 flex-1">Running / Queued</span>
-                <span className="text-sm font-bold text-gray-900">{d.runningAudits + d.queuedAudits}</span>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Follow-ups due */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-gray-400" /><CardTitle>Follow-ups due</CardTitle></div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {d.followUpsDue.length === 0 ? (
+              <p className="text-sm text-gray-400 py-3">No follow-ups due.</p>
+            ) : (
+              <div className="space-y-1">
+                {d.followUpsDue.map((l) => (
+                  <div key={l.restaurant_id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{l.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{displayCity(l.restaurant.city)}</p>
+                    </div>
+                    <span className="text-xs text-amber-600 flex items-center gap-1"><Clock className="w-3 h-3" />{l.next_followup_at ? formatDateTime(l.next_followup_at) : ''}</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-3 py-2 border-b border-gray-50">
-                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <span className="text-sm text-gray-600 flex-1">Failed</span>
-                <span className="text-sm font-bold text-gray-900">{d.failedAudits}</span>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Interested, no next action */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-amber-400" /><CardTitle>Interested — no next step</CardTitle></div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {d.interestedNoNext.length === 0 ? (
+              <p className="text-sm text-gray-400 py-3">Every interested lead has a next step scheduled.</p>
+            ) : (
+              <div className="space-y-1">
+                {d.interestedNoNext.map((l) => (
+                  <div key={l.restaurant_id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{l.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{displayCity(l.restaurant.city)}</p>
+                    </div>
+                    <Badge variant="warning">{l.status.replace('_', ' ')}</Badge>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center gap-3 py-2">
-                <ClipboardList className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm text-gray-600 flex-1">Total audits</span>
-                <span className="text-sm font-bold text-gray-900">{d.totalAudits}</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent audits */}
+      {/* Top opportunities with next action */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Recent audits</CardTitle>
-            <Link href="/admin/audits" className="text-xs text-blue-500 hover:underline">View all →</Link>
+            <CardTitle>Top opportunities</CardTitle>
+            <Link href="/admin/leads" className="text-xs text-blue-500 hover:underline">All leads →</Link>
           </div>
         </CardHeader>
-        <div className="divide-y divide-gray-50">
-          {d.recentAudits.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">
-              No audits yet. Upload restaurants to get started.
-            </div>
+        <CardContent className="pt-0">
+          {d.topOpportunities.length === 0 ? (
+            <p className="text-sm text-gray-400 py-3">No completed audits yet.</p>
           ) : (
-            d.recentAudits.map((audit: any) => {
-              const rest = Array.isArray(audit.restaurant) ? audit.restaurant[0] : audit.restaurant
-              return (
-                <div key={audit.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{rest?.name ?? 'Unknown'}</p>
-                    <p className="text-xs text-gray-400">{rest?.city ?? ''} · {formatDateTime(audit.created_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {audit.status === 'running' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
-                    <Badge variant={statusVariant(audit.status) as 'success' | 'warning' | 'danger' | 'info' | 'default'}>
-                      {audit.status}
-                    </Badge>
-                    {audit.status === 'completed' && (
-                      <Link href={`/admin/audits/${audit.id}`} className="text-xs text-blue-500 hover:underline">View →</Link>
-                    )}
-                  </div>
-                </div>
-              )
-            })
+            <div className="space-y-1">
+              {d.topOpportunities.map((o) => {
+                const contacted = CONTACTED.has(o.lead)
+                return (
+                  <Link key={o.audit_id} href={`/admin/audits/${o.audit_id}`} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{o.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{displayCity(o.restaurant.city)}{o.restaurant.cuisine ? ` · ${o.restaurant.cuisine}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{contacted ? o.lead.replace('_', ' ') : 'send report'}</span>
+                      <OppBadge score={o.opportunity_score} />
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
           )}
-        </div>
+        </CardContent>
       </Card>
     </div>
   )

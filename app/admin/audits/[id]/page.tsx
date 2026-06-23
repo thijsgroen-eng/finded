@@ -109,7 +109,7 @@ export default async function AuditDetailPage({
   const specialty    = entity.cuisine ?? null
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
 
       {/* Back + header */}
       <div className="mb-6">

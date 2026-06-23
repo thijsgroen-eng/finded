@@ -175,7 +175,7 @@ export default function EntitiesPage() {
   const labelClass = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5"
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Entities</h1>

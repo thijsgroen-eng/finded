@@ -77,7 +77,7 @@ export default async function LeadsPage({
   }, {} as Record<string, number>)
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
         <p className="text-sm text-gray-500 mt-1">{leads.length} restaurants · {counts['customer'] ?? 0} customers · {counts['interested'] ?? 0} interested</p>
@@ -111,7 +111,7 @@ export default async function LeadsPage({
       </div>
 
       {/* Leads table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

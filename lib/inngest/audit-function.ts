@@ -6,6 +6,7 @@ import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPrompts } from '@/lib/engine/prompt-generator'
 import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
+import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
 
 // Each prompt is sampled SAMPLES times at the pinned AUDIT_TEMPERATURE (0.7);
@@ -281,10 +282,35 @@ export const auditFunction = inngest.createFunction(
 
       const metrics = computeFullMetrics(entity.name, mentionData, entityData)
 
+      // Website AI-readiness signals → website_signal_score component.
+      const { data: wa } = await supabaseAdmin
+        .from('website_audits')
+        .select('schema_present, menu_present, opening_hours_present, reservation_links_present, social_links_present')
+        .eq('audit_id', audit_id)
+        .single()
+      const websiteSignals = wa
+        ? { present: [wa.schema_present, wa.menu_present, wa.opening_hours_present, wa.reservation_links_present, wa.social_links_present].filter(Boolean).length, total: 5 }
+        : null
+      const providersRan = new Set(mentions.map((m: any) => m.model)).size
+
+      // Transparent, documented, stored score breakdown — supersedes the opaque score.
+      const breakdown = computeScoreBreakdown({
+        mentionFrequency: metrics.mention_frequency,
+        avgPosition:      metrics.avg_position,
+        modelConsensus:   metrics.model_consensus,
+        providersRan:     Math.max(1, providersRan),
+        promptCoverage:   metrics.prompt_coverage,
+        shareOfVoice:     metrics.share_of_voice,
+        websiteSignals,
+        sampleCount:      metrics.sample_count,
+      })
+
       await supabaseAdmin.from('visibility_scores').insert({
         audit_id,
         restaurant_id:             restaurant_id,
-        visibility_score:          metrics.visibility_score,
+        visibility_score:          breakdown.visibility_score,
+        confidence_score:          breakdown.confidence_score,
+        score_breakdown:           breakdown,
         opportunity_score:         metrics.opportunity_score,
         opportunity_label:         metrics.opportunity_label,
         mention_frequency:         metrics.mention_frequency,

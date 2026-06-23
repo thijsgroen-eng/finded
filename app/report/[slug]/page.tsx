@@ -43,6 +43,10 @@ const STR = {
     monitorTitle: 'Wil je dit elke maand volgen?',
     monitorBody: 'AI-zichtbaarheid verandert constant. Krijg een maandelijks rapport, scoretracking en meldingen als concurrenten terrein winnen.',
     monitorCta: 'Maandelijkse monitoring — €29/maand',
+    scoreMethodTitle: 'Hoe deze score is berekend',
+    scoreWeight: 'weging',
+    scoreConfidence: 'Betrouwbaarheid',
+    scoreVariability: 'Gemeten over deze set prompts. AI-antwoorden kunnen variëren; scores zijn indicatief, geen garantie.',
     footer: 'Finded · AI-zichtbaarheid voor restaurants ·',
     // derived-gap explanations (evidence-tied)
     gapSchema: 'Geen Restaurant-schema gevonden — AI-modellen kunnen je type en gegevens niet betrouwbaar uitlezen.',
@@ -89,6 +93,10 @@ const STR = {
     monitorTitle: 'Want to track this every month?',
     monitorBody: 'AI visibility changes constantly. Get a monthly report, score tracking, and alerts when competitors gain ground.',
     monitorCta: 'Monthly monitoring — €29/month',
+    scoreMethodTitle: 'How this score is calculated',
+    scoreWeight: 'weight',
+    scoreConfidence: 'Confidence',
+    scoreVariability: 'Measured across this prompt set. AI answers can vary; scores are directional, not a guarantee.',
     footer: 'Finded · AI Visibility for Restaurants ·',
     gapSchema: 'No Restaurant schema detected — AI models can\'t reliably read your type and details.',
     gapMenu: 'No menu page found by AI crawlers — cuisine and dishes aren\'t visible.',
@@ -187,7 +195,12 @@ async function getReportData(slug: string) {
   // Recommendations: real signal_gaps if present, else derive from website_audits gaps.
   let gaps: Gap[] = (signalGaps ?? []).filter(g => g.title).map(g => ({ title: g.title, explanation: g.explanation ?? '', severity: g.severity ?? 'medium' }))
 
-  return { restaurant, audit, headline, perModel, sentiment, competitors: competitors ?? [], websiteAudit, gaps }
+  const scoreBreakdown = (vs?.score_breakdown ?? null) as null | {
+    components: { key: string; label: string; score: number; weight: number; detail: string }[]
+  }
+  const confidenceScore = vs?.confidence_score != null ? Number(vs.confidence_score) : null
+
+  return { restaurant, audit, headline, perModel, sentiment, competitors: competitors ?? [], websiteAudit, gaps, scoreBreakdown, confidenceScore }
 }
 
 function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
@@ -226,7 +239,7 @@ export default async function PreviewReportPage({
   const data = await getReportData(slug)
   if (!data) notFound()
 
-  const { restaurant, audit, headline, perModel, sentiment, competitors, websiteAudit, gaps } = data
+  const { restaurant, audit, headline, perModel, sentiment, competitors, websiteAudit, gaps, scoreBreakdown, confidenceScore } = data
   const paid = restaurant.report_paid
 
   const freqPct = headline ? Math.round(headline.mentionFrequency * 100) : null
@@ -357,6 +370,30 @@ export default async function PreviewReportPage({
             {!paid && perModel.some(p => !FREE_MODELS.includes(p.model)) && (
               <div style={{ marginTop: 8, fontSize: 12, color: '#b0aea8', display: 'flex', alignItems: 'center', gap: 6 }}><span>🔒</span> {t.perModelLock}</div>
             )}
+          </div>
+        )}
+
+        {/* How this score is calculated — transparent, evidence-backed breakdown. */}
+        {scoreBreakdown && scoreBreakdown.components.length > 0 && (
+          <div style={card}>
+            <div style={cardTitle}>{t.scoreMethodTitle}</div>
+            {scoreBreakdown.components.map((c) => (
+              <div key={c.key} style={{ padding: '8px 0', borderBottom: '1px solid #f2f1ee' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#111110' }}>{c.label}</span>
+                  <span style={{ fontSize: 13, color: '#7a7874' }}>
+                    {Math.round(c.score)}/100 · {Math.round(c.weight * 100)}% {t.scoreWeight}
+                  </span>
+                </div>
+                {c.detail ? <div style={{ fontSize: 12, color: '#b0aea8', marginTop: 2 }}>{c.detail}</div> : null}
+              </div>
+            ))}
+            {confidenceScore != null && (
+              <div style={{ marginTop: 12, fontSize: 12, color: '#7a7874' }}>
+                {t.scoreConfidence}: <strong style={{ color: '#111110' }}>{Math.round(confidenceScore * 100)}%</strong>
+              </div>
+            )}
+            <div style={{ marginTop: 8, fontSize: 11, color: '#b0aea8', lineHeight: 1.5 }}>{t.scoreVariability}</div>
           </div>
         )}
 

@@ -5,6 +5,7 @@
  */
 
 import { assertPublicHttpUrl } from './url-guard'
+import { decodeHtmlEntities } from './html'
 
 export interface WebsiteAuditResult {
   // Universal signals
@@ -218,10 +219,10 @@ export async function auditWebsite(url: string): Promise<WebsiteAuditResult> {
 function extractMeta(html: string, type: 'title' | 'description'): string | null {
   if (type === 'title') {
     const match = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i)
-    return match ? match[1].trim() : null
+    return match ? decodeHtmlEntities(match[1].trim()) : null
   }
   const match =
     html.match(/<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']{1,300})[\"']/i) ||
     html.match(/<meta[^>]+content=[\"']([^\"']{1,300})[\"'][^>]+name=[\"']description[\"']/i)
-  return match ? match[1].trim() : null
+  return match ? decodeHtmlEntities(match[1].trim()) : null
 }

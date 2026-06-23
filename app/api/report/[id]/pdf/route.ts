@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { asLanguage, languageForCountry, Language } from '@/lib/i18n'
 import { ReportDocument, ReportData, ReportVariant } from '@/lib/report/report-document'
+import { ADMIN_COOKIE, isValidSession, adminAuthDisabledInDev } from '@/lib/auth/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,12 +13,11 @@ export const dynamic = 'force-dynamic'
 /**
  * GET /api/report/[id]/pdf?lang=nl|en&variant=full|teaser
  * Streams the audit report as a PDF. `id` is the audit id.
- *  - full   → everything (internal / your copy)
- *  - teaser → hides competitor names + the fixes, adds an "unlock" CTA (lead magnet)
+ *  - full   → everything (internal / your copy) — ADMIN ONLY
+ *  - teaser → hides competitor names + the fixes, adds an "unlock" CTA (public lead magnet)
  *
- * NOTE: not access-controlled (the app has no admin auth yet — deferred). The
- * full variant exposes the paid content; protect it once admin auth exists. The
- * audit id is an unguessable uuid in the meantime.
+ * The full variant carries the paid content (competitors + fixes), so it requires
+ * a valid admin session. The teaser is intentionally public.
  */
 export async function GET(
   request: NextRequest,
@@ -27,6 +27,12 @@ export async function GET(
   const url = new URL(request.url)
   const variant: ReportVariant = url.searchParams.get('variant') === 'teaser' ? 'teaser' : 'full'
   const langParam = url.searchParams.get('lang')
+
+  // The full report is admin-only; the teaser stays public.
+  if (variant === 'full' && !adminAuthDisabledInDev()) {
+    const authed = await isValidSession(request.cookies.get(ADMIN_COOKIE)?.value)
+    if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { data: audit } = await supabaseAdmin
     .from('audits')

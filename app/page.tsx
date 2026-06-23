@@ -1,5 +1,3 @@
-import Link from 'next/link'
-
 export default function LandingPage() {
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#fafaf8', minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: '#111110' }}>
@@ -9,8 +7,7 @@ export default function LandingPage() {
         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>Finded</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <a href="#how" style={{ fontSize: 13, fontWeight: 500, color: '#7a7874', textDecoration: 'none' }}>How it works</a>
-          <a href="#insights" style={{ fontSize: 13, fontWeight: 500, color: '#7a7874', textDecoration: 'none' }}>Insights</a>
-          <a href="/admin/dashboard" style={{ fontSize: 13, fontWeight: 600, background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, textDecoration: 'none' }}>Admin →</a>
+          <a href="/admin/new" style={{ fontSize: 13, fontWeight: 600, background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, textDecoration: 'none' }}>Audit your restaurant →</a>
         </div>
       </nav>
 
@@ -70,33 +67,6 @@ export default function LandingPage() {
               <p style={{ fontSize: 14, color: '#7a7874', lineHeight: 1.6 }}>{desc}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Insights / Articles */}
-      <section id="insights" style={{ background: '#fff', borderTop: '1px solid #e2e1dc', padding: '80px 24px' }}>
-        <div style={{ maxWidth: 980, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Insights</div>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: -0.8 }}>AI visibility for restaurants</h2>
-            <p style={{ fontSize: 15, color: '#7a7874', marginTop: 12 }}>How AI models pick which restaurants to recommend — and what you can do about it.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
-            {[
-              { tag: 'Guide', title: 'Why ChatGPT recommends some restaurants and not others', desc: 'The signals language models lean on when answering “where should I eat” — and where most restaurants fall short.' },
-              { tag: 'How-to', title: 'Getting your restaurant into AI search results', desc: 'Practical steps to make your restaurant easier for ChatGPT, Gemini, Claude and Perplexity to surface.' },
-              { tag: 'Reference', title: 'Schema, reviews & FAQs: the signals AI models read', desc: 'A plain-language look at the structured data and content that influence AI recommendations.' },
-            ].map(({ tag, title, desc }) => (
-              <Link key={title} href="#" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ background: '#fafaf8', border: '1px solid #e2e1dc', borderRadius: 12, padding: 22, height: '100%' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0d6b50', textTransform: 'uppercase', letterSpacing: 0.6 }}>{tag}</span>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: '10px 0 8px', lineHeight: 1.3 }}>{title}</h3>
-                  <p style={{ fontSize: 14, color: '#7a7874', lineHeight: 1.6, marginBottom: 12 }}>{desc}</p>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#16a37a' }}>Read →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
 

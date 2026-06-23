@@ -6,8 +6,13 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Building2, ClipboardList,
   Upload, Users, BarChart2, Plus, MessageSquareText,
-  Menu, X
+  Menu, X, LogOut
 } from 'lucide-react'
+
+async function logout() {
+  await fetch('/api/admin/login', { method: 'DELETE' })
+  window.location.href = '/login'
+}
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
@@ -65,8 +70,16 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-gray-800">
-        <p className="text-xs text-gray-600">Finded Platform v1.0</p>
+      <div className="px-3 py-3 border-t border-gray-800">
+        <button
+          type="button"
+          onClick={logout}
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors"
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          Log out
+        </button>
+        <p className="text-xs text-gray-600 px-3 pt-2">Finded Platform v1.0</p>
       </div>
     </>
   )

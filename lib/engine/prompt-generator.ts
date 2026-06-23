@@ -31,14 +31,15 @@ export interface BusinessProfile {
   language?: Language       // prompt language; defaults to English
 }
 
-type TemplateSet = {
-  discovery: string[]
-  category: string[]
-  occasions: string[]
-  problemSolution: string[]
-  trust: string[]
-  geographic: string[]
-}
+export const TEMPLATE_CATEGORIES = [
+  'discovery', 'category', 'occasions', 'problemSolution', 'trust', 'geographic',
+] as const
+export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number]
+
+export type TemplateSet = Record<TemplateCategory, string[]>
+
+/** Business types we ship templates for; 'default' is the generic fallback. */
+export const TEMPLATE_BUSINESS_TYPES = ['restaurant', 'default'] as const
 
 // ── Intent templates per business type ────────────────────────────────────────
 
@@ -222,7 +223,7 @@ const TEMPLATES_BY_LANGUAGE: Record<Language, Record<string, TemplateSet>> = {
   nl: BUSINESS_TEMPLATES_NL,
 }
 
-function selectTemplate(businessType: string, language: Language): TemplateSet {
+export function selectTemplate(businessType: string, language: Language): TemplateSet {
   const lang = TEMPLATES_BY_LANGUAGE[language] ?? BUSINESS_TEMPLATES
   return (
     lang[businessType] ??
@@ -230,6 +231,33 @@ function selectTemplate(businessType: string, language: Language): TemplateSet {
     BUSINESS_TEMPLATES[businessType] ??
     BUSINESS_TEMPLATES.default
   )
+}
+
+/**
+ * Overlay operator-defined template rows onto the code default set. A category
+ * with one or more rows REPLACES the code list for that category; categories with
+ * no rows keep their code default. Pure (no I/O) so it can be unit-tested and so
+ * the DB-backed store (lib/engine/prompt-store.ts) is the only thing that touches
+ * Supabase. Unknown categories are ignored.
+ */
+export function mergeTemplateRows(
+  base: TemplateSet,
+  rows: Array<{ category: string; template: string }>,
+): TemplateSet {
+  if (!rows.length) return base
+  const byCat: Partial<Record<TemplateCategory, string[]>> = {}
+  for (const r of rows) {
+    if ((TEMPLATE_CATEGORIES as readonly string[]).includes(r.category)) {
+      const c = r.category as TemplateCategory
+      ;(byCat[c] ??= []).push(r.template)
+    }
+  }
+  const merged: TemplateSet = { ...base }
+  for (const c of TEMPLATE_CATEGORIES) {
+    const custom = byCat[c]
+    if (custom && custom.length) merged[c] = custom
+  }
+  return merged
 }
 
 // ── Natural language variations ────────────────────────────────────────────────
@@ -289,8 +317,12 @@ function getTier(importance: number): 1 | 2 | 3 {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-export function generatePrompts(profile: BusinessProfile): GeneratedPrompt[] {
-  const template = selectTemplate(profile.businessType.toLowerCase(), profile.language ?? 'en')
+export function generatePrompts(
+  profile: BusinessProfile,
+  templateOverride?: TemplateSet,
+): GeneratedPrompt[] {
+  const template = templateOverride
+    ?? selectTemplate(profile.businessType.toLowerCase(), profile.language ?? 'en')
 
   const prompts: GeneratedPrompt[] = []
   let idx = 0
@@ -368,7 +400,8 @@ export function getQuickPrompts(
   country: string = 'Netherlands',
   subtype?: string,
   subtypes?: string[],
-  language: Language = 'en'
+  language: Language = 'en',
+  templateOverride?: TemplateSet,
 ): GeneratedPrompt[] {
   const profile: BusinessProfile = {
     name: businessName,
@@ -379,7 +412,7 @@ export function getQuickPrompts(
     language,
   }
 
-  const all = generatePrompts(profile) // sorted by importance desc
+  const all = generatePrompts(profile, templateOverride) // sorted by importance desc
 
   const byCategory: Record<string, GeneratedPrompt[]> = {}
   for (const p of all) {
@@ -415,6 +448,9 @@ export function getQuickPrompts(
 /**
  * Full prompt set for deep audits (50+ prompts).
  */
-export function getFullPrompts(profile: BusinessProfile): GeneratedPrompt[] {
-  return generatePrompts(profile)
+export function getFullPrompts(
+  profile: BusinessProfile,
+  templateOverride?: TemplateSet,
+): GeneratedPrompt[] {
+  return generatePrompts(profile, templateOverride)
 }

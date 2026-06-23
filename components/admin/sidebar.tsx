@@ -4,13 +4,14 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Building2, ClipboardList,
-  Upload, Users, BarChart2, Plus
+  Upload, Users, BarChart2, Plus, MessageSquareText
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/restaurants', label: 'Entities',    icon: Building2 },
   { href: '/admin/audits',      label: 'Audits',      icon: ClipboardList },
+  { href: '/admin/prompts',     label: 'Prompts',     icon: MessageSquareText },
   { href: '/admin/analytics',   label: 'Analytics',   icon: BarChart2 },
   { href: '/admin/leads',       label: 'Leads',       icon: Users },
   { href: '/admin/upload',      label: 'Bulk Import', icon: Upload },

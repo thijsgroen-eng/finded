@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
 import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
-import { getQuickPrompts } from '@/lib/engine/prompt-generator'
+import { getQuickPromptsFromStore } from '@/lib/engine/prompt-store'
 import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
@@ -110,7 +110,7 @@ export const auditFunction = inngest.createFunction(
 
       // Cap at MAX_PROMPTS: sampling multiplies calls by SAMPLES × providers, so
       // we use the top of the (cuisine-forward) quick set to bound cost/timeout.
-      const generated = getQuickPrompts(
+      const generated = (await getQuickPromptsFromStore(
         entity.name,
         businessType,
         entity.city,
@@ -118,7 +118,7 @@ export const auditFunction = inngest.createFunction(
         subtypes[0],
         subtypes,
         language,
-      ).slice(0, MAX_PROMPTS)
+      )).slice(0, MAX_PROMPTS)
 
       await supabaseAdmin.from('prompt_runs').insert(
         generated.map((p: { id: string; category: string; intent: string; prompt: string }) => ({

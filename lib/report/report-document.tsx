@@ -125,6 +125,8 @@ const s = StyleSheet.create({
   recPriority: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   recDesc: { fontSize: 9, color: MUTED, marginTop: 2 },
 
+  methodBody: { fontSize: 8.5, color: MUTED, lineHeight: 1.5 },
+
   hiddenNote: { fontSize: 9.5, color: MUTED, backgroundColor: PANEL, borderRadius: 6, padding: 10 },
   unlock: { marginTop: 8, backgroundColor: NAVY, borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center' },
   unlockBar: { width: 3, backgroundColor: ORANGE, alignSelf: 'stretch', borderRadius: 2, marginRight: 12 },
@@ -332,6 +334,14 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
               </View>
             ))
           )}
+        </View>
+
+        {/* Methodology & limitations — credibility in both variants */}
+        <View style={s.section} wrap={false}>
+          <Text style={s.sectionTitle}>{t.methodology}</Text>
+          <Text style={s.methodBody}>{t.methodologyBody(data.modelBreakdown.length || 4, data.sampleCount)}</Text>
+          <Text style={[s.sectionTitle, { marginTop: 10 }]}>{t.limitations}</Text>
+          <Text style={s.methodBody}>{t.limitationsBody}</Text>
         </View>
 
         <Footer disclaimer={t.estimateCaveat} />

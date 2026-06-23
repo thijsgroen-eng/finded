@@ -1,15 +1,20 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
+import {
+  buildRunAccounting, buildPromptEvidence, averageExtractionConfidence,
+} from '@/lib/engine/audit-evidence'
 import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
 import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
-import { ESTIMATE_CAVEAT } from '@/lib/estimates'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, TrendingUp, ExternalLink } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, ExternalLink, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { OutreachEmail } from '@/components/admin/outreach-email'
 import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
+import {
+  ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard,
+} from '@/components/admin/audit-evidence'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
@@ -36,20 +41,31 @@ async function getAuditData(id: string) {
     { data: websiteAudit },
     { data: mentions },
     { data: modelRuns },
+    { data: promptRuns },
+    { data: entities },
     { data: visibilityScore },
     { data: competitors },
     { data: signalGaps },
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
-    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', id),
-    supabaseAdmin.from('model_runs').select('model, duration_ms, tokens_used').eq('audit_id', id),
+    supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', id),
+    supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response').eq('audit_id', id),
+    supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', id),
+    supabaseAdmin.from('entities').select('prompt_id, model, name, confidence').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),
     supabaseAdmin.from('signal_gaps').select('*').eq('restaurant_id', entity.id).order('severity'),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
-  return { audit, entity, websiteAudit, metrics, modelRuns: modelRuns ?? [], visibilityScore, competitors: competitors ?? [], signalGaps: signalGaps ?? [] }
+  const runAccounting = buildRunAccounting(modelRuns ?? [])
+  const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [])
+  const extractionConfidence = averageExtractionConfidence(entities ?? [])
+  return {
+    audit, entity, websiteAudit, metrics, modelRuns: modelRuns ?? [], visibilityScore,
+    competitors: competitors ?? [], signalGaps: signalGaps ?? [],
+    runAccounting, promptEvidence, extractionConfidence,
+  }
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -87,17 +103,14 @@ export default async function AuditDetailPage({
   const data = await getAuditData(id)
   if (!data) notFound()
 
-  const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps } = data
+  const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
+          runAccounting, promptEvidence, extractionConfidence } = data
 
-  const totalPrompts   = audit.total_prompts ?? metrics.total_prompts
-  const totalModelRuns = audit.total_model_runs ?? data.modelRuns.length
-  const visScore       = visibilityScore?.visibility_score ?? null
+  const totalPrompts   = runAccounting.distinct_prompts || audit.total_prompts || metrics.total_prompts
   const oppScore       = visibilityScore?.opportunity_score ?? null
   const oppLabel       = visibilityScore?.opportunity_label ?? null
-  const revenueMin     = visibilityScore?.estimated_revenue_min ?? null
-  const revenueMax     = visibilityScore?.estimated_revenue_max ?? null
-  const visitorsMin    = visibilityScore?.estimated_visitors_min ?? null
-  const visitorsMax    = visibilityScore?.estimated_visitors_max ?? null
+  const scoreBreakdown = visibilityScore?.score_breakdown ?? null
+  const auditLanguage  = languageForCountry(entity.country)
   const myMentions     = metrics.total_mentions
   const topComp        = competitors[0]?.mention_count ?? 0
 
@@ -109,7 +122,7 @@ export default async function AuditDetailPage({
   const specialty    = entity.cuisine ?? null
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
 
       {/* Back + header */}
       <div className="mb-6">
@@ -155,58 +168,45 @@ export default async function AuditDetailPage({
         <StatCard label="Mention frequency" value={formatPercent(metrics.mention_frequency)} sub={`${myMentions} of ${totalPrompts} prompts`} />
         <StatCard label="Position score"    value={`${Math.round(metrics.position_score)}/100`} sub={metrics.position_score >= 60 ? 'Good' : metrics.position_score >= 30 ? 'Fair' : 'Poor'} />
         <StatCard label="Model consensus"   value={`${metrics.model_consensus}/4`} sub="models that mentioned" />
-        <StatCard label="Prompts run"       value={totalPrompts} sub={`${totalModelRuns} model runs`} />
+        <StatCard label="Prompts run"       value={totalPrompts} sub={`${runAccounting.completed}/${runAccounting.total_runs} model calls ok`} />
       </div>
 
-      {/* Opportunity + Revenue */}
+      {/* Opportunity score */}
       {oppScore !== null && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <Card className="border-amber-100 bg-amber-50/30">
-            <CardContent className="pt-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI opportunity score</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-4xl font-bold ${oppColor}`}>{Math.round(oppScore)}</span>
-                    <span className="text-gray-400 text-lg">/100</span>
-                  </div>
-                  {oppLabel && (
-                    <span className={`text-xs font-medium mt-1 inline-block ${oppColor}`}>
-                      {oppLabel.replace('_', ' ')} opportunity
-                    </span>
-                  )}
+        <Card className="border-amber-100 bg-amber-50/30 mb-5">
+          <CardContent className="pt-5">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI opportunity score</p>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-4xl font-bold ${oppColor}`}>{Math.round(oppScore)}</span>
+                  <span className="text-gray-400 text-lg">/100</span>
                 </div>
-                <TrendingUp className="w-8 h-8 text-amber-400 mt-1" />
+                {oppLabel && (
+                  <span className={`text-xs font-medium mt-1 inline-block ${oppColor}`}>
+                    {oppLabel.replace('_', ' ')} opportunity
+                  </span>
+                )}
               </div>
-              {topComp > myMentions && (
-                <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-amber-100">
-                  Top competitor mentioned <strong>{topComp}×</strong> vs your <strong>{myMentions}×</strong>
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Estimated monthly opportunity</p>
-              {revenueMax && revenueMax > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-2xl font-bold text-gray-900">
-                    €{revenueMin?.toLocaleString()} – €{revenueMax.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500">estimated additional revenue/month</p>
-                  {visitorsMin && visitorsMax && (
-                    <p className="text-sm text-gray-600">{visitorsMin}–{visitorsMax} additional visitors/month</p>
-                  )}
-                  <p className="text-xs text-gray-400">{ESTIMATE_CAVEAT}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">Not enough data to estimate yet</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              <TrendingUp className="w-8 h-8 text-amber-400 mt-1" />
+            </div>
+            {topComp > myMentions && (
+              <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-amber-100">
+                Top competitor mentioned <strong>{topComp}×</strong> vs your <strong>{myMentions}×</strong>
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
+
+      {/* How the score is calculated (stored breakdown) */}
+      <ScoreBreakdownCard breakdown={scoreBreakdown} />
+
+      {/* Run accounting — explains prompts vs model calls */}
+      <RunAccountingCard acc={runAccounting} extractionConfidence={extractionConfidence} />
+
+      {/* Prompt-level evidence */}
+      <PromptEvidenceCard prompts={promptEvidence} />
 
       {/* Signal gaps — root causes */}
       {signalGaps.length > 0 && (
@@ -366,11 +366,35 @@ export default async function AuditDetailPage({
         </Card>
       )}
 
+      {/* Methodology & limitations */}
+      <MethodologyCard acc={runAccounting} language={auditLanguage} />
+
       {/* Recommendations + Fix Now */}
       <Recommendations auditId={id} />
 
       {/* Outreach email (NL/EN) */}
       <OutreachEmail auditId={id} restaurantName={entity.name} defaultLanguage={languageForCountry(entity.country)} />
+
+      {/* PDF report (NL/EN · full vs client preview) */}
+      <Card>
+        <CardHeader><CardTitle>PDF report</CardTitle></CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Full report — your copy</p>
+            <div className="flex gap-2">
+              <a href={`/api/report/${id}/pdf?variant=full&lang=nl`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-gray-900 text-white hover:bg-gray-700">Nederlands ↓</a>
+              <a href={`/api/report/${id}/pdf?variant=full&lang=en`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-gray-900 text-white hover:bg-gray-700">English ↓</a>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Client preview — hides competitors &amp; fixes</p>
+            <div className="flex gap-2">
+              <a href={`/api/report/${id}/pdf?variant=teaser&lang=nl`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-700 hover:border-gray-400">Nederlands ↓</a>
+              <a href={`/api/report/${id}/pdf?variant=teaser&lang=en`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-700 hover:border-gray-400">English ↓</a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {audit.error_message && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 mt-4">

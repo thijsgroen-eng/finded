@@ -1,8 +1,14 @@
 import { inngest } from '@/lib/inngest/client'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import Anthropic from '@anthropic-ai/sdk'
+import { sanitizeJsonLd } from '@/lib/engine/jsonld'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// Appended to every fix's system prompt: any JSON-LD must be syntactically valid.
+const VALID_JSONLD_RULE = `
+
+JSON-LD VALIDITY: any <script type="application/ld+json"> you emit MUST be valid JSON — NO comments (no // and no /* */), no trailing commas. Express "to be filled in" guidance as placeholder STRING VALUES (e.g. "telephone": "[PLACEHOLDER: phone number]"), never as comments.`
 
 // Appended to every fix's system prompt. These assets are about REAL businesses,
 // so the model must never invent verifiable facts (founding dates, awards,
@@ -84,11 +90,10 @@ Return as HTML with clear section headings.`,
     buildPrompt: (r) => `Generate opening hours JSON-LD schema for ${r.name} in ${r.city}.
 
 Since actual hours are unknown, generate a realistic template for a ${r.cuisine ?? 'restaurant'} with:
-- Placeholder comments showing WHERE to update each day
-- Standard restaurant hours format (Mon-Sun)
-- Both openingHoursSpecification and openingHours formats
+- Standard restaurant hours format (Mon-Sun) using openingHoursSpecification
+- Use placeholder STRING VALUES like "[PLACEHOLDER: Mon open time]" for times to confirm — never invent real hours
 
-Return a <script type="application/ld+json"> block with clear TODO comments for the owner to fill in actual hours.`,
+Return a single <script type="application/ld+json"> block. The JSON-LD MUST be valid JSON: NO comments (no // or /* */), no trailing commas. Put any "fill this in" guidance inside placeholder string values, not comments.`,
   },
 
   authority_content: {
@@ -220,14 +225,17 @@ export const fixFunction = inngest.createFunction(
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 4000,
-        system: config.systemPrompt + NO_FABRICATION_RULE,
+        system: config.systemPrompt + NO_FABRICATION_RULE + VALID_JSONLD_RULE,
         messages: [{
           role: 'user',
           content: config.buildPrompt(restaurant, websiteAudit, null),
         }],
       })
 
-      return message.content[0]?.type === 'text' ? message.content[0].text : ''
+      const raw = message.content[0]?.type === 'text' ? message.content[0].text : ''
+      // Strip any code fences, then normalize JSON-LD blocks to valid JSON.
+      const unfenced = raw.replace(/```(?:json|html|json-ld)?\n?|```/g, '').trim()
+      return sanitizeJsonLd(unfenced)
     })
 
     // Get current version count

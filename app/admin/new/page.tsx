@@ -99,8 +99,8 @@ export default function NewAuditPage() {
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             AI Visibility Audit
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Analyze any business</h1>
-          <p className="text-sm text-gray-500 mt-2">Enter a website URL — we detect the business type and run the audit automatically</p>
+          <h1 className="text-2xl font-bold text-gray-900">Audit a restaurant</h1>
+          <p className="text-sm text-gray-500 mt-2">Enter the restaurant&rsquo;s website — we detect its cuisine and city, then run the AI visibility audit in Dutch automatically</p>
         </div>
 
         {/* URL input */}
@@ -138,7 +138,7 @@ export default function NewAuditPage() {
               </div>
             )}
             <p className="mt-3 text-xs text-gray-400">
-              Works for any business — restaurant, dentist, lawyer, hotel, agency, SaaS, ecommerce
+              Built for restaurants in the Netherlands — prompts, competitors and fixes are tuned to how diners search, in Dutch.
             </p>
           </div>
         )}

@@ -6,6 +6,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { assertPublicHttpUrl } from './url-guard'
+import { decodeHtmlEntities } from './html'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -69,8 +70,8 @@ function extractMeta(html: string): { title: string | null; description: string 
     html.match(/<meta[^>]+content=[\"']([^\"']{1,300})[\"'][^>]+name=[\"']description[\"']/i)
 
   return {
-    title: titleMatch ? titleMatch[1].trim() : null,
-    description: descMatch ? descMatch[1].trim() : null,
+    title: titleMatch ? decodeHtmlEntities(titleMatch[1].trim()) : null,
+    description: descMatch ? decodeHtmlEntities(descMatch[1].trim()) : null,
   }
 }
 

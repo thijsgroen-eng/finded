@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "ANTHROPIC_API_KEY=dummy node --import tsx --test tests/scoring.test.ts tests/html.test.ts tests/matching.test.ts tests/normalize.test.ts tests/prompt-store.test.ts tests/audit-evidence.test.ts tests/dashboard.test.ts tests/jsonld.test.ts tests/auth.test.ts",
     "verify:metrics": "ANTHROPIC_API_KEY=dummy tsx scripts/verify-metrics.ts"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "@radix-ui/react-slot": "^1.2.5",
     "@radix-ui/react-tabs": "^1.1.14",
     "@radix-ui/react-toast": "^1.2.16",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.1",
     "class-variance-authority": "^0.7.1",
@@ -35,6 +37,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "recharts": "^3.8.1",
+    "stripe": "^22.2.3",
     "tailwind-merge": "^3.6.0",
     "xlsx": "^0.18.5"
   },

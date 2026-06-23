@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { createAudit } from '@/lib/engine/audit-runner'
+import { normalizeCity, domainFromUrl } from '@/lib/engine/normalize'
 import * as Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
@@ -120,7 +121,8 @@ export async function POST(request: NextRequest) {
           .insert({
             name:          row.name,
             website:       row.website || null,
-            city:          row.city,
+            domain:        domainFromUrl(row.website),
+            city:          normalizeCity(row.city) ?? row.city,
             cuisine:       row.cuisine || null,
             email:         row.email || null,
             phone:         row.phone || null,

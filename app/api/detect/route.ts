@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { normalizeCity, domainFromUrl } from '@/lib/engine/normalize'
 
 // Dynamic import prevents Next.js from treating engine exports as route exports
 export async function POST(request: NextRequest) {
@@ -35,7 +36,8 @@ export async function PUT(request: NextRequest) {
       .insert({
         name:          business.name,
         website:       business.website,
-        city:          business.city || 'Unknown',
+        domain:        domainFromUrl(business.website),
+        city:          normalizeCity(business.city) ?? (business.city || 'Unknown'),
         country:       business.country || null,
         cuisine:       business.subtypes[0] || null,
         business_type: business.business_type,

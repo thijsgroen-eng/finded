@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "ANTHROPIC_API_KEY=dummy node --import tsx --test tests/scoring.test.ts tests/html.test.ts tests/matching.test.ts tests/normalize.test.ts tests/prompt-store.test.ts",
+    "test": "ANTHROPIC_API_KEY=dummy node --import tsx --test tests/scoring.test.ts tests/html.test.ts tests/matching.test.ts tests/normalize.test.ts tests/prompt-store.test.ts tests/audit-evidence.test.ts",
     "verify:metrics": "ANTHROPIC_API_KEY=dummy tsx scripts/verify-metrics.ts"
   },
   "dependencies": {

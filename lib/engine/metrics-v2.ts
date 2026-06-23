@@ -1,9 +1,11 @@
 import type { ExtractedEntity } from './entity-extractor'
 import { positionWeight, gradedMentionFrequency } from './metrics-core'
 import { estimateOpportunity } from '@/lib/estimates'
+import { normalizeName } from './normalize'
 
 export interface CompetitorStats {
   name: string
+  canonical_key: string
   mention_count: number
   avg_position: number
   sentiment_score: number    // -1 to 1
@@ -211,21 +213,25 @@ export function computeFullMetrics(
     negative: targetMentions.filter(m => m.sentiment === 'negative').length,
   }
 
+  // Dedupe competitors by canonical name so "De Kas" / "Restaurant De Kas" merge
+  // into one row instead of inflating the count.
   const competitorMap = new Map<string, {
+    name: string
     count: number
     positions: number[]
     sentiments: number[]
     reasons: string[]
   }>()
+  const targetKey = normalizeName(targetName)
 
   for (const entity of allEntities) {
-    if (entity.name.toLowerCase().includes(targetName.toLowerCase()) ||
-        targetName.toLowerCase().includes(entity.name.toLowerCase())) continue
+    const key = normalizeName(entity.name)
+    if (!key || key === targetKey) continue
 
-    if (!competitorMap.has(entity.name)) {
-      competitorMap.set(entity.name, { count: 0, positions: [], sentiments: [], reasons: [] })
+    if (!competitorMap.has(key)) {
+      competitorMap.set(key, { name: entity.name, count: 0, positions: [], sentiments: [], reasons: [] })
     }
-    const comp = competitorMap.get(entity.name)!
+    const comp = competitorMap.get(key)!
     comp.count++
     if (entity.position) comp.positions.push(entity.position)
     if (entity.sentiment === 'positive') comp.sentiments.push(1)
@@ -244,8 +250,9 @@ export function computeFullMetrics(
   const competitors: CompetitorStats[] = [...competitorMap.entries()]
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
-    .map(([name, data]) => ({
-      name,
+    .map(([key, data]) => ({
+      name: data.name,
+      canonical_key: key,
       mention_count: data.count,
       avg_position: data.positions.length > 0
         ? data.positions.reduce((a, b) => a + b, 0) / data.positions.length

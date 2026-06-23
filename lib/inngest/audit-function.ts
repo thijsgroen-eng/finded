@@ -346,6 +346,7 @@ export const auditFunction = inngest.createFunction(
           metrics.competitors.map((c: any) => ({
             audit_id,
             name:            c.name,
+            canonical_key:   c.canonical_key,
             mention_count:   c.mention_count,
             avg_position:    c.avg_position,
             sentiment_score: c.sentiment_score,

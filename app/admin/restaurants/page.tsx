@@ -179,7 +179,7 @@ export default function EntitiesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Entities</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} entities · any business type</p>
+          <p className="text-sm text-gray-500 mt-1">{total} entities · restaurants first (other types supported internally)</p>
         </div>
         <Button size="sm" onClick={() => setShowForm(v => !v)}>
           <Plus className="w-3.5 h-3.5" />

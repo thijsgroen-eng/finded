@@ -32,20 +32,6 @@ const PRIORITY_STYLES = {
   low:    { bg: '#edf8f3', color: '#0d6b50', label: 'LOW' },
 }
 
-// Map recommendation titles to fix types
-function inferFixType(title: string, what: string): string | null {
-  const text = (title + ' ' + what).toLowerCase()
-  if (text.includes('schema') || text.includes('json-ld') || text.includes('structured data')) return 'schema_jsonld'
-  if (text.includes('faq')) return 'faq_page'
-  if (text.includes('opening hours') || text.includes('hours')) return 'opening_hours'
-  if (text.includes('description') || text.includes('meta') || text.includes('citation')) return 'optimized_description'
-  if (text.includes('authority') || text.includes('about')) return 'authority_content'
-  if (text.includes('menu')) return 'menu_structure'
-  if (text.includes('reservation') || text.includes('booking')) return 'reservation_markup'
-  if (text.includes('location') || text.includes('landing page')) return 'location_page'
-  return null
-}
-
 function AssetPreview({ asset, onRegenerate, loading }: {
   asset: GeneratedAsset
   onRegenerate: () => void
@@ -170,7 +156,7 @@ export function Recommendations({ auditId }: { auditId: string }) {
 
   async function generateFix(rec: Recommendation) {
     if (!rec.id) return
-    const fixType = rec.type ?? inferFixType(rec.title, rec.what)
+    const fixType = rec.type // backend-authoritative; no client-side text inference
     if (!fixType) return
 
     setFixLoading(prev => ({ ...prev, [rec.id!]: true }))
@@ -255,7 +241,7 @@ export function Recommendations({ auditId }: { auditId: string }) {
           <div className="space-y-3">
             {recs.map((rec, i) => {
               const style = PRIORITY_STYLES[rec.priority] ?? PRIORITY_STYLES.medium
-              const fixType = rec.type ?? inferFixType(rec.title, rec.what)
+              const fixType = rec.type
               const isFixLoading = rec.id ? fixLoading[rec.id] : false
               const asset = rec.id ? assets[rec.id] : null
 

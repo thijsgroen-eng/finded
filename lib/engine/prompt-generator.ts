@@ -1,11 +1,13 @@
 /**
- * Universal Intent Engine
- * Generates AI visibility evaluation prompts for any business type.
- * Works for restaurants, dentists, lawyers, hotels, agencies, SaaS, etc.
+ * Restaurant Intent Engine
+ * Generates AI visibility evaluation prompts for restaurants (the product's
+ * focus). A generic `default` template remains only as a safety net for rows
+ * whose business_type isn't 'restaurant'; the product is restaurant-first for
+ * the Netherlands and other verticals were intentionally removed.
  *
  * Prompts are generated per language. Dutch is the default for NL businesses
  * (most real restaurant searches in the Netherlands are in Dutch); English is
- * the fallback and is used for the future "any country" generalization.
+ * the fallback.
  */
 
 import { Language } from '@/lib/i18n'
@@ -88,164 +90,6 @@ const BUSINESS_TEMPLATES: Record<string, TemplateSet> = {
       'Best {subtype} restaurant near {location} centre',
       'Best restaurants near me {location}',
       '{subtype} restaurant {location} city centre',
-    ],
-  },
-
-  dentist: {
-    discovery: [
-      'Best dentist in {location}',
-      'Top dental clinic {location}',
-      'Dentist near me {location}',
-      'Good dentist {location}',
-      'Recommended dentist {location}',
-    ],
-    category: [
-      'Best {subtype} dentist {location}',
-      '{subtype} dental clinic {location}',
-      'Dentist specializing in {subtype} {location}',
-      'Best {subtype} treatment {location}',
-    ],
-    occasions: [
-      'Emergency dentist {location}',
-      'Dentist for children {location}',
-      'Dentist for anxious patients {location}',
-      'Dentist accepting new patients {location}',
-      'Weekend dentist {location}',
-    ],
-    problemSolution: [
-      'Where to get {subtype} in {location}',
-      'How much does {subtype} cost {location}',
-      'Best dentist for tooth pain {location}',
-      'Affordable dental care {location}',
-      'Dentist that accepts insurance {location}',
-    ],
-    trust: [
-      'Highest rated dentist {location}',
-      'Most reviewed dental clinic {location}',
-      'Trusted dentist {location}',
-      'Award winning dental practice {location}',
-    ],
-    geographic: [
-      'Dentist in {location} centre',
-      'Dental clinic near {location}',
-      '{subtype} dentist {location} area',
-    ],
-  },
-
-  lawyer: {
-    discovery: [
-      'Best lawyer in {location}',
-      'Top law firm {location}',
-      'Attorney {location}',
-      'Legal advice {location}',
-      'Recommended solicitor {location}',
-    ],
-    category: [
-      'Best {subtype} lawyer {location}',
-      '{subtype} attorney {location}',
-      'Law firm specializing in {subtype} {location}',
-      '{subtype} legal services {location}',
-    ],
-    occasions: [
-      'Urgent legal help {location}',
-      'Free legal consultation {location}',
-      'Business lawyer {location}',
-      'Personal injury lawyer {location}',
-      'Startup lawyer {location}',
-    ],
-    problemSolution: [
-      'Who to call for {subtype} case {location}',
-      'How to find a {subtype} lawyer {location}',
-      'Best lawyer for small business {location}',
-      'Affordable legal help {location}',
-      'Lawyer that speaks my language {location}',
-    ],
-    trust: [
-      'Highest rated law firm {location}',
-      'Most experienced {subtype} lawyer {location}',
-      'Award winning attorney {location}',
-      'Trusted solicitor {location}',
-    ],
-    geographic: [
-      'Law firm in {location} centre',
-      '{subtype} lawyer near {location}',
-      'Attorney {location} area',
-    ],
-  },
-
-  hotel: {
-    discovery: [
-      'Best hotels in {location}',
-      'Top places to stay in {location}',
-      'Where to stay in {location}',
-      'Best accommodation {location}',
-      'Recommended hotels {location}',
-    ],
-    category: [
-      'Best {subtype} hotel {location}',
-      '{subtype} accommodation {location}',
-      'Luxury hotel {location}',
-      'Boutique hotel {location}',
-    ],
-    occasions: [
-      'Romantic hotel {location}',
-      'Family hotel {location}',
-      'Business hotel {location}',
-      'Hotel for honeymoon {location}',
-      'Pet friendly hotel {location}',
-    ],
-    problemSolution: [
-      'Best hotel near {location} airport',
-      'Hotel with parking {location}',
-      'Cheap hotel {location}',
-      'Hotel with pool {location}',
-      'Long stay hotel {location}',
-    ],
-    trust: [
-      'Highest rated hotel {location}',
-      'Most reviewed hotel {location}',
-      'Award winning hotel {location}',
-      '5 star hotel {location}',
-    ],
-    geographic: [
-      'Hotel in {location} centre',
-      'Hotel near {location} station',
-      '{subtype} hotel near {location}',
-    ],
-  },
-
-  agency: {
-    discovery: [
-      'Best marketing agency {location}',
-      'Top digital agency {location}',
-      'Recommended agency {location}',
-      'Best creative agency {location}',
-    ],
-    category: [
-      'Best {subtype} agency {location}',
-      '{subtype} services {location}',
-      'Agency specializing in {subtype} {location}',
-    ],
-    occasions: [
-      'Agency for startup {location}',
-      'Agency for ecommerce {location}',
-      'Agency for small business {location}',
-      'Agency for rebrand {location}',
-    ],
-    problemSolution: [
-      'How to find a {subtype} agency {location}',
-      'Best agency for {subtype} campaign {location}',
-      'Affordable marketing agency {location}',
-      'Agency with proven results {location}',
-    ],
-    trust: [
-      'Award winning agency {location}',
-      'Most reviewed agency {location}',
-      'Top performing {subtype} agency {location}',
-    ],
-    geographic: [
-      '{subtype} agency in {location}',
-      'Digital agency near {location}',
     ],
   },
 

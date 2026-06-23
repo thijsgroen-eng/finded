@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
+import { FIX_TYPES, FIX_TYPE_HINTS, asFixType } from '@/lib/engine/fix-types'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-// Map recommendation titles to fix types
-function inferFixType(title: string, what: string): string | null {
-  const text = (title + ' ' + what).toLowerCase()
-  if (text.includes('schema') || text.includes('json-ld') || text.includes('structured data')) return 'schema_jsonld'
-  if (text.includes('faq')) return 'faq_page'
-  if (text.includes('opening hours') || text.includes('hours')) return 'opening_hours'
-  if (text.includes('description') || text.includes('meta') || text.includes('citation')) return 'optimized_description'
-  if (text.includes('authority') || text.includes('about')) return 'authority_content'
-  if (text.includes('menu')) return 'menu_structure'
-  if (text.includes('reservation') || text.includes('booking')) return 'reservation_markup'
-  if (text.includes('location') || text.includes('landing page')) return 'location_page'
-  return null
-}
 
 export async function POST(request: NextRequest) {
   const { audit_id } = await request.json()
@@ -105,14 +92,21 @@ Format your response as a JSON array with this exact structure:
 [
   {
     "priority": "high|medium|low",
+    "type": ${JSON.stringify([...FIX_TYPES])} or null,
     "title": "Short action title (max 8 words)",
     "what": "Exactly what to do (2-3 sentences, specific and actionable)",
     "why": "Why this will improve AI visibility (1-2 sentences)",
+    "evidence": "The specific data point from THIS audit that triggered it (e.g. 'Missing from 4/5 Italiaans queries' or 'Schema.org markup absent')",
     "impact": "Expected impact description (e.g. '+15-25% visibility on ChatGPT')"
   }
 ]
 
+Fix type guide (choose the closest, or null if none of these implement the fix):
+${FIX_TYPES.map(ty => `- ${ty}: ${FIX_TYPE_HINTS[ty]}`).join('\n')}
+
 Rules:
+- "type" MUST be exactly one of the listed values or null — do not invent types.
+- "evidence" must quote a real number/signal from the audit data above, not a generality.
 - Be SPECIFIC to this restaurant's actual data
 - Prioritise by impact: fix what will move the needle most first
 - Give concrete actions, not vague advice
@@ -146,9 +140,11 @@ Rules:
         rawRecs.map((rec: any) => ({
           audit_id,
           restaurant_id: restaurant.id,
-          type: inferFixType(rec.title, rec.what),
+          type: asFixType(rec.type), // backend-authoritative, enum-validated (null if invalid)
           title: rec.title,
           description: rec.what,
+          why: rec.why ?? null,
+          evidence: rec.evidence ?? null,
           priority: rec.priority,
           impact: rec.impact,
           difficulty: rec.difficulty ?? null,
@@ -161,7 +157,7 @@ Rules:
     const recommendations = rawRecs.map((rec: any, i: number) => ({
       ...rec,
       id: insertedRecs?.[i]?.id ?? null,
-      type: inferFixType(rec.title, rec.what),
+      type: asFixType(rec.type),
       status: 'pending',
     }))
 
@@ -207,7 +203,8 @@ export async function GET(request: NextRequest) {
       priority: r.priority,
       title: r.title,
       what: r.description,
-      why: r.description,
+      why: r.why ?? '',
+      evidence: r.evidence ?? null,
       impact: r.impact ?? '',
       status: r.status,
     }))

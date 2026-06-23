@@ -39,18 +39,28 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
+/**
+ * The configured admin password, trimmed. Leading/trailing whitespace is a
+ * common footgun when pasting the value into a hosting dashboard (a trailing
+ * newline makes every login fail with "incorrect password"), so we normalize it
+ * here. Returns '' when unset/blank.
+ */
+function adminPassword(): string {
+  return process.env.ADMIN_PASSWORD?.trim() ?? ''
+}
+
 /** The cookie value a valid session must carry, or null if admin auth is unconfigured. */
 export async function expectedToken(): Promise<string | null> {
-  const pw = process.env.ADMIN_PASSWORD
+  const pw = adminPassword()
   if (!pw) return null
   return hmac(pw, SESSION_PAYLOAD)
 }
 
-/** Whether a submitted password matches ADMIN_PASSWORD (constant-time). */
+/** Whether a submitted password matches ADMIN_PASSWORD (constant-time, whitespace-trimmed). */
 export function passwordMatches(submitted: string): boolean {
-  const pw = process.env.ADMIN_PASSWORD
+  const pw = adminPassword()
   if (!pw) return false
-  return safeEqual(submitted, pw)
+  return safeEqual(submitted.trim(), pw)
 }
 
 /** Whether a cookie value represents a valid admin session. */
@@ -63,5 +73,5 @@ export async function isValidSession(cookieValue: string | undefined | null): Pr
 
 /** True when no ADMIN_PASSWORD is set AND we are not in production (dev bypass). */
 export function adminAuthDisabledInDev(): boolean {
-  return !process.env.ADMIN_PASSWORD && process.env.NODE_ENV !== 'production'
+  return !adminPassword() && process.env.NODE_ENV !== 'production'
 }

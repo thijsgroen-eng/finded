@@ -74,6 +74,20 @@ test('buildPromptEvidence joins prompts, mentions and runs per provider', () => 
   assert.equal(anthropic.mentioned, false)
 })
 
+test('buildPromptEvidence surfaces the competitors AI named instead per prompt', () => {
+  const promptRuns: PromptRunRow[] = [{ prompt_id: 'p1', category: 'category', intent: 'x', prompt_text: 'q' }]
+  const ev = buildPromptEvidence(promptRuns, [], [], [
+    { prompt_id: 'p1', model: 'openai', name: 'De Kas', confidence: 1, is_target: true, normalized_name: 'de kas' },
+    { prompt_id: 'p1', model: 'openai', name: 'Bar Centraal', confidence: 1, is_target: false, normalized_name: 'centraal' },
+    { prompt_id: 'p1', model: 'anthropic', name: 'Bar Centraal', confidence: 1, is_target: false, normalized_name: 'centraal' },
+    { prompt_id: 'p1', model: 'gemini', name: 'Osteria', confidence: 1, is_target: false, normalized_name: 'osteria' },
+  ])
+  const top = ev[0].top_competitors
+  assert.equal(top[0].name, 'Bar Centraal')
+  assert.equal(top[0].count, 2)
+  assert.ok(!top.some((c) => c.name === 'De Kas'), 'target excluded')
+})
+
 test('averageExtractionConfidence ignores nulls and returns null when unrecorded', () => {
   assert.equal(averageExtractionConfidence([]), null)
   assert.equal(

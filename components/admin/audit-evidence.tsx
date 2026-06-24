@@ -15,6 +15,7 @@ export interface PromptEvidence {
   prompt_id: string; prompt_text: string | null; category: string | null; intent: string | null
   locale: string | null; mentioned_any: boolean
   models: { model: string; ran: number; failed: number; mentioned: boolean; mention_rate: number | null; best_position: number | null; model_version: string | null; grounded: boolean | null }[]
+  top_competitors?: { name: string; count: number }[]
 }
 export interface ScoreComponent { key: string; label: string; score: number; weight: number; detail: string }
 export interface ScoreBreakdown {
@@ -186,6 +187,11 @@ export function PromptEvidenceCard({ prompts }: { prompts: PromptEvidence[] }) {
                 </div>
               ))}
             </div>
+            {p.top_competitors && p.top_competitors.length > 0 && (
+              <p className="text-xs text-gray-400 mt-2">
+                AI named instead: {p.top_competitors.map((c) => `${c.name} (${c.count})`).join(' · ')}
+              </p>
+            )}
           </div>
         ))}
         {prompts.length > 4 && (

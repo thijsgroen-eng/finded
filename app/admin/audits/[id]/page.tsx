@@ -3,10 +3,10 @@ import { computeMetrics } from '@/lib/engine/metrics'
 import {
   buildRunAccounting, buildPromptEvidence, averageExtractionConfidence,
 } from '@/lib/engine/audit-evidence'
-import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
+import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
 import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
 import { notFound } from 'next/navigation'
-import { TrendingUp, ExternalLink, ArrowLeft } from 'lucide-react'
+import { ExternalLink, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { OutreachEmail } from '@/components/admin/outreach-email'
@@ -57,7 +57,7 @@ async function getAuditData(id: string) {
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', id),
     supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status, sources').eq('audit_id', id),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', id),
-    supabaseAdmin.from('entities').select('prompt_id, model, name, confidence').eq('audit_id', id),
+    supabaseAdmin.from('entities').select('prompt_id, model, name, confidence, is_target, normalized_name').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),
     supabaseAdmin.from('signal_gaps').select('*').eq('restaurant_id', entity.id).order('severity'),
@@ -69,7 +69,7 @@ async function getAuditData(id: string) {
 
   const metrics = computeMetrics(mentions ?? [])
   const runAccounting = buildRunAccounting(modelRuns ?? [])
-  const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [])
+  const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [], entities ?? [])
   const extractionConfidence = averageExtractionConfidence(entities ?? [])
   const allSources = (modelRuns ?? []).flatMap((r: { sources?: unknown }) => Array.isArray(r.sources) ? r.sources : [])
   const authority = buildAuthoritySignals(allSources, entity.domain)
@@ -109,6 +109,8 @@ export default async function AuditDetailPage({
   const totalPrompts   = runAccounting.distinct_prompts || audit.total_prompts || metrics.total_prompts
   const oppScore       = visibilityScore?.opportunity_score ?? null
   const oppLabel       = visibilityScore?.opportunity_label ?? null
+  const visScore       = visibilityScore?.visibility_score ?? null
+  const confidence     = visibilityScore?.confidence_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
   const auditLanguage  = languageForCountry(entity.country)
   const myMentions     = metrics.total_mentions
@@ -179,41 +181,50 @@ export default async function AuditDetailPage({
       {/* Score trend */}
       <ScoreTrend restaurantId={entity.id} />
 
-      {/* Core metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Mention frequency" value={formatPercent(metrics.mention_frequency)} sub={`${myMentions} of ${totalPrompts} prompts`} />
-        <StatCard label="Position score"    value={`${Math.round(metrics.position_score)}/100`} sub={metrics.position_score >= 60 ? 'Good' : metrics.position_score >= 30 ? 'Fair' : 'Poor'} />
-        <StatCard label="Model consensus"   value={`${metrics.model_consensus}/4`} sub="models that mentioned" />
-        <StatCard label="Prompts run"       value={totalPrompts} sub={`${runAccounting.completed}/${runAccounting.total_runs} model calls ok`} />
-      </div>
-
-      {/* Opportunity score */}
-      {oppScore !== null && (
-        <Card className="border-amber-100 bg-amber-50/30 mb-5">
-          <CardContent className="pt-5">
-            <div className="flex items-start justify-between mb-3">
+      {/* Consolidated score header — headline scores + key stats in one place */}
+      <Card className="mb-5">
+        <CardContent className="pt-5">
+          <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Visibility score</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-4xl font-bold text-gray-900">{visScore != null ? Math.round(visScore) : '—'}</span>
+                <span className="text-gray-400 text-lg">/100</span>
+              </div>
+              {confidence != null && <span className="text-xs text-gray-400">confidence {Math.round(confidence * 100)}%</span>}
+            </div>
+            {oppScore !== null && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI opportunity score</p>
-                <div className="flex items-baseline gap-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Opportunity</p>
+                <div className="flex items-baseline gap-1.5">
                   <span className={`text-4xl font-bold ${oppColor}`}>{Math.round(oppScore)}</span>
                   <span className="text-gray-400 text-lg">/100</span>
                 </div>
-                {oppLabel && (
-                  <span className={`text-xs font-medium mt-1 inline-block ${oppColor}`}>
-                    {oppLabel.replace('_', ' ')} opportunity
-                  </span>
-                )}
+                {oppLabel && <span className={`text-xs font-medium ${oppColor}`}>{oppLabel.replace('_', ' ')} opportunity</span>}
               </div>
-              <TrendingUp className="w-8 h-8 text-amber-400 mt-1" />
-            </div>
-            {topComp > myMentions && (
-              <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-amber-100">
-                Top competitor mentioned <strong>{topComp}×</strong> vs your <strong>{myMentions}×</strong>
-              </p>
             )}
-          </CardContent>
-        </Card>
-      )}
+            <div className="ml-auto flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <p className="text-lg font-bold text-gray-900">{formatPercent(metrics.mention_frequency)}</p>
+                <p className="text-xs text-gray-400">mention freq · {myMentions} of {totalPrompts}</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900">{metrics.model_consensus}/4</p>
+                <p className="text-xs text-gray-400">models mentioned</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900">{totalPrompts}</p>
+                <p className="text-xs text-gray-400">prompts · {runAccounting.completed}/{runAccounting.total_runs} calls ok</p>
+              </div>
+            </div>
+          </div>
+          {topComp > myMentions && (
+            <p className="text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100">
+              Top competitor mentioned <strong>{topComp}×</strong> vs your <strong>{myMentions}×</strong>
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Why this result — plain-language synthesis */}
       <Card className="mb-5 border-gray-200">

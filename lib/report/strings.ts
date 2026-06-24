@@ -38,6 +38,9 @@ export interface ReportStrings {
   limitationsBody: string
   websiteSignalsLine: (present: number, total: number) => string
   formulaVersionLine: (version: string) => string
+  implementationPlan: string
+  suggestedFix: string
+  expectedImpact: string
 }
 
 const EN: ReportStrings = {
@@ -80,6 +83,9 @@ const EN: ReportStrings = {
     'AI answers vary between runs, so figures are sampled estimates with a confidence band, not guarantees. Results reflect the moment of the audit and this specific set of questions. Failed model calls are excluded. Any revenue figures are illustrative, not measured.',
   websiteSignalsLine: (present, total) => `Website AI-readiness: ${present} of ${total} signals present.`,
   formulaVersionLine: (version) => `Scoring formula ${version}.`,
+  implementationPlan: 'Implementation plan',
+  suggestedFix: 'Fix',
+  expectedImpact: 'Expected impact',
 }
 
 const NL: ReportStrings = {
@@ -122,6 +128,9 @@ const NL: ReportStrings = {
     'AI-antwoorden variëren per keer, dus de cijfers zijn steekproefschattingen met een betrouwbaarheidsmarge, geen garanties. De resultaten weerspiegelen het moment van de audit en deze specifieke set vragen. Mislukte modelaanroepen zijn uitgesloten. Eventuele omzetbedragen zijn illustratief, niet gemeten.',
   websiteSignalsLine: (present, total) => `Website-gereedheid voor AI: ${present} van de ${total} signalen aanwezig.`,
   formulaVersionLine: (version) => `Scoreformule ${version}.`,
+  implementationPlan: 'Implementatieplan',
+  suggestedFix: 'Oplossing',
+  expectedImpact: 'Verwachte impact',
 }
 
 export function reportStrings(language: Language): ReportStrings {

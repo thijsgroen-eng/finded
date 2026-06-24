@@ -3,7 +3,19 @@ import { Document, Page, View, Text, StyleSheet, Svg, Circle, Path } from '@reac
 import { Language } from '@/lib/i18n'
 import { reportStrings } from './strings'
 
-export type ReportVariant = 'full' | 'teaser'
+// Plan-based variants drive which sections appear:
+//  - free           : lead magnet — score, models, basic competitors, summary; fixes upsold
+//  - audit          : the €49 detailed report — everything
+//  - implementation : the €299 package — the prioritised fixes as an action plan
+// 'full' / 'teaser' are kept as aliases (audit / free) for older links.
+export type ReportVariant = 'free' | 'audit' | 'implementation' | 'full' | 'teaser'
+
+export type ReportPlan = 'free' | 'audit' | 'implementation'
+export function normalizeVariant(v: ReportVariant): ReportPlan {
+  if (v === 'full') return 'audit'
+  if (v === 'teaser') return 'free'
+  return v
+}
 
 export interface ReportData {
   restaurantName: string
@@ -19,7 +31,7 @@ export interface ReportData {
   modelBreakdown: { model: string; frequency: number; mentions: number }[]
   sentiment: { positive: number; neutral: number; negative: number }
   competitors: { name: string; mention_count: number }[]
-  recommendations: { title: string; description: string; priority: string }[]
+  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null }[]
   websiteSignals?: { present: number; total: number } | null
   formulaVersion?: string | null
 }
@@ -183,7 +195,9 @@ function Footer({ disclaimer }: { disclaimer: string }) {
 
 export function ReportDocument({ data, language, variant }: { data: ReportData; language: Language; variant: ReportVariant }) {
   const t = reportStrings(language)
-  const isTeaser = variant === 'teaser'
+  const mode = normalizeVariant(variant)
+  const isFree = mode === 'free'
+  const isImpl = mode === 'implementation'
   const priorityLabel = (p: string) => (p === 'high' ? t.priorityHigh : p === 'low' ? t.priorityLow : t.priorityMedium)
 
   const sentimentPills: { label: string; value: number; color: string; bg: string }[] = [
@@ -201,7 +215,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             <View style={s.brandDot} />
             <Text style={s.brand}>Finded</Text>
           </View>
-          {isTeaser && <Text style={s.previewBadge}>{t.previewBadge}</Text>}
+          {isFree && <Text style={s.previewBadge}>{t.previewBadge}</Text>}
         </View>
 
         <View style={s.coverMid}>
@@ -282,37 +296,37 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
           </View>
         </View>
 
-        {/* Competitors */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>{t.competitors}</Text>
-          {data.competitors.length === 0 ? (
-            <Text style={s.tCount}>—</Text>
-          ) : isTeaser ? (
-            <Text style={s.hiddenNote}>{t.competitorsHiddenNote(data.competitors.length)}</Text>
-          ) : (
-            <View style={s.table}>
-              <View style={s.tHead}>
-                <Text style={[s.tHeadCell, { width: 22 }]}>#</Text>
-                <Text style={[s.tHeadCell, { flex: 1 }]}>{t.competitorColumn}</Text>
-                <Text style={s.tHeadCell}>{t.mentions}</Text>
-              </View>
-              {data.competitors.map((c, i) => (
-                <View key={`${c.name}-${i}`} style={s.tRow}>
-                  <Text style={s.tRank}>{i + 1}</Text>
-                  <Text style={s.tName}>{c.name}</Text>
-                  <Text style={s.tCount}>{c.mention_count}</Text>
+        {/* Competitors (hidden in the implementation package) */}
+        {!isImpl && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t.competitors}</Text>
+            {data.competitors.length === 0 ? (
+              <Text style={s.tCount}>—</Text>
+            ) : (
+              <View style={s.table}>
+                <View style={s.tHead}>
+                  <Text style={[s.tHeadCell, { width: 22 }]}>#</Text>
+                  <Text style={[s.tHeadCell, { flex: 1 }]}>{t.competitorColumn}</Text>
+                  <Text style={s.tHeadCell}>{t.mentions}</Text>
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
+                {(isFree ? data.competitors.slice(0, 3) : data.competitors).map((c, i) => (
+                  <View key={`${c.name}-${i}`} style={s.tRow}>
+                    <Text style={s.tRank}>{i + 1}</Text>
+                    <Text style={s.tName}>{c.name}</Text>
+                    <Text style={s.tCount}>{c.mention_count}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
-        {/* Recommendations */}
+        {/* Recommendations / implementation plan */}
         <View style={[s.section, { marginBottom: 28 }]}>
-          <Text style={s.sectionTitle}>{t.recommendations}</Text>
+          <Text style={s.sectionTitle}>{isImpl ? t.implementationPlan : t.recommendations}</Text>
           {data.recommendations.length === 0 ? (
             <Text style={s.tCount}>—</Text>
-          ) : isTeaser ? (
+          ) : isFree ? (
             <>
               <Text style={s.hiddenNote}>{t.recommendationsHiddenNote(data.recommendations.length)}</Text>
               <View style={s.unlock}>
@@ -332,6 +346,16 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
                     {r.title}  <Text style={[s.recPriority, { color: priorityColor(r.priority) }]}>{priorityLabel(r.priority)}</Text>
                   </Text>
                   <Text style={s.recDesc}>{r.description}</Text>
+                  {isImpl && r.suggested_fix && (
+                    <Text style={[s.recDesc, { marginTop: 3 }]}>
+                      <Text style={{ fontFamily: 'Helvetica-Bold', color: INK }}>{t.suggestedFix}: </Text>{r.suggested_fix}
+                    </Text>
+                  )}
+                  {isImpl && r.expected_impact && (
+                    <Text style={[s.recDesc, { marginTop: 2, color: GREEN }]}>
+                      {t.expectedImpact}: {r.expected_impact}
+                    </Text>
+                  )}
                 </View>
               </View>
             ))

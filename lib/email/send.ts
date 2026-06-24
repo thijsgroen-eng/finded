@@ -20,6 +20,8 @@ export async function sendEmail(opts: {
   subject: string
   html: string
   text?: string
+  /** Optional file attachments (content is base64). */
+  attachments?: { filename: string; content: string }[]
 }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: true }
@@ -28,7 +30,10 @@ export async function sendEmail(opts: {
     const res = await fetch(RESEND_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [opts.to], subject: opts.subject, html: opts.html, text: opts.text }),
+      body: JSON.stringify({
+        from, to: [opts.to], subject: opts.subject, html: opts.html, text: opts.text,
+        ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
+      }),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}` }
     return { sent: true }

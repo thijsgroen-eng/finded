@@ -118,11 +118,11 @@ function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; 
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: FONT, background: BG, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK }}>
+    <div id="top" style={{ fontFamily: FONT, background: BG, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK }}>
 
       {/* ── Nav ── */}
       <nav style={{ background: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>Finded</div>
+        <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: INK, textDecoration: 'none' }}>Finded</a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <a href="#sample" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Sample report</a>
           <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '8px 16px', borderRadius: 7, textDecoration: 'none' }}>Get your free audit</a>
@@ -190,7 +190,10 @@ export default function LandingPage() {
       </section>
 
       {/* ── What your audit shows (4 cards = sample report preview) ── */}
-      <section id="sample" style={{ maxWidth: 1000, margin: '0 auto', padding: '48px 24px' }}>
+      <section id="sample" style={{ maxWidth: 1000, margin: '0 auto', padding: '48px 24px', scrollMarginTop: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <a href="#top" style={{ fontSize: 13, fontWeight: 600, color: MUTED, textDecoration: 'none' }}>↑ Back to top</a>
+        </div>
         <SectionTitle
           kicker="Your report"
           title="What your audit shows"
@@ -302,7 +305,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Lead capture ── */}
-      <section id="check" style={{ background: PANEL, borderTop: `1px solid ${BORDER}` }}>
+      <section id="check" style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, letterSpacing: -0.8, marginBottom: 12 }}>
             See your restaurant&rsquo;s AI visibility

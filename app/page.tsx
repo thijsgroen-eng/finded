@@ -138,9 +138,13 @@ export default function LandingPage() {
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 50px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5, marginBottom: 18 }}>
             Is your restaurant showing up when guests ask <span style={{ color: GREEN }}>AI</span> where to eat?
           </h1>
-          <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 28, maxWidth: 520 }}>
-            We test how ChatGPT, Claude, Gemini and Perplexity recommend restaurants in your city — then show
-            which competitors appear instead of you, and exactly what to fix on your website.
+          <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 16, maxWidth: 520 }}>
+            Every day, potential guests ask ChatGPT, Gemini and other AI tools where to eat. If your
+            competitors are mentioned and you aren&rsquo;t, you&rsquo;re <strong style={{ color: INK }}>invisible
+            in a growing discovery channel</strong>.
+          </p>
+          <p style={{ fontSize: 'clamp(15px, 1.9vw, 17px)', color: MUTED, lineHeight: 1.6, marginBottom: 28, maxWidth: 520 }}>
+            We show exactly where you appear, which competitors get recommended instead, and what to fix.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a href="#check" style={{ background: INK, color: '#fff', padding: '14px 26px', borderRadius: 8, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
@@ -154,18 +158,29 @@ export default function LandingPage() {
         </div>
         <div>
           <SampleReportCard />
+          <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 10 }}>
+            Sample Audit Preview — example data, not a real restaurant.
+          </p>
         </div>
       </section>
 
-      {/* ── AI platform strip + what we test ── */}
+      {/* ── AI platform trust strip ── */}
       <div style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 24px' }}>
-          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
-            We test your visibility across
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '26px 24px' }}>
+          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 18 }}>
+            We test visibility across major AI search platforms.
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(16px, 4vw, 44px)', flexWrap: 'wrap', marginBottom: 18 }}>
-            {['ChatGPT', 'Claude', 'Gemini', 'Perplexity'].map((m) => (
-              <span key={m} style={{ fontSize: 'clamp(16px, 2.4vw, 22px)', fontWeight: 800, color: INK, letterSpacing: -0.4 }}>{m}</span>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(10px, 2.5vw, 18px)', flexWrap: 'wrap', marginBottom: 18 }}>
+            {[
+              { name: 'ChatGPT', color: '#10a37f' },
+              { name: 'Claude', color: '#d97757' },
+              { name: 'Gemini', color: '#4285f4' },
+              { name: 'Perplexity', color: '#20808d' },
+            ].map((p) => (
+              <span key={p.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: BG, border: `1px solid ${BORDER}`, borderRadius: 30, padding: '8px 16px 8px 10px' }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: p.color, color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{p.name[0]}</span>
+                <span style={{ fontSize: 'clamp(14px, 2vw, 17px)', fontWeight: 800, color: INK, letterSpacing: -0.3 }}>{p.name}</span>
+              </span>
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -176,16 +191,26 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Pain ── */}
-      <section style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px 24px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 'clamp(22px, 3.4vw, 30px)', fontWeight: 800, letterSpacing: -0.6, marginBottom: 16, lineHeight: 1.2 }}>
-          Guests no longer only search Google Maps.<br />
-          <span style={{ color: GREEN }}>They ask AI where to eat tonight.</span>
-        </h2>
-        <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, maxWidth: 600, margin: '0 auto' }}>
-          When ChatGPT or Gemini names three restaurants for &ldquo;beste Italiaans in Amsterdam&rdquo; and
-          yours isn&rsquo;t one of them, you&rsquo;re invisible in a fast-growing discovery channel — and you
-          can&rsquo;t fix what you can&rsquo;t see.
+      {/* ── Why now? ── */}
+      <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 24px 8px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why now</div>
+          <h2 style={{ fontSize: 'clamp(24px, 3.6vw, 32px)', fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15 }}>
+            AI is becoming a restaurant<br />discovery channel
+          </h2>
+        </div>
+        <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, textAlign: 'center', maxWidth: 600, margin: '0 auto 20px' }}>
+          Guests increasingly ask AI tools where to eat:
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
+          {['"Beste Italiaans restaurant Amsterdam"', '"Waar moet ik vanavond eten?"', '"Best sushi near me"'].map((q) => (
+            <span key={q} style={{ fontSize: 14, color: INK, background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', fontWeight: 600 }}>{q}</span>
+          ))}
+        </div>
+        <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, textAlign: 'center', maxWidth: 620, margin: '0 auto' }}>
+          When AI answers, only a handful of restaurants get named — and the rest are invisible.
+          <strong style={{ color: INK }}> Your audit shows whether you&rsquo;re one of them, or whether your
+          competitors are being recommended instead.</strong>
         </p>
       </section>
 
@@ -308,11 +333,18 @@ export default function LandingPage() {
       <section id="check" style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, letterSpacing: -0.8, marginBottom: 12 }}>
-            See your restaurant&rsquo;s AI visibility
+            Get your free AI visibility audit
           </h2>
-          <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, marginBottom: 28 }}>
-            Enter your website and we&rsquo;ll prepare your free report and email the results.
+          <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, marginBottom: 18 }}>
+            Enter your website and we&rsquo;ll prepare the report and email the results.
           </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(10px, 3vw, 22px)', flexWrap: 'wrap', marginBottom: 28 }}>
+            {['Professional audit', 'Actionable recommendations', 'Competitor visibility analysis'].map((v) => (
+              <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: DGREEN }}>
+                <span style={{ color: GREEN }}>✓</span> {v}
+              </span>
+            ))}
+          </div>
           <LeadForm />
         </div>
       </section>

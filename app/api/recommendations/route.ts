@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { FIX_TYPES, FIX_TYPE_HINTS, asFixType } from '@/lib/engine/fix-types'
+import { asLevel, computePriorityRank } from '@/lib/audit/recommendation-priority'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -108,13 +109,14 @@ Base each recommendation on the evidence above: the weakest score components, mi
 Format your response as a JSON array with this exact structure:
 [
   {
-    "priority": "high|medium|low",
+    "impact_level": "high|medium|low",
+    "effort": "high|medium|low",
     "type": ${JSON.stringify([...FIX_TYPES])} or null,
     "title": "Short action title (max 8 words)",
     "what": "Exactly what to do (2-3 sentences, specific and actionable)",
     "why": "Why this will improve AI visibility (1-2 sentences)",
-    "evidence": "The specific data point from THIS audit that triggered it (e.g. 'Missing from 4/5 Italiaans queries' or 'Schema.org markup absent')",
-    "impact": "Expected impact description (e.g. '+15-25% visibility on ChatGPT')"
+    "evidence": "The specific data point from THIS audit that triggered it (e.g. 'Missing from 4/5 Italiaans queries' or 'Competitor De Kas named in 9 answers, you in 2')",
+    "impact": "Expected impact, plainly stated (e.g. 'Helps you appear for cuisine queries you currently miss')"
   }
 ]
 
@@ -123,7 +125,9 @@ ${FIX_TYPES.map(ty => `- ${ty}: ${FIX_TYPE_HINTS[ty]}`).join('\n')}
 
 Rules:
 - "type" MUST be exactly one of the listed values or null — do not invent types.
+- "impact_level" = how much this is likely to move AI visibility; "effort" = how hard it is for the owner.
 - "evidence" must quote a real number/signal from the audit data above, not a generality.
+- Where relevant, tie the recommendation to the COMPETITOR GAP — reference the competitors that are named instead and the specific prompts where they appear and this restaurant doesn't. Do NOT claim anything about competitors' own websites (we didn't inspect them); only cite the mention/prompt evidence above.
 - Be SPECIFIC to this restaurant's actual data
 - Prioritise by impact: fix what will move the needle most first
 - Give concrete actions, not vague advice
@@ -156,6 +160,9 @@ Rules:
       .insert(
         rawRecs.map((rec: any) => {
           const fixType = asFixType(rec.type) // backend-authoritative, enum-validated (null if invalid)
+          const impactLevel = asLevel(rec.impact_level ?? rec.priority)
+          const effort = asLevel(rec.effort)
+          const priorityRank = computePriorityRank(impactLevel, effort)
           return {
             audit_id,
             restaurant_id: restaurant.id,
@@ -164,27 +171,38 @@ Rules:
             description: rec.what,
             why: rec.why ?? null,
             evidence: rec.evidence ?? null,
-            priority: rec.priority,
+            priority: impactLevel,            // keep priority = impact for existing UI colours
             impact: rec.impact,
             difficulty: rec.difficulty ?? null,
             status: 'pending',
-            // Typed/evidence-backed fields (013): the concrete fix, its expected
-            // impact, and the asset type that implements it (when one exists).
             suggested_fix: rec.what ?? null,
             expected_impact: rec.impact ?? null,
             asset_type: fixType,
+            // Prioritisation (014): Impact × Effort → where to start.
+            impact_level: impactLevel,
+            effort,
+            priority_rank: priorityRank,
           }
         })
       )
       .select()
 
     // Build response with IDs merged in
-    const recommendations = rawRecs.map((rec: any, i: number) => ({
-      ...rec,
-      id: insertedRecs?.[i]?.id ?? null,
-      type: asFixType(rec.type),
-      status: 'pending',
-    }))
+    const recommendations = rawRecs.map((rec: any, i: number) => {
+      const impact_level = asLevel(rec.impact_level ?? rec.priority)
+      const effort = asLevel(rec.effort)
+      return {
+        ...rec,
+        id: insertedRecs?.[i]?.id ?? null,
+        type: asFixType(rec.type),
+        priority: impact_level,
+        impact_level,
+        effort,
+        priority_rank: computePriorityRank(impact_level, effort),
+        what: rec.what,
+        status: 'pending',
+      }
+    })
 
     // Also store as JSON blob for backward compat
     await supabaseAdmin
@@ -226,6 +244,9 @@ export async function GET(request: NextRequest) {
       id: r.id,
       type: r.type,
       priority: r.priority,
+      impact_level: r.impact_level ?? r.priority ?? 'medium',
+      effort: r.effort ?? 'medium',
+      priority_rank: r.priority_rank ?? 'do_next',
       title: r.title,
       what: r.description,
       why: r.why ?? '',

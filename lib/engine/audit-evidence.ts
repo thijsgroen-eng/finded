@@ -44,6 +44,8 @@ export interface EntityRow {
   model: string
   name: string
   confidence: number | null
+  is_target?: boolean | null
+  normalized_name?: string | null
 }
 
 const isFailed = (r: ModelRunRow) =>
@@ -156,6 +158,8 @@ export interface PromptEvidence {
   locale: string | null
   mentioned_any: boolean
   models: PromptEvidenceModel[]
+  /** Competitors AI named for this prompt (top by count) — "who won instead". */
+  top_competitors: { name: string; count: number }[]
 }
 
 const PROVIDER_ORDER = ['openai', 'anthropic', 'gemini', 'perplexity']
@@ -170,7 +174,20 @@ export function buildPromptEvidence(
   promptRuns: PromptRunRow[],
   mentions: MentionRow[],
   modelRuns: ModelRunRow[],
+  entities: EntityRow[] = [],
 ): PromptEvidence[] {
+  // Per-prompt competitor tally (non-target names) → "who won instead".
+  const competitorsByPrompt = new Map<string, Map<string, { name: string; count: number }>>()
+  for (const e of entities) {
+    if (!e.prompt_id || e.is_target) continue
+    const key = (e.normalized_name || e.name || '').toLowerCase()
+    if (!key) continue
+    const byKey = competitorsByPrompt.get(e.prompt_id) ?? new Map()
+    const slot = byKey.get(key) ?? { name: e.name, count: 0 }
+    slot.count++
+    byKey.set(key, slot)
+    competitorsByPrompt.set(e.prompt_id, byKey)
+  }
   // Index runs + mentions by prompt_id then model.
   const runIndex = new Map<string, Map<string, ModelRunRow[]>>()
   for (const r of modelRuns) {
@@ -219,6 +236,10 @@ export function buildPromptEvidence(
       ? [...runsByModel.values()].flat().find((r) => r.locale)?.locale
       : null) ?? null
 
+    const top_competitors = [...(competitorsByPrompt.get(p.prompt_id)?.values() ?? [])]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+
     return {
       prompt_id: p.prompt_id,
       prompt_text: p.prompt_text,
@@ -227,6 +248,7 @@ export function buildPromptEvidence(
       locale,
       mentioned_any: models.some((m) => m.mentioned),
       models,
+      top_competitors,
     }
   })
 }

@@ -7,7 +7,7 @@ export default function LandingPage() {
         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>Finded</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <a href="#how" style={{ fontSize: 13, fontWeight: 500, color: '#7a7874', textDecoration: 'none' }}>How it works</a>
-          <a href="/admin/new" style={{ fontSize: 13, fontWeight: 600, background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, textDecoration: 'none' }}>Audit your restaurant →</a>
+          <a href="/audit" style={{ fontSize: 13, fontWeight: 600, background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, textDecoration: 'none' }}>Audit your restaurant →</a>
         </div>
       </nav>
 
@@ -23,14 +23,14 @@ export default function LandingPage() {
           When diners ask ChatGPT, Gemini, Claude or Perplexity <em>“beste restaurants in Amsterdam”</em>, does your restaurant show up? We measure your AI visibility — in Dutch, the way people actually search — and show you exactly how to fix it.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href="/admin/new" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111110', color: '#fff', padding: '13px 28px', borderRadius: 7, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+          <a href="/audit" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111110', color: '#fff', padding: '13px 28px', borderRadius: 7, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Audit your restaurant →
           </a>
           <a href="#how" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', color: '#3a3935', padding: '13px 22px', borderRadius: 7, fontSize: 15, fontWeight: 500, textDecoration: 'none', border: '1px solid #e2e1dc' }}>
             See how it works
           </a>
         </div>
-        <p style={{ fontSize: 12, color: '#b0aea8', marginTop: 14 }}>Restaurant-specific data · Dutch &amp; English · Results in minutes</p>
+        <p style={{ fontSize: 12, color: '#b0aea8', marginTop: 14 }}>Restaurant-specific data · Dutch &amp; English · Report sent to your inbox</p>
       </section>
 
       {/* Cuisines */}
@@ -74,7 +74,7 @@ export default function LandingPage() {
       <section style={{ padding: '80px 24px', textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
         <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800, letterSpacing: -0.8, marginBottom: 16 }}>See where your restaurant stands</h2>
         <p style={{ fontSize: 16, color: '#7a7874', lineHeight: 1.65, marginBottom: 28 }}>Run a free AI visibility audit and find out how diners are (or aren’t) discovering you through AI.</p>
-        <a href="/admin/new" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111110', color: '#fff', padding: '14px 30px', borderRadius: 7, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+        <a href="/audit" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111110', color: '#fff', padding: '14px 30px', borderRadius: 7, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
           Audit your restaurant →
         </a>
       </section>

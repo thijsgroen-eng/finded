@@ -4,7 +4,8 @@ import { getAvailableProviders } from '@/lib/providers'
 import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPromptsFromStore } from '@/lib/engine/prompt-store'
-import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
+import { extractEntities, findTargetInEntities, keywordTargetMention, resolveEntityName } from '@/lib/engine/entity-extractor'
+import { normalizeName } from '@/lib/engine/normalize'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
@@ -121,12 +122,15 @@ export const auditFunction = inngest.createFunction(
       )).slice(0, MAX_PROMPTS)
 
       await supabaseAdmin.from('prompt_runs').insert(
-        generated.map((p: { id: string; category: string; intent: string; prompt: string }) => ({
+        generated.map((p: { id: string; category: string; intent: string; prompt: string; importance?: number }) => ({
           audit_id,
           prompt_id:   p.id,
           category:    p.category,
           intent:      p.intent,
           prompt_text: p.prompt,
+          language,
+          weight:      p.importance ?? null,
+          active:      true,
         }))
       )
 
@@ -148,34 +152,76 @@ export const auditFunction = inngest.createFunction(
 
           await Promise.all(
             providers.map(async (provider: any) => {
-              const result = await provider.runPrompt(promptObj.prompt, {
-                temperature: AUDIT_TEMPERATURE,
-                grounded: AUDIT_GROUNDED && provider.supportsGrounding,
-              })
+              // ── Run lifecycle: create the audit_run BEFORE the call ──────────
+              // so a crash still leaves a record, and failures/retries are
+              // first-class (status + retry_of_run_id) rather than an ERROR: prefix.
+              const { data: prior } = await supabaseAdmin
+                .from('model_runs')
+                .select('id')
+                .eq('audit_id', audit_id)
+                .eq('prompt_id', promptObj.id)
+                .eq('sample_index', sample)
+                .eq('model', provider.name)
+                .order('created_at', { ascending: false })
+                .limit(1)
+              const retryOf = prior && prior.length ? prior[0].id : null
 
-              await supabaseAdmin.from('model_runs').insert({
-                audit_id,
-                model:          provider.name,
-                prompt_id:      promptObj.id,   // generator's text id (no longer a prompts FK)
-                prompt_text_id: promptObj.id,
-                sample_index:   sample,
-                grounded:       result.grounded ?? null,
-                model_version:  result.model_version ?? null,
-                temperature:    result.temperature ?? null,
-                locale:         language,
-                sources:        result.sources && result.sources.length ? result.sources : null,
-                raw_response:   result.error ? `ERROR: ${result.error}` : result.response,
-                tokens_used:    result.tokens_used ?? null,
-                duration_ms:    result.duration_ms,
-              })
+              const { data: runRow } = await supabaseAdmin
+                .from('model_runs')
+                .insert({
+                  audit_id,
+                  restaurant_id:   entity.id,
+                  model:           provider.name,
+                  prompt_id:       promptObj.id,   // generator's text id (no longer a prompts FK)
+                  prompt_text_id:  promptObj.id,
+                  prompt_text:     promptObj.prompt,
+                  sample_index:    sample,
+                  locale:          language,
+                  status:          'running',
+                  started_at:      new Date().toISOString(),
+                  retry_of_run_id: retryOf,
+                  raw_response:    '',              // filled on completion (column is NOT NULL)
+                  metadata:        { temperature: AUDIT_TEMPERATURE, grounded: AUDIT_GROUNDED && provider.supportsGrounding },
+                })
+                .select('id')
+                .single()
+              const runId = runRow?.id ?? null
 
-              if (result.error || !result.response) return
+              let result: any
+              try {
+                result = await provider.runPrompt(promptObj.prompt, {
+                  temperature: AUDIT_TEMPERATURE,
+                  grounded: AUDIT_GROUNDED && provider.supportsGrounding,
+                })
+              } catch (e: any) {
+                result = { error: e?.message ?? 'provider threw', response: '', duration_ms: null }
+              }
+
+              const failed = !!result.error || !result.response
+              await supabaseAdmin.from('model_runs').update({
+                status:        failed ? 'failed' : 'completed',
+                error:         result.error ?? null,
+                completed_at:  new Date().toISOString(),
+                grounded:      result.grounded ?? null,
+                model_version: result.model_version ?? null,
+                temperature:   result.temperature ?? null,
+                sources:       result.sources && result.sources.length ? result.sources : null,
+                raw_response:  result.error ? `ERROR: ${result.error}` : result.response,
+                tokens_used:   result.tokens_used ?? null,
+                duration_ms:   result.duration_ms ?? null,
+              }).eq('id', runId)
+
+              if (failed) return
               ok++
 
               // Parse THIS sample independently (no cross-sample caching).
               const extraction = await extractEntities(result.response, promptObj.prompt, provider.name)
 
               for (const ent of extraction.entities) {
+                // Resolve each extracted name against the target so the mention is
+                // self-describing evidence (normalized name, target flag, why).
+                const score = resolveEntityName(ent.name, entity.name)
+                const isTarget = score >= 0.7
                 const { data: entityRow } = await supabaseAdmin
                   .from('entities')
                   .insert({
@@ -189,6 +235,11 @@ export const auditFunction = inngest.createFunction(
                     context:      ent.context,
                     sentiment:    ent.sentiment,
                     confidence:   ent.confidence,
+                    normalized_name:       normalizeName(ent.name),
+                    is_target:             isTarget,
+                    matched_restaurant_id: isTarget ? entity.id : null,
+                    match_reason:          isTarget ? (score >= 1 ? 'exact name match' : score >= 0.9 ? 'name contains target' : 'strong word overlap') : null,
+                    evidence_excerpt:      ent.context ? ent.context.slice(0, 280) : null,
                   })
                   .select('id')
                   .single()

@@ -1,6 +1,6 @@
 import { LeadForm } from '@/components/landing/lead-form'
 
-// ── Palette (beige / black / green, premium) ──────────────────────────────────
+// ── Palette (beige / black / green) ───────────────────────────────────────────
 const BG = '#fafaf8'
 const PANEL = '#ffffff'
 const INK = '#111110'
@@ -11,107 +11,69 @@ const GREEN = '#16a37a'
 const DGREEN = '#0d6b50'
 const LGREEN = '#edf8f3'
 const RED = '#c0392b'
-const AMBER = '#b9770e'
 
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
-function SampleBadge() {
+// ── Contact ───────────────────────────────────────────────────────────────────
+const CONTACT_EMAIL = 'Info@finded.com'
+
+function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; sub?: string }) {
   return (
-    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#fff', background: GREEN, padding: '3px 8px', borderRadius: 5 }}>
-      Sample
-    </span>
-  )
-}
-
-// ── The above-the-fold product visual: a believable (clearly labelled) report ──
-function SampleReportCard() {
-  const models = [
-    { name: 'ChatGPT', hits: 1, of: 8 },
-    { name: 'Claude', hits: 0, of: 8 },
-    { name: 'Gemini', hits: 1, of: 8 },
-    { name: 'Perplexity', hits: 0, of: 8 },
-  ]
-  const competitors = [
-    { name: 'Trattoria del Centro', n: 11 },
-    { name: 'Osteria Amsterdam', n: 9 },
-    { name: 'La Vita Italiana', n: 7 },
-  ]
-  return (
-    <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 24px 48px -24px rgba(17,17,16,0.25)', overflow: 'hidden' }}>
-      {/* header */}
-      <div style={{ background: INK, color: '#fff', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>Trattoria Bella · Amsterdam</div>
-          <div style={{ fontSize: 10, color: '#9b9a96', textTransform: 'uppercase', letterSpacing: 1 }}>AI Visibility Report</div>
-        </div>
-        <SampleBadge />
-      </div>
-
-      <div style={{ padding: 18, display: 'grid', gap: 16 }}>
-        {/* score row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 78, height: 78, borderRadius: '50%', flexShrink: 0, background: `conic-gradient(${RED} 0 34%, #eee 34% 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: PANEL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 22, fontWeight: 800, color: INK, lineHeight: 1 }}>34</span>
-              <span style={{ fontSize: 9, color: FAINT }}>/ 100</span>
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>Mentioned in 2 of 32 AI answers</div>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>across 8 prompts × 4 AI models</div>
-            <div style={{ fontSize: 11, color: RED, fontWeight: 600, marginTop: 4 }}>Low visibility — high opportunity</div>
-          </div>
-        </div>
-
-        {/* per-model */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {models.map((m) => {
-            const ok = m.hits > 0
-            return (
-              <div key={m.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 10px' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: INK }}>{m.name}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: ok ? DGREEN : RED }}>{m.hits}/{m.of}</span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* competitors */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT, marginBottom: 6 }}>Recommended instead of you</div>
-          {competitors.map((c) => (
-            <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${BG}` }}>
-              <span style={{ fontSize: 12, color: INK }}>{c.name}</span>
-              <span style={{ fontSize: 11, color: MUTED }}>{c.n} mentions</span>
-            </div>
-          ))}
-        </div>
-
-        {/* signals + fix */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: RED, background: '#fbecea', borderRadius: 6, padding: '4px 8px' }}>✕ Restaurant schema missing</span>
-          <span style={{ fontSize: 11, color: AMBER, background: '#fdf3e3', borderRadius: 6, padding: '4px 8px' }}>! Opening hours weak</span>
-          <span style={{ fontSize: 11, color: DGREEN, background: LGREEN, borderRadius: 6, padding: '4px 8px' }}>✓ 5 fixes ready</span>
-        </div>
-      </div>
+    <div style={{ textAlign: 'center', marginBottom: 36, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
+      {kicker && <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{kicker}</div>}
+      <h2 style={{ fontSize: 'clamp(23px, 3.4vw, 31px)', fontWeight: 800, letterSpacing: -0.7, color: INK }}>{title}</h2>
+      {sub && <p style={{ fontSize: 16, color: MUTED, marginTop: 12, lineHeight: 1.6 }}>{sub}</p>}
     </div>
   )
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+// ── A real AI conversation (clearly labelled example) ─────────────────────────
+function ConversationMock() {
+  const answer = [
+    ['Ristorante Toscana', 'Authentic Tuscan cooking near the Grote Markt.'],
+    ['Trattoria da Marco', 'Family-run, known for fresh pasta.'],
+    ['Osteria Verde', 'Cosy spot popular for date nights.'],
+  ]
   return (
-    <span style={{ fontSize: 13, fontWeight: 600, color: DGREEN, background: LGREEN, border: `1px solid #d4ede2`, borderRadius: 20, padding: '7px 14px' }}>
-      {children}
-    </span>
-  )
-}
-
-function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; sub?: string }) {
-  return (
-    <div style={{ textAlign: 'center', marginBottom: 40, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
-      {kicker && <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{kicker}</div>}
-      <h2 style={{ fontSize: 'clamp(24px, 3.6vw, 34px)', fontWeight: 800, letterSpacing: -0.8, color: INK }}>{title}</h2>
-      {sub && <p style={{ fontSize: 16, color: MUTED, marginTop: 12, lineHeight: 1.6 }}>{sub}</p>}
+    <div>
+      <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 24px 48px -28px rgba(17,17,16,0.22)', overflow: 'hidden' }}>
+        <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#10a37f', color: '#fff', fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>C</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: INK }}>ChatGPT</span>
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: FAINT }}>Example</span>
+        </div>
+        <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+          {/* user */}
+          <div style={{ alignSelf: 'flex-end', maxWidth: '85%', background: INK, color: '#fff', borderRadius: '12px 12px 4px 12px', padding: '10px 14px', fontSize: 14, justifySelf: 'end' }}>
+            Wat is een goed Italiaans restaurant in Haarlem?
+          </div>
+          {/* assistant */}
+          <div style={{ maxWidth: '92%', background: BG, border: `1px solid ${BORDER}`, borderRadius: '12px 12px 12px 4px', padding: '12px 14px' }}>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>Een paar aanraders in Haarlem:</div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {answer.map(([n, d], i) => (
+                <div key={n} style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: INK }}>{i + 1}.</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{n}</div>
+                    <div style={{ fontSize: 12, color: MUTED }}>{d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* verdict */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fbecea', border: '1px solid #f0cfc9', borderRadius: 10, padding: '10px 14px' }}>
+            <span style={{ color: RED, fontWeight: 800 }}>✕</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: RED }}>Your restaurant wasn&rsquo;t mentioned.</span>
+          </div>
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 10 }}>
+        An example of how AI answers a diner&rsquo;s question. I run searches like this and check whether you show up.
+      </p>
     </div>
   )
 }
@@ -124,242 +86,168 @@ export default function LandingPage() {
       <nav style={{ background: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: INK, textDecoration: 'none' }}>Finded</a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <a href="#sample" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Sample report</a>
-          <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '8px 16px', borderRadius: 7, textDecoration: 'none' }}>Get your free audit</a>
+          <a href="#how" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>How it works</a>
+          <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '8px 16px', borderRadius: 7, textDecoration: 'none' }}>Check my restaurant</a>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(40px, 6vw, 72px) 24px 56px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'clamp(32px, 5vw, 56px)', alignItems: 'center' }}>
+      <section style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(36px, 5vw, 64px) 24px 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'clamp(32px, 5vw, 52px)', alignItems: 'start' }}>
         <div>
-          <div style={{ display: 'inline-block', background: LGREEN, color: DGREEN, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 20 }}>
-            Built for restaurants · Netherlands
+          <div style={{ display: 'inline-block', background: LGREEN, color: DGREEN, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, letterSpacing: 0.4, marginBottom: 20 }}>
+            Built in the Netherlands · for restaurants
           </div>
-          <h1 style={{ fontSize: 'clamp(32px, 5vw, 50px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5, marginBottom: 18 }}>
-            Is your restaurant showing up when guests ask <span style={{ color: GREEN }}>AI</span> where to eat?
+          <h1 style={{ fontSize: 'clamp(30px, 4.6vw, 46px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.3, marginBottom: 18 }}>
+            When guests ask AI where to eat, does it mention <span style={{ color: GREEN }}>your restaurant</span>?
           </h1>
-          <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 16, maxWidth: 520 }}>
-            Every day, potential guests ask ChatGPT, Gemini and other AI tools where to eat. If your
-            competitors are mentioned and you aren&rsquo;t, you&rsquo;re <strong style={{ color: INK }}>invisible
-            in a growing discovery channel</strong>.
+          <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 22, maxWidth: 520 }}>
+            More people ask ChatGPT, Claude, Gemini and Perplexity where to eat. I&rsquo;ll check how those
+            tools talk about your restaurant — and which restaurants they recommend instead.
           </p>
-          <p style={{ fontSize: 'clamp(15px, 1.9vw, 17px)', color: MUTED, lineHeight: 1.6, marginBottom: 28, maxWidth: 520 }}>
-            We show exactly where you appear, which competitors get recommended instead, and what to fix.
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#check" style={{ background: INK, color: '#fff', padding: '14px 26px', borderRadius: 8, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-              Get your free AI visibility audit →
-            </a>
-            <a href="#sample" style={{ background: 'transparent', color: INK, padding: '14px 22px', borderRadius: 8, fontSize: 15, fontWeight: 600, textDecoration: 'none', border: `1px solid ${BORDER}` }}>
-              View sample report
-            </a>
+          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: '0 16px 40px -28px rgba(17,17,16,0.35)' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: INK, marginBottom: 4 }}>See what AI says about your restaurant</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Free. Send your website and I&rsquo;ll email you what I find.</div>
+            <LeadForm />
           </div>
-          <p style={{ fontSize: 12, color: FAINT, marginTop: 16 }}>Free · Dutch &amp; English prompts · report sent to your inbox</p>
         </div>
-        <div>
-          <SampleReportCard />
-          <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 10 }}>
-            Sample Audit Preview — example data, not a real restaurant.
-          </p>
-        </div>
+        <ConversationMock />
       </section>
 
-      {/* ── AI platform trust strip ── */}
-      <div style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '26px 24px' }}>
-          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 18 }}>
-            We test visibility across major AI search platforms.
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(10px, 2.5vw, 18px)', flexWrap: 'wrap', marginBottom: 18 }}>
-            {[
-              { name: 'ChatGPT', color: '#10a37f' },
-              { name: 'Claude', color: '#d97757' },
-              { name: 'Gemini', color: '#4285f4' },
-              { name: 'Perplexity', color: '#20808d' },
-            ].map((p) => (
-              <span key={p.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: BG, border: `1px solid ${BORDER}`, borderRadius: 30, padding: '8px 16px 8px 10px' }}>
-                <span style={{ width: 22, height: 22, borderRadius: '50%', background: p.color, color: '#fff', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{p.name[0]}</span>
-                <span style={{ fontSize: 'clamp(14px, 2vw, 17px)', fontWeight: 800, color: INK, letterSpacing: -0.3 }}>{p.name}</span>
-              </span>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {['Dutch prompts', 'English prompts', 'City-based searches', 'Cuisine-based searches'].map((t) => (
-              <span key={t} style={{ fontSize: 13, color: MUTED, background: BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '5px 12px' }}>{t}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Why now? ── */}
-      <section style={{ maxWidth: 820, margin: '0 auto', padding: '64px 24px 8px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why now</div>
-          <h2 style={{ fontSize: 'clamp(24px, 3.6vw, 32px)', fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15 }}>
-            AI is becoming a restaurant<br />discovery channel
-          </h2>
-        </div>
-        <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, textAlign: 'center', maxWidth: 600, margin: '0 auto 20px' }}>
-          Guests increasingly ask AI tools where to eat:
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
-          {['"Beste Italiaans restaurant Amsterdam"', '"Waar moet ik vanavond eten?"', '"Best sushi near me"'].map((q) => (
-            <span key={q} style={{ fontSize: 14, color: INK, background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', fontWeight: 600 }}>{q}</span>
-          ))}
-        </div>
-        <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, textAlign: 'center', maxWidth: 620, margin: '0 auto' }}>
-          When AI answers, only a handful of restaurants get named — and the rest are invisible.
-          <strong style={{ color: INK }}> Your audit shows whether you&rsquo;re one of them, or whether your
-          competitors are being recommended instead.</strong>
-        </p>
-      </section>
-
-      {/* ── What your audit shows (4 cards = sample report preview) ── */}
-      <section id="sample" style={{ maxWidth: 1000, margin: '0 auto', padding: '48px 24px', scrollMarginTop: 64 }}>
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <a href="#top" style={{ fontSize: 13, fontWeight: 600, color: MUTED, textDecoration: 'none' }}>↑ Back to top</a>
-        </div>
-        <SectionTitle
-          kicker="Your report"
-          title="What your audit shows"
-          sub="A concrete deliverable — not a score in a vacuum. Every number traces back to the AI answers we recorded."
-        />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16 }}>
-          {/* 1. Visibility score */}
-          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT }}>Visibility score</span>
-              <SampleBadge />
-            </div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: RED, lineHeight: 1 }}>34<span style={{ fontSize: 16, color: FAINT, fontWeight: 600 }}>/100</span></div>
-            <p style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>Mentioned in 2 of 32 answers · 1 of 4 models · confidence band shown.</p>
-          </div>
-
-          {/* 2. Prompt evidence */}
-          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT }}>Prompt evidence</span>
-            <div style={{ marginTop: 12, display: 'grid', gap: 7 }}>
-              {[['"beste Italiaans Amsterdam"', false], ['"romantisch diner centrum"', false], ['"waar pasta eten Amsterdam"', true]].map(([q, hit]) => (
-                <div key={q as string} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: hit ? DGREEN : RED, fontWeight: 700, fontSize: 13 }}>{hit ? '✓' : '✕'}</span>
-                  <span style={{ fontSize: 12, color: INK }}>{q}</span>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 12, color: MUTED, marginTop: 10 }}>Exact prompt, model, and whether you appeared.</p>
-          </div>
-
-          {/* 3. Competitors */}
-          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT }}>Competitors AI picks instead</span>
-            <div style={{ marginTop: 12, display: 'grid', gap: 7 }}>
-              {[['Trattoria del Centro', 11], ['Osteria Amsterdam', 9], ['La Vita Italiana', 7]].map(([n, c]) => (
-                <div key={n as string} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: INK }}>{n}</span>
-                  <span style={{ fontSize: 12, color: MUTED }}>{c}×</span>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 12, color: MUTED, marginTop: 10 }}>Who gets recommended, by which model, how often.</p>
-          </div>
-
-          {/* 4. Recommended fixes */}
-          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT }}>Recommended fixes</span>
-            <div style={{ marginTop: 12, display: 'grid', gap: 7 }}>
-              {['Add Restaurant schema markup', 'Make the menu crawlable', 'Add an FAQ with cuisine + city'].map((f) => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: DGREEN, fontWeight: 700, fontSize: 13 }}>→</span>
-                  <span style={{ fontSize: 12, color: INK }}>{f}</span>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 12, color: MUTED, marginTop: 10 }}>Prioritised, copy-paste-ready, tied to the evidence.</p>
-          </div>
-        </div>
-
-        {/* outcome-focused proof chips */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 28 }}>
-          {['8 Dutch dining prompts', '4 AI platforms tested', 'Competitor mention tracking', 'Website signal scan', 'Structured-data analysis', 'Fix-ready recommendations'].map((c) => (
-            <Chip key={c}>{c}</Chip>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Before / After ── */}
+      {/* ── Why I built Finded ── */}
       <section style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '56px 24px' }}>
-          <SectionTitle kicker="Example" title="From invisible to recommended" sub="An illustrative example of how fixing website signals changes AI visibility." />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, alignItems: 'stretch' }}>
-            {/* before */}
-            <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: RED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Before</div>
-              <p style={{ fontSize: 14, color: INK, marginBottom: 6 }}>Not mentioned for:</p>
-              <p style={{ fontSize: 15, fontWeight: 700, color: INK }}>&ldquo;beste Italiaans restaurant Amsterdam&rdquo;</p>
-              <p style={{ fontSize: 13, color: MUTED, marginTop: 10 }}>0 of 4 models named the restaurant. Schema missing, menu not crawlable.</p>
-            </div>
-            {/* fixes */}
-            <div style={{ background: INK, color: '#fff', borderRadius: 14, padding: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: GREEN, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Fixes applied</div>
-              {['Added Restaurant structured data', 'Added FAQ content (cuisine + city)', 'Improved location-specific copy'].map((f) => (
-                <div key={f} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <span style={{ color: GREEN }}>✓</span><span style={{ fontSize: 13, color: '#e7e6e2' }}>{f}</span>
-                </div>
-              ))}
-            </div>
-            {/* after */}
-            <div style={{ background: LGREEN, border: `1px solid #cde9dd`, borderRadius: 14, padding: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: DGREEN, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>After</div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: INK }}>Visibility improved across tracked prompts</p>
-              <p style={{ fontSize: 13, color: DGREEN, marginTop: 10 }}>Now named by multiple models for cuisine + city queries.</p>
-            </div>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: 12, color: FAINT, marginTop: 16 }}>Illustrative demonstration — your report shows your own measured results.</p>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why I built Finded</div>
+          <p style={{ fontSize: 17, color: INK, lineHeight: 1.65, marginBottom: 14 }}>
+            I work with restaurants, and I noticed something. When I asked ChatGPT where to eat in Dutch
+            cities, the same handful of places kept coming up — and most owners had no idea whether AI was
+            recommending them or their competitors.
+          </p>
+          <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, marginBottom: 16 }}>
+            So I built Finded to help restaurants see how they&rsquo;re represented when guests ask AI for a
+            recommendation. It&rsquo;s a small, independent project based in the Netherlands — not an agency
+            or a marketing machine.
+          </p>
+          <p style={{ fontSize: 14, color: MUTED }}>
+            Questions? Email me directly at{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>{CONTACT_EMAIL}</a>.
+          </p>
         </div>
       </section>
 
-      {/* ── Methodology ── */}
-      <section style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px', textAlign: 'center' }}>
-        <SectionTitle kicker="Methodology" title="Measured, not guessed" />
-        <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.7 }}>
-          We run a controlled set of realistic Dutch and English prompts across the major AI tools.
-          AI responses can vary over time, so we measure visibility across <strong style={{ color: INK }}>multiple
-          prompts and models</strong> — with a confidence band — rather than claiming a single exact ranking.
-          Every figure in your report links back to the actual answers we recorded.
+      {/* ── Why now ── */}
+      <section style={{ maxWidth: 720, margin: '0 auto', padding: '56px 24px 16px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: 'clamp(22px, 3.3vw, 30px)', fontWeight: 800, letterSpacing: -0.6, marginBottom: 14, lineHeight: 1.2 }}>
+          Guests don&rsquo;t just search Google anymore
+        </h2>
+        <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, maxWidth: 600, margin: '0 auto 20px' }}>
+          More and more people ask AI tools where they should eat. These tools usually name only a few
+          restaurants — so if your competitors are mentioned and you aren&rsquo;t, you&rsquo;re missing out
+          in a discovery channel that&rsquo;s quietly growing.
         </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {['"Beste Italiaans restaurant Haarlem"', '"Waar moet ik eten in Amsterdam?"', '"Romantisch restaurant Utrecht"'].map((q) => (
+            <span key={q} style={{ fontSize: 13, color: INK, background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 12px', fontWeight: 600 }}>{q}</span>
+          ))}
+        </div>
+      </section>
+
+      {/* ── How this works ── */}
+      <section id="how" style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px', textAlign: 'center', scrollMarginTop: 64 }}>
+        <SectionTitle kicker="How this works" title="No fixed rankings — just honest checks" />
+        <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.75, textAlign: 'left' }}>
+          AI tools don&rsquo;t have a fixed ranking like Google, and their answers change over time. So I
+          run a consistent set of realistic restaurant searches — in Dutch and English — across the major
+          AI platforms, and record whether your restaurant comes up. I repeat each search a few times so the
+          result isn&rsquo;t a one-off fluke, then compare you against the restaurants that <em>do</em> get
+          named, and point out what on your website might be holding you back.
+        </p>
+      </section>
+
+      {/* ── What you'll see ── */}
+      <section id="sample" style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '56px 24px' }}>
+          <SectionTitle kicker="What you'll see" title="Plain answers to four questions" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16 }}>
+            {[
+              ['Are we being recommended?', 'How often AI names your restaurant when guests ask where to eat — and which tools do or don’t.'],
+              ['Which restaurants appear instead?', 'The places that get recommended in your city, so you can see who’s winning that visibility.'],
+              ['Why aren’t we showing up?', 'The website signals AI tools rely on — structured data, menu, hours, content — and what’s missing.'],
+              ['What should we fix first?', 'A short, prioritised list of practical changes, in plain language, that you can act on right away.'],
+            ].map(([q, a]) => (
+              <div key={q as string} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: INK, marginBottom: 8, lineHeight: 1.3 }}>{q}</h3>
+                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.55 }}>{a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── What happens next ── */}
+      <section style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px' }}>
+        <SectionTitle kicker="What happens next" title="Simple, and no pressure" />
+        <div style={{ display: 'grid', gap: 12 }}>
+          {[
+            ['1', 'You send your website', 'Just the URL, your city, and an email — that’s all I need to start.'],
+            ['2', 'I run the checks', 'I search the AI tools the way a guest would and record what they say about you.'],
+            ['3', 'You get a report', 'I email you what I found: where you appear, who appears instead, and what to fix.'],
+            ['4', 'We talk it through — if you want', 'Happy to walk through the findings together. No commitment, no sales process.'],
+          ].map(([n, t, d]) => (
+            <div key={n as string} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: LGREEN, color: DGREEN, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: INK }}>{t}</div>
+                <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.5, marginTop: 2 }}>{d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── What this won't tell you (limitations) ── */}
+      <section style={{ maxWidth: 760, margin: '0 auto', padding: '8px 24px 56px' }}>
+        <SectionTitle kicker="Being honest" title="What this won't tell you" sub="I'd rather set expectations than oversell." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+          {[
+            'I can’t guarantee AI will recommend you — nobody can.',
+            'I can’t control what ChatGPT or any model says.',
+            'AI answers vary over time, so results are a snapshot, not a fixed score.',
+            'AI visibility is only one part of how guests find a restaurant.',
+          ].map((l) => (
+            <div key={l} style={{ display: 'flex', gap: 10, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+              <span style={{ color: FAINT, fontWeight: 800 }}>•</span>
+              <span style={{ fontSize: 14, color: MUTED, lineHeight: 1.5 }}>{l}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ── Lead capture ── */}
-      <section id="check" style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, letterSpacing: -0.8, marginBottom: 12 }}>
-            Get your free AI visibility audit
+      <section id="check" style={{ background: INK, scrollMarginTop: 58 }}>
+        <div style={{ maxWidth: 540, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(23px, 3.6vw, 31px)', fontWeight: 800, letterSpacing: -0.6, marginBottom: 12, color: '#fff' }}>
+            Let&rsquo;s check whether AI recommends your restaurant
           </h2>
-          <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.6, marginBottom: 18 }}>
-            Enter your website and we&rsquo;ll prepare the report and email the results.
+          <p style={{ fontSize: 16, color: '#b9b8b3', lineHeight: 1.6, marginBottom: 26 }}>
+            Send your website and I&rsquo;ll email you what the AI tools are saying — usually within a few days.
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(10px, 3vw, 22px)', flexWrap: 'wrap', marginBottom: 28 }}>
-            {['Professional audit', 'Actionable recommendations', 'Competitor visibility analysis'].map((v) => (
-              <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: DGREEN }}>
-                <span style={{ color: GREEN }}>✓</span> {v}
-              </span>
-            ))}
+          <div style={{ background: BG, borderRadius: 16, padding: 'clamp(18px, 3vw, 26px)' }}>
+            <LeadForm />
           </div>
-          <LeadForm />
         </div>
       </section>
 
       {/* ── FAQ ── */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px' }}>
-        <SectionTitle kicker="FAQ" title="Questions, answered" />
+        <SectionTitle kicker="FAQ" title="A few honest answers" />
         <div style={{ display: 'grid', gap: 12 }}>
           {[
-            ['What exactly do I get?', 'A report showing your AI visibility score, the exact prompts and models you were (or weren’t) named in, the competitors AI recommends instead, your website signal scan, and prioritised fixes.'],
-            ['How is this measured?', 'We send a controlled set of realistic Dutch and English diner prompts to ChatGPT, Claude, Gemini and Perplexity, repeat them, and record who gets named — with a confidence band.'],
-            ['Can AI answers change over time?', 'Yes — that’s why we sample multiple prompts and models instead of claiming one fixed ranking, and we re-measure on each audit so you can track change.'],
-            ['Is it really free?', 'The initial AI visibility audit is free. We email you the results.'],
-            ['What do you need from me?', 'Just your restaurant website, city, and an email to send the report to.'],
-            ['What do you do with my data?', 'We use your details only to prepare and send your audit. We don’t sell your data.'],
+            ['Is this really free?', 'Yes — the initial check is free and I email you the results. No account, no card, no obligation.'],
+            ['How do you check this?', 'I ask the major AI tools the kinds of questions guests actually ask — in Dutch and English — and record whether your restaurant appears, repeated across several prompts and models.'],
+            ['Can AI answers change?', 'They can, and they do. That’s why I measure across multiple prompts and models and treat the result as a snapshot rather than a fixed ranking.'],
+            ['What do you need from me?', 'Just your restaurant’s website, your city, and an email address to send the results to.'],
+            ['What do you do with my details?', 'I only use them to prepare and send your report. I don’t sell your data or add you to a mailing list.'],
+            ['Who’s behind this?', `Finded is a small, independent project based in the Netherlands. You can reach me directly at ${CONTACT_EMAIL}.`],
           ].map(([q, a]) => (
             <details key={q} style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px' }}>
               <summary style={{ fontSize: 15, fontWeight: 700, color: INK, cursor: 'pointer', listStyle: 'none' }}>{q}</summary>
@@ -370,31 +258,32 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer style={{ background: INK, color: '#cdccc7' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px', display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ maxWidth: 300 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Finded</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: '#9b9a96' }}>
-              AI visibility audits built for restaurants in the Netherlands. See how ChatGPT, Claude,
-              Gemini and Perplexity recommend restaurants in your city — and what to fix.
+      <footer style={{ background: PANEL, borderTop: `1px solid ${BORDER}` }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px', display: 'flex', flexWrap: 'wrap', gap: 28, justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ maxWidth: 320 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 8 }}>Finded</div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: MUTED }}>
+              Built in the Netherlands for restaurants navigating AI search. A small, independent project —
+              I&rsquo;ll check how ChatGPT, Claude, Gemini and Perplexity talk about your restaurant.
             </p>
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#75746f', marginBottom: 6 }}>Get started</div>
-            <a href="#check" style={{ color: '#cdccc7', textDecoration: 'none', display: 'block' }}>Free AI visibility audit</a>
-            <a href="#sample" style={{ color: '#cdccc7', textDecoration: 'none', display: 'block' }}>Sample report</a>
-            <a href="/audit" style={{ color: '#cdccc7', textDecoration: 'none', display: 'block' }}>Full request form</a>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>Get started</div>
+            <a href="#check" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Check my restaurant</a>
+            <a href="#how" style={{ color: INK, textDecoration: 'none', display: 'block' }}>How it works</a>
+            <a href="/audit" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Request form</a>
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#75746f', marginBottom: 6 }}>Contact</div>
-            <a href="mailto:hello@finded.app" style={{ color: '#cdccc7', textDecoration: 'none', display: 'block' }}>hello@finded.app</a>
-            <p style={{ color: '#75746f', maxWidth: 240, marginTop: 8, lineHeight: 1.5 }}>
-              Privacy: we use your details only to prepare and send your audit, and never sell your data.
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>Contact</div>
+            <div style={{ color: INK }}>Netherlands</div>
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{CONTACT_EMAIL}</a>
+            <p style={{ color: FAINT, maxWidth: 240, marginTop: 8, lineHeight: 1.5 }}>
+              I only use your details to prepare and send your report, and never sell your data.
             </p>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid #2a2a28', padding: '16px 24px', textAlign: 'center', fontSize: 12, color: '#75746f' }}>
-          © {2026} Finded · Built for restaurants in the Netherlands
+        <div style={{ borderTop: `1px solid ${BORDER}`, padding: '16px 24px', textAlign: 'center', fontSize: 12, color: FAINT }}>
+          © {2026} Finded · Built in the Netherlands for restaurants navigating AI search
         </div>
       </footer>
     </div>

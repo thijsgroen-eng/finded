@@ -15,15 +15,16 @@ import { CopyReportLink } from '@/components/admin/copy-report-link'
 import { AuditControls } from '@/components/admin/audit-controls'
 import { ReportSender } from '@/components/admin/report-sender'
 import {
-  ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel,
+  ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel, AuthorityPanel,
 } from '@/components/admin/audit-evidence'
 import { toWebsiteSignals } from '@/lib/audit/website-signals'
+import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, preview_slug, country)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, domain, preview_slug, country)')
     .eq('id', id)
     .single()
 
@@ -36,6 +37,7 @@ async function getAuditData(id: string) {
     cuisine: string | null
     business_type: string | null
     website: string | null
+    domain: string | null
     preview_slug: string | null
     country: string | null
   }
@@ -52,7 +54,7 @@ async function getAuditData(id: string) {
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', id),
-    supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status').eq('audit_id', id),
+    supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status, sources').eq('audit_id', id),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', id),
     supabaseAdmin.from('entities').select('prompt_id, model, name, confidence').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
@@ -68,10 +70,12 @@ async function getAuditData(id: string) {
   const runAccounting = buildRunAccounting(modelRuns ?? [])
   const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [])
   const extractionConfidence = averageExtractionConfidence(entities ?? [])
+  const allSources = (modelRuns ?? []).flatMap((r: { sources?: unknown }) => Array.isArray(r.sources) ? r.sources : [])
+  const authority = buildAuthoritySignals(allSources, entity.domain)
   return {
     audit, entity, websiteAudit, metrics, modelRuns: modelRuns ?? [], visibilityScore,
     competitors: competitors ?? [], signalGaps: signalGaps ?? [],
-    runAccounting, promptEvidence, extractionConfidence, requestEmail: req?.email ?? null,
+    runAccounting, promptEvidence, extractionConfidence, authority, requestEmail: req?.email ?? null,
   }
 }
 
@@ -99,7 +103,7 @@ export default async function AuditDetailPage({
   if (!data) notFound()
 
   const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
-          runAccounting, promptEvidence, extractionConfidence } = data
+          runAccounting, promptEvidence, extractionConfidence, authority } = data
 
   const totalPrompts   = runAccounting.distinct_prompts || audit.total_prompts || metrics.total_prompts
   const oppScore       = visibilityScore?.opportunity_score ?? null
@@ -333,6 +337,9 @@ export default async function AuditDetailPage({
 
       {/* Website signals — typed checklist */}
       <WebsiteSignalsPanel signals={toWebsiteSignals(websiteAudit)} />
+
+      {/* Authority & citations — which third-party sources AI leaned on */}
+      <AuthorityPanel authority={authority} />
 
       {/* Methodology & limitations */}
       <MethodologyCard acc={runAccounting} language={auditLanguage} />

@@ -254,6 +254,64 @@ export function WebsiteSignalsPanel({ signals }: { signals: WebsiteSignal[] }) {
   )
 }
 
+// ── Authority & citations (which third-party sources AI leans on) ───────────────
+export interface AuthoritySignals {
+  totalSources: number
+  platforms: { key: string; label: string; count: number }[]
+  otherDomains: { domain: string; count: number }[]
+  ownCited: boolean
+}
+
+export function AuthorityPanel({ authority }: { authority: AuthoritySignals }) {
+  if (authority.totalSources === 0) {
+    return (
+      <Card className="mb-5">
+        <CardHeader><CardTitle>Authority &amp; citations</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-sm text-gray-400">
+            The AI models didn&rsquo;t return citation sources for this audit (grounding off or none provided),
+            so there&rsquo;s nothing to show here.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+  return (
+    <Card className="mb-5">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Authority &amp; citations</CardTitle>
+          <span className="text-xs text-gray-400">{authority.totalSources} sources AI cited</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-sm text-gray-600 mb-3">
+          When the models answered, they leaned on these third-party sources. Being present and accurate on
+          the ones they cite most makes you easier to recommend.
+          {' '}
+          {authority.ownCited
+            ? <span className="text-emerald-600 font-medium">Your own site was among the cited sources.</span>
+            : <span className="text-amber-600 font-medium">Your own site was not cited.</span>}
+        </p>
+        {authority.platforms.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {authority.platforms.map((p) => (
+              <span key={p.key} className="inline-flex items-center gap-1.5 text-xs font-medium bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
+                {p.label} <span className="text-gray-400">×{p.count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {authority.otherDomains.length > 0 && (
+          <p className="text-xs text-gray-400">
+            Also cited: {authority.otherDomains.map((d) => `${d.domain} (${d.count})`).join(' · ')}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── Methodology & limitations ───────────────────────────────────────────────────
 export function MethodologyCard({ acc, language }: { acc: RunAccounting; language: string }) {
   return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Spinner } from '@/components/ui'
 import { Zap, RefreshCw, Wrench, Download, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { PRIORITY_RANK_LABEL, priorityRankOrder, type PriorityRank } from '@/lib/audit/recommendation-priority'
 
 interface Recommendation {
   id?: string
@@ -13,6 +14,16 @@ interface Recommendation {
   impact: string
   type?: string
   status?: string
+  evidence?: string | null
+  impact_level?: 'high' | 'medium' | 'low'
+  effort?: 'high' | 'medium' | 'low'
+  priority_rank?: PriorityRank
+}
+
+const RANK_STYLE: Record<PriorityRank, { bg: string; color: string }> = {
+  do_first: { bg: '#fdeaea', color: '#9b2c2c' },
+  do_next:  { bg: '#fef3e2', color: '#7a4f0a' },
+  optional: { bg: '#eef0f2', color: '#5b6168' },
 }
 
 interface GeneratedAsset {
@@ -24,12 +35,6 @@ interface GeneratedAsset {
   status: string
   version: number
   created_at: string
-}
-
-const PRIORITY_STYLES = {
-  high:   { bg: '#fdeaea', color: '#9b2c2c', label: 'HIGH' },
-  medium: { bg: '#fef3e2', color: '#7a4f0a', label: 'MED' },
-  low:    { bg: '#edf8f3', color: '#0d6b50', label: 'LOW' },
 }
 
 function AssetPreview({ asset, onRegenerate, loading }: {
@@ -239,8 +244,9 @@ export function Recommendations({ auditId }: { auditId: string }) {
 
         {recs && !loading && (
           <div className="space-y-3">
-            {recs.map((rec, i) => {
-              const style = PRIORITY_STYLES[rec.priority] ?? PRIORITY_STYLES.medium
+            {[...recs].sort((a, b) => priorityRankOrder(a.priority_rank ?? 'do_next') - priorityRankOrder(b.priority_rank ?? 'do_next')).map((rec, i) => {
+              const rank = rec.priority_rank ?? 'do_next'
+              const rankStyle = RANK_STYLE[rank]
               const fixType = rec.type
               const isFixLoading = rec.id ? fixLoading[rec.id] : false
               const asset = rec.id ? assets[rec.id] : null
@@ -248,12 +254,14 @@ export function Recommendations({ auditId }: { auditId: string }) {
               return (
                 <div key={i} className="border border-gray-100 rounded-lg p-4 bg-gray-50 hover:border-gray-200 transition-colors">
                   <div className="flex items-start gap-3">
-                    <span
-                      className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-                      style={{ background: style.bg, color: style.color }}
-                    >
-                      {style.label}
-                    </span>
+                    <div className="flex-shrink-0 w-20 mt-0.5">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full inline-block" style={{ background: rankStyle.bg, color: rankStyle.color }}>
+                        {PRIORITY_RANK_LABEL[rank]}
+                      </span>
+                      <p className="text-[10px] text-gray-400 mt-1 leading-tight">
+                        Impact {(rec.impact_level ?? rec.priority)} · Effort {rec.effort ?? '—'}
+                      </p>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="text-sm font-semibold text-gray-900">{rec.title}</div>
@@ -284,6 +292,12 @@ export function Recommendations({ auditId }: { auditId: string }) {
                         <span className="font-semibold text-gray-500 text-xs uppercase tracking-wide">Why: </span>
                         {rec.why}
                       </div>
+                      {rec.evidence && (
+                        <div className="text-sm text-gray-600 mb-2 leading-relaxed">
+                          <span className="font-semibold text-gray-500 text-xs uppercase tracking-wide">Evidence: </span>
+                          {rec.evidence}
+                        </div>
+                      )}
                       <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-md">
                         <span>📈</span>
                         {rec.impact}

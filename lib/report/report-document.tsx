@@ -31,10 +31,17 @@ export interface ReportData {
   modelBreakdown: { model: string; frequency: number; mentions: number }[]
   sentiment: { positive: number; neutral: number; negative: number }
   competitors: { name: string; mention_count: number }[]
-  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null }[]
+  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null }[]
   websiteSignals?: { present: number; total: number } | null
   formulaVersion?: string | null
+  summary?: string | null
 }
+
+const RANK_LABEL: Record<string, Record<string, string>> = {
+  en: { do_first: 'Do first', do_next: 'Do next', optional: 'Optional' },
+  nl: { do_first: 'Eerst doen', do_next: 'Daarna', optional: 'Optioneel' },
+}
+const RANK_ORDER: Record<string, number> = { do_first: 0, do_next: 1, optional: 2 }
 
 const MODEL_LABELS: Record<string, string> = {
   openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity',
@@ -259,6 +266,14 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
           </View>
         </View>
 
+        {/* Why this result — plain-language synthesis */}
+        {data.summary && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{language === 'nl' ? 'Samenvatting' : 'Summary'}</Text>
+            <Text style={s.methodBody}>{data.summary}</Text>
+          </View>
+        )}
+
         {/* Per-model cards */}
         {data.modelBreakdown.length > 0 && (
           <View style={s.section}>
@@ -338,12 +353,16 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
               </View>
             </>
           ) : (
-            data.recommendations.map((r, i) => (
+            [...data.recommendations]
+              .sort((a, b) => (RANK_ORDER[a.priority_rank ?? 'do_next'] ?? 1) - (RANK_ORDER[b.priority_rank ?? 'do_next'] ?? 1))
+              .map((r, i) => (
               <View key={i} style={s.recItem} wrap={false}>
                 <Text style={s.recNum}>{i + 1}</Text>
                 <View style={s.recBody}>
                   <Text style={s.recTitle}>
-                    {r.title}  <Text style={[s.recPriority, { color: priorityColor(r.priority) }]}>{priorityLabel(r.priority)}</Text>
+                    {r.title}  <Text style={[s.recPriority, { color: priorityColor(r.priority) }]}>
+                      {(RANK_LABEL[language] ?? RANK_LABEL.en)[r.priority_rank ?? 'do_next'] ?? priorityLabel(r.priority)}
+                    </Text>
                   </Text>
                   <Text style={s.recDesc}>{r.description}</Text>
                   {isImpl && r.suggested_fix && (

@@ -14,15 +14,8 @@ const RED = '#c0392b'
 
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
-// ── Founder details ───────────────────────────────────────────────────────────
-// TODO: confirm these public-facing details before they go live (see chat).
-// A monogram avatar is used as an honest placeholder until a real photo is added.
-const FOUNDER = {
-  name: 'Thijs',
-  initials: 'T',
-  email: 'hello@finded.app',
-  linkedin: '', // add a LinkedIn URL to show the link
-}
+// ── Contact ───────────────────────────────────────────────────────────────────
+const CONTACT_EMAIL = 'Info@finded.com'
 
 function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; sub?: string }) {
   return (
@@ -120,29 +113,24 @@ export default function LandingPage() {
         <ConversationMock />
       </section>
 
-      {/* ── Founder ── */}
+      {/* ── Why I built Finded ── */}
       <section style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: 760, margin: '0 auto', padding: '48px 24px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'clamp(20px, 4vw, 32px)', alignItems: 'start' }}>
-          <div style={{ width: 76, height: 76, borderRadius: '50%', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, flexShrink: 0 }}>
-            {FOUNDER.initials}
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Why I built Finded</div>
-            <p style={{ fontSize: 16, color: INK, lineHeight: 1.65, marginBottom: 12 }}>
-              I work with restaurants, and I noticed something. When I asked ChatGPT where to eat in Dutch
-              cities, the same handful of places kept coming up — and most owners had no idea whether AI was
-              recommending them or their competitors.
-            </p>
-            <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, marginBottom: 16 }}>
-              So I built Finded to help restaurants see how they&rsquo;re represented when guests ask AI for a
-              recommendation. It&rsquo;s a small, independent project — not an agency or a marketing machine.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>— {FOUNDER.name}</span>
-              <a href={`mailto:${FOUNDER.email}`} style={{ fontSize: 13, color: DGREEN, textDecoration: 'none' }}>{FOUNDER.email}</a>
-              {FOUNDER.linkedin && <a href={FOUNDER.linkedin} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: DGREEN, textDecoration: 'none' }}>LinkedIn</a>}
-            </div>
-          </div>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why I built Finded</div>
+          <p style={{ fontSize: 17, color: INK, lineHeight: 1.65, marginBottom: 14 }}>
+            I work with restaurants, and I noticed something. When I asked ChatGPT where to eat in Dutch
+            cities, the same handful of places kept coming up — and most owners had no idea whether AI was
+            recommending them or their competitors.
+          </p>
+          <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, marginBottom: 16 }}>
+            So I built Finded to help restaurants see how they&rsquo;re represented when guests ask AI for a
+            recommendation. It&rsquo;s a small, independent project based in the Netherlands — not an agency
+            or a marketing machine.
+          </p>
+          <p style={{ fontSize: 14, color: MUTED }}>
+            Questions? Email me directly at{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>{CONTACT_EMAIL}</a>.
+          </p>
         </div>
       </section>
 
@@ -259,7 +247,7 @@ export default function LandingPage() {
             ['Can AI answers change?', 'They can, and they do. That’s why I measure across multiple prompts and models and treat the result as a snapshot rather than a fixed ranking.'],
             ['What do you need from me?', 'Just your restaurant’s website, your city, and an email address to send the results to.'],
             ['What do you do with my details?', 'I only use them to prepare and send your report. I don’t sell your data or add you to a mailing list.'],
-            ['Who’s behind this?', `Finded is a small independent project run by ${FOUNDER.name}, based in the Netherlands. You can reach me directly at ${FOUNDER.email}.`],
+            ['Who’s behind this?', `Finded is a small, independent project based in the Netherlands. You can reach me directly at ${CONTACT_EMAIL}.`],
           ].map(([q, a]) => (
             <details key={q} style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px' }}>
               <summary style={{ fontSize: 15, fontWeight: 700, color: INK, cursor: 'pointer', listStyle: 'none' }}>{q}</summary>
@@ -287,9 +275,8 @@ export default function LandingPage() {
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>Contact</div>
-            <div style={{ color: INK }}>{FOUNDER.name} · Netherlands</div>
-            <a href={`mailto:${FOUNDER.email}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{FOUNDER.email}</a>
-            {FOUNDER.linkedin && <a href={FOUNDER.linkedin} target="_blank" rel="noreferrer" style={{ color: INK, textDecoration: 'none', display: 'block' }}>LinkedIn</a>}
+            <div style={{ color: INK }}>Netherlands</div>
+            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{CONTACT_EMAIL}</a>
             <p style={{ color: FAINT, maxWidth: 240, marginTop: 8, lineHeight: 1.5 }}>
               I only use your details to prepare and send your report, and never sell your data.
             </p>

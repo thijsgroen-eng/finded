@@ -54,11 +54,12 @@ export function LeadForm() {
   if (done) {
     return (
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 28, textAlign: 'center' }}>
-        <div style={{ fontSize: 34, marginBottom: 6 }}>✅</div>
-        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: INK }}>We&rsquo;ve got your request</h3>
+        <div style={{ fontSize: 34, marginBottom: 6 }}>🙏</div>
+        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: INK }}>Thanks — I&rsquo;ll take a look</h3>
         <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.6, maxWidth: 380, margin: '0 auto' }}>
-          We&rsquo;ll prepare your AI visibility report and email the results. Most are handled within
-          a few business days. Results are measured across a set of AI models and prompts and can vary.
+          I&rsquo;ll run the checks across the AI tools and email you what I find — usually within a few
+          days. No account, no sales pitch. AI answers vary over time, so I measure across several
+          prompts and models rather than claiming one fixed ranking.
         </p>
       </div>
     )
@@ -95,10 +96,10 @@ export function LeadForm() {
 
       <button type="submit" disabled={submitting}
         style={{ background: INK, color: '#fff', border: 'none', padding: '14px 20px', borderRadius: 9, fontSize: 15, fontWeight: 700, cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
-        {submitting ? 'Sending…' : 'Check my AI visibility'}
+        {submitting ? 'Sending…' : 'See what AI says about my restaurant'}
       </button>
       <p style={{ fontSize: 12, color: '#b0aea8', textAlign: 'center' }}>
-        <span style={{ color: GREEN, fontWeight: 600 }}>Free</span> · no account needed · we only use this to send your report
+        <span style={{ color: GREEN, fontWeight: 600 }}>Free</span> · no account · I only use this to send you the results
       </p>
     </form>
   )

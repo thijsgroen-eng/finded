@@ -49,7 +49,7 @@ async function getAuditData(id: string) {
   ] = await Promise.all([
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', id),
-    supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response').eq('audit_id', id),
+    supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status').eq('audit_id', id),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', id),
     supabaseAdmin.from('entities').select('prompt_id, model, name, confidence').eq('audit_id', id),
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),

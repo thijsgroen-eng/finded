@@ -18,6 +18,9 @@ export interface ModelRunRow {
   locale: string | null
   duration_ms: number | null
   raw_response: string | null
+  /** First-class lifecycle status (013). Older rows may be null → fall back to the
+   *  raw_response 'ERROR:' prefix. */
+  status?: string | null
 }
 
 export interface MentionRow {
@@ -43,7 +46,8 @@ export interface EntityRow {
   confidence: number | null
 }
 
-const isFailed = (r: ModelRunRow) => (r.raw_response ?? '').startsWith('ERROR:')
+const isFailed = (r: ModelRunRow) =>
+  r.status === 'failed' || (r.status == null && (r.raw_response ?? '').startsWith('ERROR:'))
 
 export interface ProviderAccounting {
   model: string

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    await supabaseAdmin.from('audit_requests').insert({
+    const { data: inserted } = await supabaseAdmin.from('audit_requests').insert({
       website:         c.website,
       domain:          c.domain,
       restaurant_name: c.restaurant_name,
@@ -55,7 +55,23 @@ export async function POST(request: NextRequest) {
       note:            c.note,
       source:          'public_audit_request',
       status:          'new_request',
-    })
+    }).select('id').single()
+
+    // Auto-run: hand off to Inngest (confirmation email → detect → audit). Async,
+    // so the visitor gets an instant response; if the dispatch fails the request
+    // stays 'new_request' for an operator to run from /admin/requests.
+    if (inserted?.id) {
+      try {
+        const { inngest } = await import('@/lib/inngest/client')
+        await inngest.send({
+          id: `audit-request-${inserted.id}`,
+          name: 'audit-request/created',
+          data: { request_id: inserted.id },
+        })
+      } catch {
+        // Leave as new_request; manual fallback in admin.
+      }
+    }
   } catch {
     // Don't leak internals; surface a generic, retryable error.
     return NextResponse.json(

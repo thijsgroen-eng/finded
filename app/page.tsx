@@ -85,9 +85,10 @@ export default function LandingPage() {
       {/* ── Nav ── */}
       <nav style={{ background: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: INK, textDecoration: 'none' }}>Finded</a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           <a href="#how" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>How it works</a>
-          <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '8px 16px', borderRadius: 7, textDecoration: 'none' }}>Check my restaurant</a>
+          <a href="#pricing" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Pricing</a>
+          <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '8px 16px', borderRadius: 7, textDecoration: 'none' }}>Check my AI visibility</a>
         </div>
       </nav>
 
@@ -183,15 +184,82 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Pricing / what you'll receive ── */}
+      <section id="pricing" style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
+        <div style={{ maxWidth: 1040, margin: '0 auto', padding: '56px 24px' }}>
+          <SectionTitle kicker="What you'll receive" title="Clear pricing, no surprises" sub="Start free. Pay only if you want a deeper analysis or help implementing it. No hidden fees, no sales calls to get a price." />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, alignItems: 'start' }}>
+            {[
+              {
+                name: 'Free AI visibility check', price: '€0', cadence: '',
+                desc: 'A quick check to see whether your restaurant appears in AI-generated restaurant recommendations.',
+                features: ['Visibility score', 'Whether your restaurant is mentioned', 'Basic competitor overview', 'Summary of findings', 'Delivered by email'],
+                cta: 'Check my AI visibility', href: '#check', note: 'No credit card required.', highlight: false,
+              },
+              {
+                name: 'Full AI visibility audit', price: '€199', cadence: 'one-time',
+                desc: 'A detailed analysis of how AI platforms recommend restaurants in your city.',
+                features: ['Everything in the free check', 'ChatGPT analysis', 'Claude analysis', 'Gemini analysis', 'Perplexity analysis', 'Dutch and English search prompts', 'Competitor comparison', 'Website signal review', 'Structured-data review', 'Prioritised action plan', 'Personal walkthrough of the findings'],
+                cta: 'Request a full audit', href: `mailto:${CONTACT_EMAIL}?subject=Full AI visibility audit`, note: 'Recommended for restaurants that want a complete picture of their AI visibility.', highlight: true,
+              },
+              {
+                name: 'Implementation & monitoring', price: 'From €149', cadence: '/month',
+                desc: 'We help implement the recommendations and monitor your visibility over time.',
+                features: ['Monthly visibility checks', 'Updated AI visibility reporting', 'Website recommendations', 'Structured-data improvements', 'Content recommendations', 'Ongoing competitor tracking', 'Priority support'],
+                cta: 'Discuss implementation', href: `mailto:${CONTACT_EMAIL}?subject=Implementation and monitoring`, note: 'Optional. Most restaurants start with the free check or full audit first.', highlight: false,
+              },
+            ].map((p) => (
+              <div key={p.name} style={{
+                background: p.highlight ? INK : BG, color: p.highlight ? '#fff' : INK,
+                border: `1px solid ${p.highlight ? INK : BORDER}`, borderRadius: 16, padding: 22,
+                display: 'flex', flexDirection: 'column', boxShadow: p.highlight ? '0 24px 48px -28px rgba(17,17,16,0.4)' : 'none',
+              }}>
+                {p.highlight && <span style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: INK, background: GREEN, padding: '3px 8px', borderRadius: 5, marginBottom: 12 }}>Most popular</span>}
+                <div style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '8px 0 10px' }}>
+                  <span style={{ fontSize: 34, fontWeight: 800, letterSpacing: -1 }}>{p.price}</span>
+                  {p.cadence && <span style={{ fontSize: 13, color: p.highlight ? '#b9b8b3' : MUTED }}>{p.cadence}</span>}
+                </div>
+                <p style={{ fontSize: 13, color: p.highlight ? '#cfcec9' : MUTED, lineHeight: 1.55, marginBottom: 14 }}>{p.desc}</p>
+                <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
+                  {p.features.map((f) => (
+                    <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ color: GREEN, fontWeight: 800, fontSize: 13, lineHeight: 1.5 }}>✓</span>
+                      <span style={{ fontSize: 13, color: p.highlight ? '#e7e6e2' : INK, lineHeight: 1.5 }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href={p.href} style={{
+                  marginTop: 'auto', textAlign: 'center', textDecoration: 'none', fontWeight: 700, fontSize: 14,
+                  padding: '12px 16px', borderRadius: 9,
+                  background: p.highlight ? '#fff' : INK, color: p.highlight ? INK : '#fff',
+                }}>{p.cta}</a>
+                <p style={{ fontSize: 12, color: p.highlight ? '#b9b8b3' : FAINT, marginTop: 10, textAlign: 'center', lineHeight: 1.45 }}>{p.note}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Why we offer a free check */}
+          <div style={{ maxWidth: 700, margin: '32px auto 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Why we offer a free check</div>
+            <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.65 }}>
+              Most restaurant owners have no way of knowing whether AI tools are recommending them or their
+              competitors. The free check helps you understand where you stand <em>before</em> deciding
+              whether you want a deeper analysis. There&rsquo;s no obligation to buy anything afterwards.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── What happens next ── */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px' }}>
-        <SectionTitle kicker="What happens next" title="Simple, and no pressure" />
+        <SectionTitle kicker="What happens next" title="What happens after I submit my restaurant?" />
         <div style={{ display: 'grid', gap: 12 }}>
           {[
-            ['1', 'You send your website', 'Just the URL, your city, and an email — that’s all I need to start.'],
-            ['2', 'I run the checks', 'I search the AI tools the way a guest would and record what they say about you.'],
-            ['3', 'You get a report', 'I email you what I found: where you appear, who appears instead, and what to fix.'],
-            ['4', 'We talk it through — if you want', 'Happy to walk through the findings together. No commitment, no sales process.'],
+            ['1', 'Submit your website and city', 'That’s all I need to start — plus an email to send the results to.'],
+            ['2', 'We run the analysis', 'I search the AI tools the way a guest would and record what they say about you.'],
+            ['3', 'You receive your results', 'I email you the free check: where you appear, who appears instead, and a summary.'],
+            ['4', 'Decide whether you want a deeper audit — or not', 'Totally up to you. There’s no obligation to purchase anything after the free check.'],
           ].map(([n, t, d]) => (
             <div key={n as string} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
               <div style={{ width: 30, height: 30, borderRadius: '50%', background: LGREEN, color: DGREEN, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
@@ -202,6 +270,9 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+        <p style={{ textAlign: 'center', fontSize: 15, fontWeight: 600, color: DGREEN, marginTop: 20 }}>
+          There is no obligation to purchase anything after receiving your free visibility check.
+        </p>
       </section>
 
       {/* ── What this won't tell you (limitations) ── */}
@@ -269,7 +340,8 @@ export default function LandingPage() {
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>Get started</div>
-            <a href="#check" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Check my restaurant</a>
+            <a href="#check" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Check my AI visibility</a>
+            <a href="#pricing" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Pricing</a>
             <a href="#how" style={{ color: INK, textDecoration: 'none', display: 'block' }}>How it works</a>
             <a href="/audit" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Request form</a>
           </div>

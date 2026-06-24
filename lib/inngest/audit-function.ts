@@ -10,7 +10,14 @@ import { matchEntity } from '@/lib/audit/entity-matching'
 import { aggregateCompetitors } from '@/lib/audit/competitors'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
+import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
+
+/** True if an operator has stopped this audit (status set to 'cancelled'). */
+async function isCancelled(auditId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin.from('audits').select('status').eq('id', auditId).single()
+  return data?.status === 'cancelled'
+}
 
 // Each prompt is sampled SAMPLES times at the pinned AUDIT_TEMPERATURE (0.7);
 // every sample is written + parsed independently so metrics-v2 can report a
@@ -146,8 +153,14 @@ export const auditFunction = inngest.createFunction(
     // results are never cached (otherwise every "sample" would be identical).
     const providers = getAvailableProviders()
     let totalSuccessful = 0
+    let stopped = false
 
     for (const promptObj of prompts) {
+      // Stop early if an operator cancelled the audit (checked once per prompt).
+      if (await step.run(`cancel-check-${audit_id}-${promptObj.id}`, () => isCancelled(audit_id))) {
+        stopped = true
+        break
+      }
       for (let sample = 0; sample < SAMPLES; sample++) {
         const { ok } = await step.run(`sample-${audit_id}-${promptObj.id}-s${sample}`, async () => {
           let ok = 0
@@ -284,6 +297,14 @@ export const auditFunction = inngest.createFunction(
 
         totalSuccessful += ok
       }
+    }
+
+    // Operator stopped it mid-run: leave status 'cancelled', skip scoring/complete.
+    if (stopped || (await step.run(`cancel-check-final-${audit_id}`, () => isCancelled(audit_id)))) {
+      await step.run(`dequeue-cancelled-${audit_id}`, async () => {
+        await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+      })
+      return { success: false, audit_id, cancelled: true }
     }
 
     // If every model call failed (bad/missing key or no credit), fail with a clear
@@ -454,6 +475,20 @@ export const auditFunction = inngest.createFunction(
         .from('audit_queue')
         .delete()
         .eq('audit_id', audit_id)
+    })
+
+    // Email the requester their report (only when this audit came from a public
+    // request and email is configured). Best-effort — never fails the audit.
+    await step.run(`notify-requester-${audit_id}`, async () => {
+      const { data: req } = await supabaseAdmin
+        .from('audit_requests').select('email').eq('audit_id', audit_id).maybeSingle()
+      if (!req?.email) return { skipped: true }
+      const { data: r } = await supabaseAdmin
+        .from('restaurants').select('name, preview_slug').eq('id', restaurant_id).single()
+      const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://finded.vercel.app').replace(/\/$/, '')
+      const reportUrl = r?.preview_slug ? `${base}/report/${r.preview_slug}` : null
+      const mail = reportReadyEmail({ restaurantName: r?.name, reportUrl })
+      return sendEmail({ to: req.email, subject: mail.subject, html: mail.html, text: mail.text })
     })
 
     return { success: true, audit_id }

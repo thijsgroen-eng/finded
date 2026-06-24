@@ -12,6 +12,7 @@ import { Recommendations } from '@/components/admin/recommendations'
 import { OutreachEmail } from '@/components/admin/outreach-email'
 import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
+import { AuditControls } from '@/components/admin/audit-controls'
 import {
   ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel,
 } from '@/components/admin/audit-evidence'
@@ -145,6 +146,7 @@ export default async function AuditDetailPage({
               <CopyReportLink slug={entity.preview_slug} />
             )}
             <Badge variant={statusVariant(audit.status) as any}>{audit.status}</Badge>
+            <AuditControls auditId={id} status={audit.status} />
           </div>
         </div>
       </div>

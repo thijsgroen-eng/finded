@@ -8,9 +8,10 @@
  */
 
 import {
-  extractEntities, keywordTargetMention, resolveEntityName, type ExtractedEntity,
+  extractEntities, keywordTargetMention, type ExtractedEntity,
 } from '@/lib/engine/entity-extractor'
 import { normalizeName } from '@/lib/engine/normalize'
+import { matchEntity } from '@/lib/audit/entity-matching'
 
 export interface StructuredMention {
   name: string
@@ -30,33 +31,23 @@ export interface ExtractMentionsResult {
   fallback: boolean
 }
 
-const TARGET_THRESHOLD = 0.7
-
-function matchReason(score: number): string | null {
-  if (score >= 1) return 'exact name match'
-  if (score >= 0.9) return 'name contains target'
-  if (score >= TARGET_THRESHOLD) return 'strong word overlap'
-  return null
-}
-
 /**
  * Shape raw extracted entities into ordered structured mentions, flagging which
- * one is the target restaurant. Pure + deterministic.
+ * one is the target restaurant (via the shared entity matcher). Pure + deterministic.
  */
 export function shapeMentions(entities: ExtractedEntity[], targetName: string): StructuredMention[] {
   return entities
     .slice()
     .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
     .map((e, i) => {
-      const score = targetName ? resolveEntityName(e.name, targetName) : 0
-      const isTarget = score >= TARGET_THRESHOLD
+      const m = matchEntity({ name: e.name }, { name: targetName })
       return {
         name: e.name,
         normalized_name: normalizeName(e.name),
         position: e.position ?? i + 1,
         confidence: typeof e.confidence === 'number' ? e.confidence : 0.5,
-        is_target: isTarget,
-        match_reason: isTarget ? matchReason(score) : null,
+        is_target: m.matched,
+        match_reason: m.reason,
         evidence_excerpt: e.context?.trim() ? e.context.trim().slice(0, 280) : null,
       }
     })

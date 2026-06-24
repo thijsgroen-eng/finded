@@ -6,15 +6,16 @@ import {
 import { Card, CardHeader, CardTitle, CardContent, Badge, StatCard } from '@/components/ui'
 import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
 import { notFound } from 'next/navigation'
-import { CheckCircle2, XCircle, TrendingUp, ExternalLink, ArrowLeft } from 'lucide-react'
+import { TrendingUp, ExternalLink, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Recommendations } from '@/components/admin/recommendations'
 import { OutreachEmail } from '@/components/admin/outreach-email'
 import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
 import {
-  ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard,
+  ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel,
 } from '@/components/admin/audit-evidence'
+import { toWebsiteSignals } from '@/lib/audit/website-signals'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
@@ -80,18 +81,6 @@ const SEVERITY_STYLES: Record<string, { bg: string; text: string; dot: string }>
   high:     { bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-500' },
   medium:   { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400' },
   low:      { bg: 'bg-gray-50',   text: 'text-gray-600',   dot: 'bg-gray-400' },
-}
-
-function CheckRow({ label, value }: { label: string; value: boolean | null }) {
-  if (value === null) return null
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-700">{label}</span>
-      {value
-        ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-        : <XCircle className="w-4 h-4 text-gray-300" />}
-    </div>
-  )
 }
 
 export default async function AuditDetailPage({
@@ -335,43 +324,8 @@ export default async function AuditDetailPage({
         </Card>
       </div>
 
-      {/* Website signals */}
-      {websiteAudit && (
-        <Card className="mb-5">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Website signals</CardTitle>
-              {entity.website && (
-                <a href={entity.website.startsWith('http') ? entity.website : `https://${entity.website}`}
-                  target="_blank" rel="noreferrer"
-                  className="text-xs text-blue-500 hover:underline">
-                  {entity.website}
-                </a>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-              <div>
-                <CheckRow label="Schema.org markup"    value={websiteAudit.schema_present} />
-                <CheckRow label="Content / services"   value={websiteAudit.menu_present} />
-                <CheckRow label="Hours / schedule"     value={websiteAudit.opening_hours_present} />
-              </div>
-              <div>
-                <CheckRow label="Booking / contact"    value={websiteAudit.reservation_links_present} />
-                <CheckRow label="Social media links"   value={websiteAudit.social_links_present} />
-              </div>
-            </div>
-            {(websiteAudit.meta_title || websiteAudit.meta_description) && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-md text-xs space-y-1">
-                {websiteAudit.meta_title && <p><span className="text-gray-400">Title:</span> {websiteAudit.meta_title}</p>}
-                {websiteAudit.meta_description && <p><span className="text-gray-400">Description:</span> {websiteAudit.meta_description}</p>}
-                {websiteAudit.review_count != null && <p><span className="text-gray-400">Reviews detected:</span> {websiteAudit.review_count}</p>}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Website signals — typed checklist */}
+      <WebsiteSignalsPanel signals={toWebsiteSignals(websiteAudit)} />
 
       {/* Methodology & limitations */}
       <MethodologyCard acc={runAccounting} language={auditLanguage} />

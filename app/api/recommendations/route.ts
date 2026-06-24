@@ -21,10 +21,12 @@ export async function POST(request: NextRequest) {
 
   if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
 
-  const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }] = await Promise.all([
+  const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }, { data: competitors }, { data: vs }] = await Promise.all([
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, prompt_text').eq('audit_id', audit_id),
+    supabaseAdmin.from('competitors').select('name, mention_count, providers').eq('audit_id', audit_id).order('mention_count', { ascending: false }).limit(5),
+    supabaseAdmin.from('visibility_scores').select('score_breakdown, visibility_score, confidence_score').eq('audit_id', audit_id).single(),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
@@ -55,6 +57,20 @@ CUISINE-SPECIFIC VISIBILITY (the queries a ${cuisineLabel} restaurant should win
     .map(m => `${m.model}: ${Math.round(m.frequency * 100)}% (${m.mentions} mentions)`)
     .join('\n')
 
+  // Competitor gap: who AI recommends instead, and by how much.
+  const myMentions = metrics.total_mentions
+  const competitorGap = (competitors ?? []).length === 0
+    ? '\n\nCOMPETITOR GAP: no competitors were extracted.'
+    : `\n\nCOMPETITOR GAP (AI recommends these instead — close this gap):\n${(competitors ?? [])
+        .map(c => `- ${c.name}: ${c.mention_count} mentions vs your ${myMentions}`).join('\n')}`
+
+  // Stored score breakdown: target the weakest components.
+  const breakdown = (vs?.score_breakdown as { components?: { label: string; score: number }[] } | null)?.components
+  const scoreContext = breakdown?.length
+    ? `\n\nSCORE BREAKDOWN (visibility ${vs?.visibility_score ?? '?'}/100 — weakest components are the priority):\n${breakdown
+        .map(c => `- ${c.label}: ${Math.round(c.score)}/100`).join('\n')}`
+    : ''
+
   const websiteSignals = websiteAudit ? `
 - Schema.org markup: ${websiteAudit.schema_present ? 'Present' : 'MISSING'}
 - Menu page: ${websiteAudit.menu_present ? 'Present' : 'MISSING'}
@@ -84,9 +100,10 @@ SENTIMENT: ${metrics.sentiment_breakdown.positive} positive, ${metrics.sentiment
 
 WEBSITE SIGNALS:
 ${websiteSignals}
-${cuisineAnalysis}
+${cuisineAnalysis}${competitorGap}${scoreContext}
 
 Generate exactly 5 specific, prioritised recommendations to improve this restaurant's AI visibility.
+Base each recommendation on the evidence above: the weakest score components, missing website signals, the competitor gap, and the cuisine prompt misses.
 
 Format your response as a JSON array with this exact structure:
 [

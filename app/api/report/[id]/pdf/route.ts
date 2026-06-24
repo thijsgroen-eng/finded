@@ -6,6 +6,7 @@ import { computeMetrics } from '@/lib/engine/metrics'
 import { asLanguage, languageForCountry, Language } from '@/lib/i18n'
 import { ReportDocument, ReportData, ReportVariant } from '@/lib/report/report-document'
 import { ADMIN_COOKIE, isValidSession, adminAuthDisabledInDev } from '@/lib/auth/admin'
+import { toWebsiteSignals } from '@/lib/audit/website-signals'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,11 +46,12 @@ export async function GET(
 
   const language: Language = langParam ? asLanguage(langParam) : languageForCountry(restaurant.country)
 
-  const [{ data: vs }, { data: mentions }, { data: competitors }, { data: recommendations }] = await Promise.all([
+  const [{ data: vs }, { data: mentions }, { data: competitors }, { data: recommendations }, { data: websiteAudit }] = await Promise.all([
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', id),
     supabaseAdmin.from('competitors').select('name, mention_count').eq('audit_id', id).order('mention_count', { ascending: false }).limit(8),
     supabaseAdmin.from('recommendations').select('title, description, priority').eq('audit_id', id).order('created_at', { ascending: true }),
+    supabaseAdmin.from('website_audits').select('*').eq('audit_id', id).single(),
   ])
 
   if (!vs) {
@@ -83,6 +85,11 @@ export async function GET(
     recommendations: (recommendations ?? []).map((r) => ({
       title: r.title ?? '', description: r.description ?? '', priority: r.priority ?? 'medium',
     })),
+    websiteSignals: (() => {
+      const sig = toWebsiteSignals(websiteAudit)
+      return sig.length ? { present: sig.filter((s) => s.status === 'present').length, total: sig.length } : null
+    })(),
+    formulaVersion: (vs.score_breakdown as { method_version?: string } | null)?.method_version ?? null,
   }
 
   const buffer = await renderToBuffer(

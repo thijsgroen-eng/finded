@@ -4,9 +4,10 @@ import { getAvailableProviders } from '@/lib/providers'
 import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPromptsFromStore } from '@/lib/engine/prompt-store'
-import { extractEntities, findTargetInEntities, keywordTargetMention, resolveEntityName } from '@/lib/engine/entity-extractor'
+import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { normalizeName } from '@/lib/engine/normalize'
-import { buildCompetitorProvenance } from '@/lib/audit/competitor-evidence'
+import { matchEntity } from '@/lib/audit/entity-matching'
+import { aggregateCompetitors } from '@/lib/audit/competitors'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
@@ -221,8 +222,10 @@ export const auditFunction = inngest.createFunction(
               for (const ent of extraction.entities) {
                 // Resolve each extracted name against the target so the mention is
                 // self-describing evidence (normalized name, target flag, why).
-                const score = resolveEntityName(ent.name, entity.name)
-                const isTarget = score >= 0.7
+                const m = matchEntity(
+                  { name: ent.name },
+                  { id: entity.id, name: entity.name, domain: (entity as any).domain ?? null },
+                )
                 const { data: entityRow } = await supabaseAdmin
                   .from('entities')
                   .insert({
@@ -237,9 +240,9 @@ export const auditFunction = inngest.createFunction(
                     sentiment:    ent.sentiment,
                     confidence:   ent.confidence,
                     normalized_name:       normalizeName(ent.name),
-                    is_target:             isTarget,
-                    matched_restaurant_id: isTarget ? entity.id : null,
-                    match_reason:          isTarget ? (score >= 1 ? 'exact name match' : score >= 0.9 ? 'name contains target' : 'strong word overlap') : null,
+                    is_target:             m.matched,
+                    matched_restaurant_id: m.matchedRestaurantId,
+                    match_reason:          m.reason ? `${m.reason} (${m.confidence.toFixed(2)})` : null,
                     evidence_excerpt:      ent.context ? ent.context.slice(0, 280) : null,
                   })
                   .select('id')
@@ -393,37 +396,19 @@ export const auditFunction = inngest.createFunction(
         total_model_runs:          metrics.total_model_runs,
       })
 
-      if (metrics.competitors.length > 0) {
-        // Attach provenance (which providers/prompts named each competitor + a few
-        // raw excerpts) from the stored entity rows, so competitor stats are
-        // traceable evidence rather than bare counts.
-        const provByKey = buildCompetitorProvenance(
-          (entities as any[]).map((e) => ({
-            name: e.name, model: e.model, prompt_id: e.prompt_id,
-            is_target: e.is_target, normalized_name: e.normalized_name,
-            evidence_excerpt: e.evidence_excerpt, context: e.context,
-          })),
-          entity.name,
-        )
-
+      // Aggregate competitors directly from the stored entity rows so every row is
+      // traceable evidence (counts + provenance), not bare numbers.
+      const competitorRows = aggregateCompetitors(
+        (entities as any[]).map((e) => ({
+          name: e.name, model: e.model, prompt_id: e.prompt_id, position: e.position,
+          sentiment: e.sentiment, is_target: e.is_target, normalized_name: e.normalized_name,
+          evidence_excerpt: e.evidence_excerpt, context: e.context,
+        })),
+        entity.name,
+      )
+      if (competitorRows.length > 0) {
         await supabaseAdmin.from('competitors').insert(
-          metrics.competitors.map((c: any) => {
-            const prov = provByKey.get(c.canonical_key)
-            return {
-              audit_id,
-              name:            c.name,
-              canonical_key:   c.canonical_key,
-              normalized_name: c.canonical_key,
-              mention_count:   c.mention_count,
-              avg_position:    c.avg_position,
-              sentiment_score: c.sentiment_score,
-              share_of_voice:  c.share_of_voice,
-              top_reasons:     c.top_reasons,
-              providers:       prov?.providers ?? [],
-              prompt_ids:      prov?.prompt_ids ?? [],
-              sample_evidence: prov?.sample_evidence ?? [],
-            }
-          })
+          competitorRows.map((c) => ({ audit_id, ...c })),
         )
       }
 

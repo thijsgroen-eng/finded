@@ -20,6 +20,8 @@ export interface ReportData {
   sentiment: { positive: number; neutral: number; negative: number }
   competitors: { name: string; mention_count: number }[]
   recommendations: { title: string; description: string; priority: string }[]
+  websiteSignals?: { present: number; total: number } | null
+  formulaVersion?: string | null
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -340,6 +342,12 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
         <View style={s.section} wrap={false}>
           <Text style={s.sectionTitle}>{t.methodology}</Text>
           <Text style={s.methodBody}>{t.methodologyBody(data.modelBreakdown.length || 4, data.sampleCount)}</Text>
+          {(data.websiteSignals || data.formulaVersion) && (
+            <Text style={[s.methodBody, { marginTop: 4 }]}>
+              {data.websiteSignals ? t.websiteSignalsLine(data.websiteSignals.present, data.websiteSignals.total) + ' ' : ''}
+              {data.formulaVersion ? t.formulaVersionLine(data.formulaVersion) : ''}
+            </Text>
+          )}
           <Text style={[s.sectionTitle, { marginTop: 10 }]}>{t.limitations}</Text>
           <Text style={s.methodBody}>{t.limitationsBody}</Text>
         </View>

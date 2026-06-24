@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
-import { ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle, AlertTriangle } from 'lucide-react'
 
 // Shapes mirror lib/engine/audit-evidence.ts + lib/engine/scoring.ts (serialized).
 export interface RunAccounting {
@@ -196,6 +196,59 @@ export function PromptEvidenceCard({ prompts }: { prompts: PromptEvidence[] }) {
             {open ? <><ChevronUp className="w-4 h-4" /> Show less</> : <><ChevronDown className="w-4 h-4" /> Show all {prompts.length} prompts</>}
           </button>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Website signals (typed checklist) ───────────────────────────────────────────
+export interface WebsiteSignal {
+  key: string; label: string; status: 'present' | 'weak' | 'missing'
+  evidence?: string; recommendedFixType?: string
+}
+
+function SignalIcon({ status }: { status: WebsiteSignal['status'] }) {
+  if (status === 'present') return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+  if (status === 'weak') return <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+  return <XCircle className="w-4 h-4 text-gray-300 shrink-0" />
+}
+
+export function WebsiteSignalsPanel({ signals }: { signals: WebsiteSignal[] }) {
+  if (signals.length === 0) {
+    return (
+      <Card className="mb-5">
+        <CardHeader><CardTitle>Website signals</CardTitle></CardHeader>
+        <CardContent className="pt-0"><p className="text-sm text-gray-400">No website audit was recorded for this audit.</p></CardContent>
+      </Card>
+    )
+  }
+  const present = signals.filter((s) => s.status === 'present').length
+  return (
+    <Card className="mb-5">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Website signals</CardTitle>
+          <span className="text-xs text-gray-400">{present}/{signals.length} present</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
+          {signals.map((s) => (
+            <div key={s.key} className="flex items-start gap-2 py-2 border-b border-gray-50">
+              <SignalIcon status={s.status} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-800">{s.label}</span>
+                  {s.status === 'weak' && <Badge variant="warning">weak</Badge>}
+                </div>
+                {s.evidence && <p className="text-xs text-gray-400 truncate" title={s.evidence}>{s.evidence}</p>}
+                {s.status !== 'present' && s.recommendedFixType && (
+                  <p className="text-xs text-gray-400">fix: <span className="font-mono">{s.recommendedFixType}</span></p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )

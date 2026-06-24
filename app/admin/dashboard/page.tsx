@@ -7,7 +7,7 @@ import {
 } from '@/lib/engine/dashboard'
 import {
   UtensilsCrossed, AlertCircle, Loader2, Clock,
-  Send, CalendarClock, Sparkles, ShieldAlert,
+  Send, CalendarClock, Sparkles, ShieldAlert, GaugeCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -22,7 +22,7 @@ async function getDashboard() {
   ] = await Promise.all([
     supabaseAdmin.from('restaurants').select('id, name, city, cuisine, business_type, website, domain'),
     supabaseAdmin.from('audits').select('id, restaurant_id, status, error_message, created_at').order('created_at', { ascending: false }),
-    supabaseAdmin.from('visibility_scores').select('restaurant_id, audit_id, opportunity_score, visibility_score'),
+    supabaseAdmin.from('visibility_scores').select('restaurant_id, audit_id, opportunity_score, visibility_score, confidence_score'),
     supabaseAdmin.from('lead_statuses').select('restaurant_id, status, next_followup_at'),
   ])
 
@@ -33,7 +33,7 @@ async function getDashboard() {
 
   // Best (highest-opportunity) completed audit per restaurant. visibility_scores
   // only exist for completed audits, so presence here means "report ready".
-  const bestByRest = new Map<string, { audit_id: string; opportunity_score: number; visibility_score: number }>()
+  const bestByRest = new Map<string, { audit_id: string; opportunity_score: number; visibility_score: number; confidence_score: number | null }>()
   for (const s of scores ?? []) {
     if (!restById.has(s.restaurant_id)) continue
     const cur = bestByRest.get(s.restaurant_id)
@@ -42,6 +42,7 @@ async function getDashboard() {
         audit_id: s.audit_id,
         opportunity_score: Number(s.opportunity_score ?? 0),
         visibility_score: Number(s.visibility_score ?? 0),
+        confidence_score: s.confidence_score != null ? Number(s.confidence_score) : null,
       })
     }
   }
@@ -83,6 +84,13 @@ async function getDashboard() {
     .sort((a, b) => b.opportunity_score - a.opportunity_score)
     .slice(0, 6)
 
+  // Audits whose score rests on thin evidence — worth a re-run before outreach.
+  const lowConfidence = [...bestByRest.entries()]
+    .filter(([, s]) => s.confidence_score != null && s.confidence_score < 0.5)
+    .map(([rid, s]) => ({ restaurant: restById.get(rid)!, ...s }))
+    .sort((a, b) => (a.confidence_score ?? 0) - (b.confidence_score ?? 0))
+    .slice(0, 6)
+
   const warnings = dataQualityWarnings(allEntities)
   const duplicateNames = findDuplicateGroups(allEntities)
     .slice(0, 5)
@@ -91,7 +99,7 @@ async function getDashboard() {
   return {
     totalRestaurants: restRows.length,
     health, failedAudits, followUpsDue, interestedNoNext, readyToSend, topOpportunities,
-    warnings, duplicateNames,
+    lowConfidence, warnings, duplicateNames,
   }
 }
 
@@ -211,6 +219,30 @@ export default async function DashboardPage() {
                     </div>
                     <span className="text-xs text-amber-600 flex items-center gap-1"><Clock className="w-3 h-3" />{l.next_followup_at ? formatDateTime(l.next_followup_at) : ''}</span>
                   </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Low-confidence audits */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><GaugeCircle className="w-4 h-4 text-gray-400" /><CardTitle>Low-confidence audits</CardTitle></div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {d.lowConfidence.length === 0 ? (
+              <p className="text-sm text-gray-400 py-3">No low-confidence audits — evidence is solid.</p>
+            ) : (
+              <div className="space-y-1">
+                {d.lowConfidence.map((c) => (
+                  <Link key={c.audit_id} href={`/admin/audits/${c.audit_id}`} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{c.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{displayCity(c.restaurant.city)}</p>
+                    </div>
+                    <span className="text-xs text-gray-500">{Math.round((c.confidence_score ?? 0) * 100)}% confidence</span>
+                  </Link>
                 ))}
               </div>
             )}

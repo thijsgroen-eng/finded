@@ -192,21 +192,21 @@ export default function LandingPage() {
             {[
               {
                 name: 'Free AI visibility check', price: '€0', cadence: '',
-                desc: 'A quick check to see whether your restaurant appears in AI-generated restaurant recommendations.',
-                features: ['Visibility score', 'Whether your restaurant is mentioned', 'Basic competitor overview', 'Summary of findings', 'Delivered by email'],
-                cta: 'Check my AI visibility', href: '#check', note: 'No credit card required.', highlight: false,
+                desc: 'A quick check to see whether AI tools are recommending your restaurant.',
+                features: ['Mentioned / not mentioned in AI recommendations', 'Basic visibility score', 'Competitors mentioned instead', 'Summary of findings', 'Delivered by email'],
+                cta: 'Check my AI visibility', href: '#check', note: 'No credit card required. No obligation.', highlight: false,
               },
               {
-                name: 'Full AI visibility audit', price: '€199', cadence: 'one-time',
-                desc: 'A detailed analysis of how AI platforms recommend restaurants in your city.',
-                features: ['Everything in the free check', 'ChatGPT analysis', 'Claude analysis', 'Gemini analysis', 'Perplexity analysis', 'Dutch and English search prompts', 'Competitor comparison', 'Website signal review', 'Structured-data review', 'Prioritised action plan', 'Personal walkthrough of the findings'],
-                cta: 'Request a full audit', href: `mailto:${CONTACT_EMAIL}?subject=Full AI visibility audit`, note: 'Recommended for restaurants that want a complete picture of their AI visibility.', highlight: true,
+                name: 'Restaurant AI Audit', price: '€49', cadence: 'one-time',
+                desc: 'A detailed analysis for restaurants that want deeper insight into their AI visibility.',
+                features: ['Everything in the free check', 'ChatGPT analysis', 'Claude analysis', 'Gemini analysis', 'Perplexity analysis', 'Dutch and English search prompts', 'Competitor comparison', 'Website review', 'Structured-data review', 'Prioritised recommendations', 'Action plan'],
+                cta: 'Request a detailed audit', href: `mailto:${CONTACT_EMAIL}?subject=Restaurant AI Audit`, note: 'Ideal for restaurants that want to understand why competitors appear more often in AI recommendations.', highlight: true,
               },
               {
-                name: 'Implementation & monitoring', price: 'From €149', cadence: '/month',
-                desc: 'We help implement the recommendations and monitor your visibility over time.',
-                features: ['Monthly visibility checks', 'Updated AI visibility reporting', 'Website recommendations', 'Structured-data improvements', 'Content recommendations', 'Ongoing competitor tracking', 'Priority support'],
-                cta: 'Discuss implementation', href: `mailto:${CONTACT_EMAIL}?subject=Implementation and monitoring`, note: 'Optional. Most restaurants start with the free check or full audit first.', highlight: false,
+                name: 'AI Visibility Implementation Package', price: '€299', cadence: 'one-time',
+                desc: 'We help implement the most important improvements found in your audit.',
+                features: ['Structured-data implementation', 'FAQ & AI-friendly content recommendations', 'Website visibility improvements', 'Local SEO & location-signal improvements', 'AI discoverability recommendations', 'Priority implementation guidance', 'Follow-up visibility check'],
+                cta: 'Discuss implementation', href: `mailto:${CONTACT_EMAIL}?subject=AI Visibility Implementation Package`, note: 'For restaurants that want help putting the recommendations into practice.', highlight: false,
               },
             ].map((p) => (
               <div key={p.name} style={{
@@ -257,9 +257,9 @@ export default function LandingPage() {
         <div style={{ display: 'grid', gap: 12 }}>
           {[
             ['1', 'Submit your website and city', 'That’s all I need to start — plus an email to send the results to.'],
-            ['2', 'We run the analysis', 'I search the AI tools the way a guest would and record what they say about you.'],
-            ['3', 'You receive your results', 'I email you the free check: where you appear, who appears instead, and a summary.'],
-            ['4', 'Decide whether you want a deeper audit — or not', 'Totally up to you. There’s no obligation to purchase anything after the free check.'],
+            ['2', 'Receive your free AI visibility check', 'I search the AI tools the way a guest would and email you what I find.'],
+            ['3', 'Review the results', 'See where you appear, which competitors show up instead, and a summary.'],
+            ['4', 'Decide whether you want a detailed audit or implementation support', 'Totally up to you — and only if it’s worth it. No pressure either way.'],
           ].map(([n, t, d]) => (
             <div key={n as string} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
               <div style={{ width: 30, height: 30, borderRadius: '50%', background: LGREEN, color: DGREEN, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
@@ -271,7 +271,7 @@ export default function LandingPage() {
           ))}
         </div>
         <p style={{ textAlign: 'center', fontSize: 15, fontWeight: 600, color: DGREEN, marginTop: 20 }}>
-          There is no obligation to purchase anything after receiving your free visibility check.
+          There is absolutely no obligation to purchase anything after receiving your free visibility check.
         </p>
       </section>
 

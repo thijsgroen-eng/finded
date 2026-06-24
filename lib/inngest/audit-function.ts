@@ -6,6 +6,7 @@ import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getQuickPromptsFromStore } from '@/lib/engine/prompt-store'
 import { extractEntities, findTargetInEntities, keywordTargetMention, resolveEntityName } from '@/lib/engine/entity-extractor'
 import { normalizeName } from '@/lib/engine/normalize'
+import { buildCompetitorProvenance } from '@/lib/audit/competitor-evidence'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
@@ -393,17 +394,36 @@ export const auditFunction = inngest.createFunction(
       })
 
       if (metrics.competitors.length > 0) {
+        // Attach provenance (which providers/prompts named each competitor + a few
+        // raw excerpts) from the stored entity rows, so competitor stats are
+        // traceable evidence rather than bare counts.
+        const provByKey = buildCompetitorProvenance(
+          (entities as any[]).map((e) => ({
+            name: e.name, model: e.model, prompt_id: e.prompt_id,
+            is_target: e.is_target, normalized_name: e.normalized_name,
+            evidence_excerpt: e.evidence_excerpt, context: e.context,
+          })),
+          entity.name,
+        )
+
         await supabaseAdmin.from('competitors').insert(
-          metrics.competitors.map((c: any) => ({
-            audit_id,
-            name:            c.name,
-            canonical_key:   c.canonical_key,
-            mention_count:   c.mention_count,
-            avg_position:    c.avg_position,
-            sentiment_score: c.sentiment_score,
-            share_of_voice:  c.share_of_voice,
-            top_reasons:     c.top_reasons,
-          }))
+          metrics.competitors.map((c: any) => {
+            const prov = provByKey.get(c.canonical_key)
+            return {
+              audit_id,
+              name:            c.name,
+              canonical_key:   c.canonical_key,
+              normalized_name: c.canonical_key,
+              mention_count:   c.mention_count,
+              avg_position:    c.avg_position,
+              sentiment_score: c.sentiment_score,
+              share_of_voice:  c.share_of_voice,
+              top_reasons:     c.top_reasons,
+              providers:       prov?.providers ?? [],
+              prompt_ids:      prov?.prompt_ids ?? [],
+              sample_evidence: prov?.sample_evidence ?? [],
+            }
+          })
         )
       }
 

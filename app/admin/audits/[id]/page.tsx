@@ -260,15 +260,22 @@ export default async function AuditDetailPage({
                 const pct = Math.min(100, (comp.mention_count / Math.max(topComp, myMentions, 1)) * 100)
                 const ahead = comp.mention_count > myMentions
                 return (
-                  <div key={comp.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div key={comp.id} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
                     <div className="w-40 shrink-0">
                       <p className="text-sm text-gray-700 truncate">{comp.name}</p>
+                      {Array.isArray(comp.providers) && comp.providers.length > 0 && (
+                        <p className="text-xs text-gray-400 truncate"
+                           title={Array.isArray(comp.sample_evidence) && comp.sample_evidence.length ? comp.sample_evidence.join('\n\n') : undefined}>
+                          {comp.providers.map((m: string) => MODEL_LABELS[m] ?? m).join(', ')}
+                          {Array.isArray(comp.prompt_ids) && comp.prompt_ids.length > 0 && ` · ${comp.prompt_ids.length} prompt${comp.prompt_ids.length === 1 ? '' : 's'}`}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden mt-1.5">
                       <div className={`h-full rounded-full ${ahead ? 'bg-red-400' : 'bg-emerald-400'}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-sm text-gray-600 w-20 text-right">{comp.mention_count} mentions</span>
-                    <span className={`text-xs w-12 text-right font-medium ${ahead ? 'text-red-500' : 'text-emerald-500'}`}>
+                    <span className="text-sm text-gray-600 w-20 text-right mt-0.5">{comp.mention_count} mentions</span>
+                    <span className={`text-xs w-12 text-right font-medium mt-1 ${ahead ? 'text-red-500' : 'text-emerald-500'}`}>
                       {ahead ? `+${comp.mention_count - myMentions}` : `-${myMentions - comp.mention_count}`}
                     </span>
                   </div>

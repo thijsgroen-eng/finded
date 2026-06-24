@@ -137,19 +137,27 @@ Rules:
     const { data: insertedRecs } = await supabaseAdmin
       .from('recommendations')
       .insert(
-        rawRecs.map((rec: any) => ({
-          audit_id,
-          restaurant_id: restaurant.id,
-          type: asFixType(rec.type), // backend-authoritative, enum-validated (null if invalid)
-          title: rec.title,
-          description: rec.what,
-          why: rec.why ?? null,
-          evidence: rec.evidence ?? null,
-          priority: rec.priority,
-          impact: rec.impact,
-          difficulty: rec.difficulty ?? null,
-          status: 'pending',
-        }))
+        rawRecs.map((rec: any) => {
+          const fixType = asFixType(rec.type) // backend-authoritative, enum-validated (null if invalid)
+          return {
+            audit_id,
+            restaurant_id: restaurant.id,
+            type: fixType,
+            title: rec.title,
+            description: rec.what,
+            why: rec.why ?? null,
+            evidence: rec.evidence ?? null,
+            priority: rec.priority,
+            impact: rec.impact,
+            difficulty: rec.difficulty ?? null,
+            status: 'pending',
+            // Typed/evidence-backed fields (013): the concrete fix, its expected
+            // impact, and the asset type that implements it (when one exists).
+            suggested_fix: rec.what ?? null,
+            expected_impact: rec.impact ?? null,
+            asset_type: fixType,
+          }
+        })
       )
       .select()
 
@@ -206,6 +214,9 @@ export async function GET(request: NextRequest) {
       why: r.why ?? '',
       evidence: r.evidence ?? null,
       impact: r.impact ?? '',
+      suggested_fix: r.suggested_fix ?? r.description ?? null,
+      expected_impact: r.expected_impact ?? r.impact ?? null,
+      asset_type: r.asset_type ?? r.type ?? null,
       status: r.status,
     }))
 

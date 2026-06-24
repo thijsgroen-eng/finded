@@ -17,8 +17,9 @@ import { ReportSender } from '@/components/admin/report-sender'
 import {
   ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel, AuthorityPanel,
 } from '@/components/admin/audit-evidence'
-import { toWebsiteSignals } from '@/lib/audit/website-signals'
+import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
+import { buildVisibilitySummary } from '@/lib/audit/summary'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
@@ -120,6 +121,21 @@ export default async function AuditDetailPage({
   const businessType = entity.business_type ?? 'business'
   const specialty    = entity.cuisine ?? null
 
+  // Website signals (with cuisine/location-clarity context) + the "why" synthesis.
+  const websiteSignals = toWebsiteSignals(websiteAudit, { cuisine: entity.cuisine, city: entity.city })
+  const visibilitySummary = buildVisibilitySummary({
+    restaurantName: entity.name,
+    totalMentions: myMentions,
+    sampleCount: runAccounting.completed,
+    mentionFrequencyPct: metrics.mention_frequency * 100,
+    modelConsensus: metrics.model_consensus,
+    providersRan: runAccounting.distinct_providers,
+    topCompetitors: competitors.map((c: { name: string; mention_count: number }) => ({ name: c.name, mention_count: c.mention_count ?? 0 })),
+    websiteGaps: gapSignals(websiteSignals).map((s) => s.label),
+    authorityPlatforms: authority.platforms.map((p) => p.label),
+    ownCited: authority.ownCited,
+  })
+
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
 
@@ -198,6 +214,14 @@ export default async function AuditDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Why this result — plain-language synthesis */}
+      <Card className="mb-5 border-gray-200">
+        <CardHeader><CardTitle>Why this result</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-sm text-gray-700 leading-relaxed">{visibilitySummary}</p>
+        </CardContent>
+      </Card>
 
       {/* How the score is calculated (stored breakdown) */}
       <ScoreBreakdownCard breakdown={scoreBreakdown} />
@@ -336,7 +360,7 @@ export default async function AuditDetailPage({
       </div>
 
       {/* Website signals — typed checklist */}
-      <WebsiteSignalsPanel signals={toWebsiteSignals(websiteAudit)} />
+      <WebsiteSignalsPanel signals={websiteSignals} />
 
       {/* Authority & citations — which third-party sources AI leaned on */}
       <AuthorityPanel authority={authority} />

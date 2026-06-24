@@ -3,7 +3,8 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { asLanguage, languageForCountry, Language } from '@/lib/i18n'
-import { toWebsiteSignals } from '@/lib/audit/website-signals'
+import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
+import { buildVisibilitySummary } from '@/lib/audit/summary'
 import { ReportDocument, ReportData, ReportVariant, normalizeVariant } from '@/lib/report/report-document'
 
 export type BuildResult =
@@ -35,7 +36,7 @@ export async function buildReportPdf(
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', auditId).single(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', auditId),
     supabaseAdmin.from('competitors').select('name, mention_count').eq('audit_id', auditId).order('mention_count', { ascending: false }).limit(8),
-    supabaseAdmin.from('recommendations').select('title, description, priority, suggested_fix, expected_impact').eq('audit_id', auditId).order('created_at', { ascending: true }),
+    supabaseAdmin.from('recommendations').select('title, description, priority, suggested_fix, expected_impact, priority_rank, impact_level, effort').eq('audit_id', auditId).order('created_at', { ascending: true }),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', auditId).single(),
   ])
 
@@ -68,12 +69,25 @@ export async function buildReportPdf(
     recommendations: (recommendations ?? []).map((r) => ({
       title: r.title ?? '', description: r.description ?? '', priority: r.priority ?? 'medium',
       suggested_fix: r.suggested_fix ?? null, expected_impact: r.expected_impact ?? null,
+      priority_rank: r.priority_rank ?? null, impact_level: r.impact_level ?? null, effort: r.effort ?? null,
     })),
     websiteSignals: (() => {
-      const sig = toWebsiteSignals(websiteAudit)
+      const sig = toWebsiteSignals(websiteAudit, { cuisine: restaurant.cuisine, city: restaurant.city })
       return sig.length ? { present: sig.filter((s) => s.status === 'present').length, total: sig.length } : null
     })(),
     formulaVersion: (vs.score_breakdown as { method_version?: string } | null)?.method_version ?? null,
+    summary: buildVisibilitySummary({
+      restaurantName: restaurant.name ?? 'This restaurant',
+      totalMentions: metrics.total_mentions,
+      sampleCount: Number(vs.sample_count ?? 0),
+      mentionFrequencyPct: Number(vs.mention_frequency ?? metrics.mention_frequency ?? 0) * 100,
+      modelConsensus: Number(vs.model_consensus ?? metrics.model_consensus ?? 0),
+      providersRan: 0,
+      topCompetitors: (competitors ?? []).map((c) => ({ name: c.name, mention_count: Number(c.mention_count ?? 0) })),
+      websiteGaps: gapSignals(toWebsiteSignals(websiteAudit, { cuisine: restaurant.cuisine, city: restaurant.city })).map((s) => s.label),
+      authorityPlatforms: [],
+      ownCited: false,
+    }),
   }
 
   const buffer = await renderToBuffer(React.createElement(ReportDocument, { data, language, variant }))

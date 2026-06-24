@@ -48,8 +48,20 @@ function lengthStatus(text: string | null | undefined, min: number, max: number)
   return n >= min && n <= max ? 'present' : 'weak'
 }
 
+/** Optional restaurant context lets us check cuisine/location clarity in the copy. */
+export interface SignalContext {
+  cuisine?: string | null
+  city?: string | null
+}
+
+/** Does the title/description mention the given term? */
+function metaMentions(wa: WebsiteAuditRow, term: string): boolean {
+  const hay = `${wa.meta_title ?? ''} ${wa.meta_description ?? ''}`.toLowerCase()
+  return hay.includes(term.toLowerCase())
+}
+
 /** Build the typed signal checklist. Returns [] when there's no website audit. */
-export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined): WebsiteSignal[] {
+export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: SignalContext): WebsiteSignal[] {
   if (!wa) return []
 
   const types = (wa.schema_types ?? []).map((t) => t.toLowerCase())
@@ -127,6 +139,27 @@ export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined): Websit
       recommendedFixType: 'optimized_description',
     },
   ]
+
+  // Cuisine / location clarity — can AI instantly tell what & where this is?
+  // Only emitted when we know the cuisine/city (otherwise we'd be guessing).
+  if (ctx?.cuisine?.trim()) {
+    signals.push({
+      key: 'cuisine_clarity',
+      label: 'Cuisine stated in title/description',
+      status: metaMentions(wa, ctx.cuisine.trim()) ? 'present' : 'missing',
+      evidence: `Looking for “${ctx.cuisine.trim()}”`,
+      recommendedFixType: 'optimized_description',
+    })
+  }
+  if (ctx?.city?.trim()) {
+    signals.push({
+      key: 'location_clarity',
+      label: 'City stated in title/description',
+      status: metaMentions(wa, ctx.city.trim()) ? 'present' : 'missing',
+      evidence: `Looking for “${ctx.city.trim()}”`,
+      recommendedFixType: 'location_page',
+    })
+  }
 
   return signals
 }

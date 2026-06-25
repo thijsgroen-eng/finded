@@ -516,11 +516,12 @@ export const auditFunction = inngest.createFunction(
         sentiment_negative:        metrics.sentiment_breakdown.negative,
         visibility_gap:            metrics.visibility_gap,
         recommendation_gap:        metrics.recommendation_gap,
-        // Revenue/visitor estimates removed — not measurable, kept out for credibility.
-        estimated_visitors_min:    null,
-        estimated_visitors_max:    null,
-        estimated_revenue_min:     null,
-        estimated_revenue_max:     null,
+        // Internal analytics only (not shown in customer reports). Stored from the
+        // computed estimates so the column's NOT NULL constraint is satisfied.
+        estimated_visitors_min:    metrics.estimated_additional_visitors_min ?? 0,
+        estimated_visitors_max:    metrics.estimated_additional_visitors_max ?? 0,
+        estimated_revenue_min:     metrics.estimated_revenue_min ?? 0,
+        estimated_revenue_max:     metrics.estimated_revenue_max ?? 0,
         total_mentions:            metrics.total_mentions,
         total_prompts:             metrics.total_prompts,
         total_model_runs:          metrics.total_model_runs,

@@ -18,7 +18,12 @@ export interface AppSettings {
   contactEmail: string
   /** Founder first name shown in the site's human/founder section. */
   founderName: string
+  /** Which AI providers audits may use. A provider with no API key is excluded
+   *  regardless; this lets the operator switch a configured provider off too. */
+  providers: { openai: boolean; anthropic: boolean; gemini: boolean; perplexity: boolean }
 }
+
+export type ProviderKey = keyof AppSettings['providers']
 
 // Clients are mostly Dutch, so default to Dutch everywhere out of the box.
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -26,16 +31,24 @@ export const DEFAULT_SETTINGS: AppSettings = {
   forceLanguage: true,
   contactEmail: 'Info@finded.com',
   founderName: 'Thijs',
+  providers: { openai: true, anthropic: true, gemini: true, perplexity: true },
 }
 
 /** Validate/normalize a raw stored object into a full AppSettings. */
 function coerce(raw: unknown): AppSettings {
   const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const p = (d.providers && typeof d.providers === 'object' ? d.providers : {}) as Record<string, unknown>
   return {
     defaultLanguage: d.defaultLanguage === 'en' ? 'en' : d.defaultLanguage === 'nl' ? 'nl' : DEFAULT_SETTINGS.defaultLanguage,
     forceLanguage: typeof d.forceLanguage === 'boolean' ? d.forceLanguage : DEFAULT_SETTINGS.forceLanguage,
     contactEmail: typeof d.contactEmail === 'string' && d.contactEmail.trim() ? d.contactEmail.trim() : DEFAULT_SETTINGS.contactEmail,
     founderName: typeof d.founderName === 'string' && d.founderName.trim() ? d.founderName.trim() : DEFAULT_SETTINGS.founderName,
+    providers: {
+      openai: (p.openai ?? true) !== false,
+      anthropic: (p.anthropic ?? true) !== false,
+      gemini: (p.gemini ?? true) !== false,
+      perplexity: (p.perplexity ?? true) !== false,
+    },
   }
 }
 

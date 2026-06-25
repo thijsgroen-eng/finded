@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui'
-import { Loader2, Check, Globe, User } from 'lucide-react'
+import { Loader2, Check, Globe, User, Cpu } from 'lucide-react'
 
+type ProviderKey = 'openai' | 'anthropic' | 'gemini' | 'perplexity'
 interface Settings {
   defaultLanguage: 'nl' | 'en'
   forceLanguage: boolean
   contactEmail: string
   founderName: string
+  providers: Record<ProviderKey, boolean>
+}
+
+const PROVIDER_LABELS: Record<ProviderKey, string> = {
+  openai: 'ChatGPT (OpenAI)', anthropic: 'Claude (Anthropic)', gemini: 'Gemini (Google)', perplexity: 'Perplexity',
 }
 
 export default function SettingsPage() {
@@ -80,6 +86,29 @@ export default function SettingsPage() {
                   <span className="block text-xs text-gray-400 mt-0.5">When on, every report and audit uses the default language above, ignoring the restaurant&rsquo;s country. Turn off to pick the language per restaurant by country (NL/BE → Dutch, else English).</span>
                 </span>
               </label>
+            </CardContent>
+          </Card>
+
+          {/* AI providers */}
+          <Card>
+            <CardHeader>
+              <CardTitle><span className="inline-flex items-center gap-2"><Cpu className="w-4 h-4 text-gray-400" /> AI providers</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-3">
+              <p className="text-xs text-gray-400">Switch a provider off to skip it in audits (e.g. to save cost) without removing its API key. A provider with no key configured is skipped automatically. At least one must stay on.</p>
+              {(Object.keys(PROVIDER_LABELS) as ProviderKey[]).map((k) => {
+                const on = s.providers[k]
+                const enabledCount = (Object.keys(s.providers) as ProviderKey[]).filter((x) => s.providers[x]).length
+                const lastOne = on && enabledCount === 1
+                return (
+                  <label key={k} className={`flex items-center justify-between gap-3 py-1.5 ${lastOne ? 'opacity-60' : 'cursor-pointer'}`}>
+                    <span className="text-sm text-gray-700">{PROVIDER_LABELS[k]}</span>
+                    <input type="checkbox" checked={on} disabled={lastOne}
+                      onChange={(e) => set('providers', { ...s.providers, [k]: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300" />
+                  </label>
+                )
+              })}
             </CardContent>
           </Card>
 

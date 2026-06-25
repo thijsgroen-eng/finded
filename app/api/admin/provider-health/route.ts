@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
+import { getSettings } from '@/lib/settings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,19 +30,24 @@ function band(rate: number, total: number): Band {
  */
 export async function GET(request: NextRequest) {
   const live = new URL(request.url).searchParams.get('test') === '1'
+  const settings = await getSettings()
+  const isEnabled = (m: string) => (settings.providers as Record<string, boolean>)[m] !== false
   const configured = getAvailableProviders().map((p) => p.name as string)
 
   if (live) {
     const providers = getAvailableProviders()
     const results = await Promise.all(
       providers.map(async (provider: any) => {
+        const base = { model: provider.name, label: MODEL_LABELS[provider.name] ?? provider.name, configured: true, enabled: isEnabled(provider.name) }
+        // Don't spend a call on a provider the operator switched off.
+        if (!isEnabled(provider.name)) return { ...base, ok: false, band: 'unknown' as Band, error: null }
         const started = Date.now()
         try {
           const r = await provider.runPrompt('Reply with the single word: OK.', { temperature: 0, grounded: false })
           const ok = !r.error && !!r.response
-          return { model: provider.name, label: MODEL_LABELS[provider.name] ?? provider.name, configured: true, ok, band: (ok ? 'green' : 'red') as Band, error: r.error ?? null, duration_ms: Date.now() - started }
+          return { ...base, ok, band: (ok ? 'green' : 'red') as Band, error: r.error ?? null, duration_ms: Date.now() - started }
         } catch (e: any) {
-          return { model: provider.name, label: MODEL_LABELS[provider.name] ?? provider.name, configured: true, ok: false, band: 'red' as Band, error: e?.message ?? 'provider threw', duration_ms: Date.now() - started }
+          return { ...base, ok: false, band: 'red' as Band, error: e?.message ?? 'provider threw', duration_ms: Date.now() - started }
         }
       }),
     )
@@ -75,6 +81,7 @@ export async function GET(request: NextRequest) {
       model,
       label: MODEL_LABELS[model] ?? model,
       configured: configured.includes(model),
+      enabled: isEnabled(model),
       total, completed, failed: p?.failed ?? 0,
       rate,
       band: band(rate, total),

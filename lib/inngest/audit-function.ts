@@ -1,6 +1,6 @@
 import { inngest } from '@/lib/inngest/client'
 import { supabaseAdmin } from '@/lib/supabase/client'
-import { getAvailableProviders } from '@/lib/providers'
+import { getEnabledProviders } from '@/lib/providers'
 import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
 import { getFullPromptsFromStore } from '@/lib/engine/prompt-store'
@@ -175,7 +175,7 @@ export const auditFunction = inngest.createFunction(
     // model_runs + per-sample entities + one target mentions row, each tagged with
     // sample_index. The Inngest step name includes audit_id + prompt id + sample so
     // results are never cached (otherwise every "sample" would be identical).
-    const providers = getAvailableProviders()
+    const providers = await getEnabledProviders()
 
     // ── Pre-flight provider health check ──────────────────────
     // One cheap, ungrounded call per provider. If too few are reachable to clear

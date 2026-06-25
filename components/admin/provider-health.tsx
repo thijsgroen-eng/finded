@@ -8,6 +8,7 @@ interface Provider {
   model: string
   label: string
   configured: boolean
+  enabled?: boolean
   band: 'green' | 'yellow' | 'red' | 'unknown'
   total?: number
   completed?: number
@@ -64,15 +65,16 @@ export function ProviderHealth() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {providers.map((p) => {
-              const st = BAND_STYLE[p.band] ?? BAND_STYLE.unknown
+              const disabled = p.enabled === false
+              const st = disabled ? { dot: 'bg-gray-300', text: 'text-gray-400', label: 'Disabled (off in Settings)' } : (BAND_STYLE[p.band] ?? BAND_STYLE.unknown)
               return (
-                <div key={p.model} className="border border-gray-100 rounded-lg p-3" title={p.error ?? undefined}>
+                <div key={p.model} className={`border border-gray-100 rounded-lg p-3 ${disabled ? 'opacity-60' : ''}`} title={p.error ?? undefined}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`w-2.5 h-2.5 rounded-full ${st.dot}`} />
                     <span className="text-sm font-semibold text-gray-900">{p.label}</span>
                   </div>
                   <div className={`text-xs font-medium ${st.text}`}>{st.label}</div>
-                  {mode === 'recent' && (p.total ?? 0) > 0 && (
+                  {!disabled && mode === 'recent' && (p.total ?? 0) > 0 && (
                     <div className="text-xs text-gray-400 mt-1">{p.completed}/{p.total} ok ({Math.round((p.rate ?? 0) * 100)}%)</div>
                   )}
                   {mode === 'live' && p.duration_ms != null && p.band === 'green' && (

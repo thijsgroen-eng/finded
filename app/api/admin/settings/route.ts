@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
   if (typeof body.forceLanguage === 'boolean') patch.forceLanguage = body.forceLanguage
   if (typeof body.contactEmail === 'string') patch.contactEmail = body.contactEmail
   if (typeof body.founderName === 'string') patch.founderName = body.founderName
+  if (body.providers && typeof body.providers === 'object') patch.providers = body.providers as AppSettings['providers']
   const settings = await updateSettings(patch)
   return NextResponse.json({ ok: true, settings })
 }

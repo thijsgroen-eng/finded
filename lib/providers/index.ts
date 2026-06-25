@@ -38,4 +38,17 @@ export function getAvailableProviders(): ModelProvider[] {
   return models.map(getProvider).filter(Boolean) as ModelProvider[]
 }
 
+/**
+ * Providers that have an API key AND are switched on in Settings. Falls back to
+ * all key-configured providers if the operator somehow disabled every one (so an
+ * audit is never left with zero providers by misconfiguration).
+ */
+export async function getEnabledProviders(): Promise<ModelProvider[]> {
+  const { getSettings } = await import('@/lib/settings')
+  const all = getAvailableProviders()
+  const s = await getSettings()
+  const enabled = all.filter((p) => (s.providers as Record<string, boolean>)[p.name] !== false)
+  return enabled.length > 0 ? enabled : all
+}
+
 export { OpenAIProvider, AnthropicProvider, GeminiProvider, PerplexityProvider }

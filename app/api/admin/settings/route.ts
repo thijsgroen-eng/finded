@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getSettings, updateSettings, AppSettings } from '@/lib/settings'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+/** GET /api/admin/settings → current settings (admin-gated by middleware). */
+export async function GET() {
+  return NextResponse.json({ settings: await getSettings() })
+}
+
+/** POST /api/admin/settings { ...patch } → merge + persist, returns new settings. */
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => ({} as Record<string, unknown>))
+  const patch: Partial<AppSettings> = {}
+  if (body.defaultLanguage === 'nl' || body.defaultLanguage === 'en') patch.defaultLanguage = body.defaultLanguage
+  if (typeof body.forceLanguage === 'boolean') patch.forceLanguage = body.forceLanguage
+  if (typeof body.contactEmail === 'string') patch.contactEmail = body.contactEmail
+  if (typeof body.founderName === 'string') patch.founderName = body.founderName
+  const settings = await updateSettings(patch)
+  return NextResponse.json({ ok: true, settings })
+}

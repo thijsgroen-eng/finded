@@ -14,7 +14,8 @@ import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliability'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
-import { languageForCountry, asLanguage } from '@/lib/i18n'
+import { asLanguage } from '@/lib/i18n'
+import { resolveAuditLanguage } from '@/lib/settings'
 
 /** True if an operator has stopped this audit (status set to 'cancelled'). */
 async function isCancelled(auditId: string): Promise<boolean> {
@@ -83,11 +84,12 @@ export const auditFunction = inngest.createFunction(
       return { entity: data }
     })
 
-    // Audit language (NL/BE → Dutch, else English; AUDIT_LANGUAGE overrides).
+    // Audit language: AUDIT_LANGUAGE env overrides; otherwise the operator's
+    // Settings decide (default Dutch, or per-country when "always" is off).
     // Computed once so both prompt generation and model_runs provenance use it.
     const language = process.env.AUDIT_LANGUAGE
       ? asLanguage(process.env.AUDIT_LANGUAGE)
-      : languageForCountry(entity.country)
+      : await resolveAuditLanguage(entity.country)
 
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {

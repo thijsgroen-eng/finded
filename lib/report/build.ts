@@ -2,7 +2,8 @@ import React from 'react'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
-import { asLanguage, languageForCountry, Language } from '@/lib/i18n'
+import { asLanguage, Language } from '@/lib/i18n'
+import { resolveAuditLanguage } from '@/lib/settings'
 import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { buildRunAccounting, buildPromptEvidence } from '@/lib/engine/audit-evidence'
@@ -45,7 +46,8 @@ export async function buildReportPdf(
   }
 
   const restaurant = (audit.restaurant ?? {}) as { name?: string; city?: string | null; cuisine?: string | null; country?: string | null; domain?: string | null }
-  const language: Language = langParam ? asLanguage(langParam) : languageForCountry(restaurant.country)
+  // Explicit ?lang wins; otherwise the operator's Settings decide (default Dutch).
+  const language: Language = langParam ? asLanguage(langParam) : await resolveAuditLanguage(restaurant.country)
 
   const [{ data: vs }, { data: mentions }, { data: competitors }, { data: recommendations }, { data: websiteAudit }, { data: modelRuns }, { data: promptRuns }, { data: entities }] = await Promise.all([
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', auditId).order('created_at', { ascending: false }).limit(1).maybeSingle(),

@@ -1,4 +1,7 @@
 import { LeadForm } from '@/components/landing/lead-form'
+import { getSettings } from '@/lib/settings'
+
+export const dynamic = 'force-dynamic'
 
 // ── Palette (beige / black / green) ───────────────────────────────────────────
 const BG = '#fafaf8'
@@ -16,9 +19,6 @@ const LRED = '#fbecea'
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
-// ── Contact / founder ─────────────────────────────────────────────────────────
-const CONTACT_EMAIL = 'Info@finded.com'
-const FOUNDER = 'Thijs'
 
 function SectionTitle({ kicker, title, sub, align = 'center' }: { kicker?: string; title: string; sub?: string; align?: 'center' | 'left' }) {
   const centered = align === 'center'
@@ -137,7 +137,10 @@ function AuditPreview({ size = 'compact' }: { size?: 'compact' | 'large' }) {
   )
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const settings = await getSettings()
+  const contactEmail = settings.contactEmail
+  const founder = settings.founderName
   return (
     <div id="top" style={{ fontFamily: FONT, background: BG, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK }}>
 
@@ -312,7 +315,7 @@ export default function LandingPage() {
                   'Prioritised recommendations',
                   '30-day action plan',
                 ],
-                cta: 'Request the full audit', href: `mailto:${CONTACT_EMAIL}?subject=Full AI Visibility Audit`, note: 'For restaurants that want to understand why competitors appear more often.', highlight: true,
+                cta: 'Request the full audit', href: `mailto:${contactEmail}?subject=Full AI Visibility Audit`, note: 'For restaurants that want to understand why competitors appear more often.', highlight: true,
               },
               {
                 name: 'Implementation package', price: '€299', cadence: 'one-time',
@@ -327,7 +330,7 @@ export default function LandingPage() {
                   'Priority roadmap',
                   'Follow-up visibility check',
                 ],
-                cta: 'Discuss implementation', href: `mailto:${CONTACT_EMAIL}?subject=AI Visibility Implementation Package`, note: 'For restaurants that want help putting the recommendations into practice.', highlight: false,
+                cta: 'Discuss implementation', href: `mailto:${contactEmail}?subject=AI Visibility Implementation Package`, note: 'For restaurants that want help putting the recommendations into practice.', highlight: false,
               },
             ].map((p) => (
               <div key={p.name} style={{
@@ -367,7 +370,7 @@ export default function LandingPage() {
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 'clamp(24px, 4vw, 36px)', display: 'flex', gap: 'clamp(20px, 4vw, 32px)', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           {/* Photo placeholder */}
           <div style={{ width: 92, height: 92, borderRadius: '50%', background: LGREEN, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: DGREEN }}>{FOUNDER.charAt(0)}</span>
+            <span style={{ fontSize: 30, fontWeight: 800, color: DGREEN }}>{founder.charAt(0)}</span>
           </div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why I built Finded</div>
@@ -381,9 +384,9 @@ export default function LandingPage() {
               marketing machine. If you have a question, I read every email.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{FOUNDER}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{founder}</span>
               <span style={{ color: FAINT }}>·</span>
-              <a href={`mailto:${CONTACT_EMAIL}`} style={{ fontSize: 14, color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>{CONTACT_EMAIL}</a>
+              <a href={`mailto:${contactEmail}`} style={{ fontSize: 14, color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
             </div>
           </div>
         </div>
@@ -414,7 +417,7 @@ export default function LandingPage() {
             ['Can AI answers change?', 'They can, and they do. That’s why we measure across multiple prompts and models and treat the result as a snapshot, not a fixed ranking.'],
             ['What do you need from me?', 'Just your restaurant’s website, your city, and an email address to send the results to.'],
             ['What do you do with my details?', 'We only use them to prepare and send your report. We don’t sell your data or add you to a mailing list.'],
-            ['Who’s behind this?', `Finded is a small, independent project based in the Netherlands, run by ${FOUNDER}. You can reach us directly at ${CONTACT_EMAIL}.`],
+            ['Who’s behind this?', `Finded is a small, independent project based in the Netherlands, run by ${founder}. You can reach us directly at ${contactEmail}.`],
           ].map(([q, a]) => (
             <details key={q} style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px' }}>
               <summary style={{ fontSize: 15, fontWeight: 700, color: INK, cursor: 'pointer', listStyle: 'none' }}>{q}</summary>
@@ -443,10 +446,10 @@ export default function LandingPage() {
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>Company</div>
-            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{CONTACT_EMAIL}</a>
+            <a href={`mailto:${contactEmail}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{contactEmail}</a>
             <a href="/privacy" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Privacy policy</a>
             <a href="/terms" style={{ color: INK, textDecoration: 'none', display: 'block' }}>Terms</a>
-            <div style={{ color: MUTED, marginTop: 6 }}>Founded by {FOUNDER} · Netherlands</div>
+            <div style={{ color: MUTED, marginTop: 6 }}>Founded by {founder} · Netherlands</div>
           </div>
         </div>
         <div style={{ borderTop: `1px solid ${BORDER}`, padding: '16px 24px', textAlign: 'center', fontSize: 12, color: FAINT }}>

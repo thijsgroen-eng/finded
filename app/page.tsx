@@ -72,7 +72,7 @@ function ConversationMock() {
         </div>
       </div>
       <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 10 }}>
-        An example of how AI answers a diner&rsquo;s question. I run searches like this and check whether you show up.
+        An example of how AI answers a diner&rsquo;s question. We run searches like this and check whether you show up.
       </p>
     </div>
   )
@@ -102,34 +102,34 @@ export default function LandingPage() {
             When guests ask AI where to eat, does it mention <span style={{ color: GREEN }}>your restaurant</span>?
           </h1>
           <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 22, maxWidth: 520 }}>
-            More people ask ChatGPT, Claude, Gemini and Perplexity where to eat. I&rsquo;ll check how those
+            More people ask ChatGPT, Claude, Gemini and Perplexity where to eat. We&rsquo;ll check how those
             tools talk about your restaurant — and which restaurants they recommend instead.
           </p>
           <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: '0 16px 40px -28px rgba(17,17,16,0.35)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: INK, marginBottom: 4 }}>See what AI says about your restaurant</div>
-            <div style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Free. Send your website and I&rsquo;ll email you what I find.</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Free. Send your website and we&rsquo;ll email you what we find.</div>
             <LeadForm />
           </div>
         </div>
         <ConversationMock />
       </section>
 
-      {/* ── Why I built Finded ── */}
+      {/* ── Who we are ── */}
       <section style={{ background: PANEL, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Why I built Finded</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Who we are &amp; what we do</div>
           <p style={{ fontSize: 17, color: INK, lineHeight: 1.65, marginBottom: 14 }}>
-            I work with restaurants, and I noticed something. When I asked ChatGPT where to eat in Dutch
+            We work with restaurants, and we noticed something. When we asked ChatGPT where to eat in Dutch
             cities, the same handful of places kept coming up — and most owners had no idea whether AI was
             recommending them or their competitors.
           </p>
           <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.65, marginBottom: 16 }}>
-            So I built Finded to help restaurants see how they&rsquo;re represented when guests ask AI for a
-            recommendation. It&rsquo;s a small, independent project based in the Netherlands — not an agency
-            or a marketing machine.
+            So we built Finded to help restaurants see how they&rsquo;re represented when guests ask AI for a
+            recommendation. We&rsquo;re a small, independent team based in the Netherlands — not an agency or a
+            marketing machine.
           </p>
           <p style={{ fontSize: 14, color: MUTED }}>
-            Questions? Email me directly at{' '}
+            Questions? Email us directly at{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>{CONTACT_EMAIL}</a>.
           </p>
         </div>
@@ -256,8 +256,8 @@ export default function LandingPage() {
         <SectionTitle kicker="What happens next" title="What happens after I submit my restaurant?" />
         <div style={{ display: 'grid', gap: 12 }}>
           {[
-            ['1', 'Submit your website and city', 'That’s all I need to start — plus an email to send the results to.'],
-            ['2', 'Receive your free AI visibility check', 'I search the AI tools the way a guest would and email you what I find.'],
+            ['1', 'Submit your website and city', 'That’s all we need to start — plus an email to send the results to.'],
+            ['2', 'Receive your free AI visibility check', 'We search the AI tools the way a guest would and email you what we find.'],
             ['3', 'Review the results', 'See where you appear, which competitors show up instead, and a summary.'],
             ['4', 'Decide whether you want a detailed audit or implementation support', 'Totally up to you — and only if it’s worth it. No pressure either way.'],
           ].map(([n, t, d]) => (
@@ -277,11 +277,11 @@ export default function LandingPage() {
 
       {/* ── What this won't tell you (limitations) ── */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '8px 24px 56px' }}>
-        <SectionTitle kicker="Being honest" title="What this won't tell you" sub="I'd rather set expectations than oversell." />
+        <SectionTitle kicker="Being honest" title="What this won't tell you" sub="We'd rather set expectations than oversell." />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
           {[
-            'I can’t guarantee AI will recommend you — nobody can.',
-            'I can’t control what ChatGPT or any model says.',
+            'We can’t guarantee AI will recommend you — nobody can.',
+            'We can’t control what ChatGPT or any model says.',
             'AI answers vary over time, so results are a snapshot, not a fixed score.',
             'AI visibility is only one part of how guests find a restaurant.',
           ].map((l) => (
@@ -313,12 +313,12 @@ export default function LandingPage() {
         <SectionTitle kicker="FAQ" title="A few honest answers" />
         <div style={{ display: 'grid', gap: 12 }}>
           {[
-            ['Is this really free?', 'Yes — the initial check is free and I email you the results. No account, no card, no obligation.'],
+            ['Is this really free?', 'Yes — the initial check is free and we email you the results. No account, no card, no obligation.'],
             ['How do you check this?', 'I ask the major AI tools the kinds of questions guests actually ask — in Dutch and English — and record whether your restaurant appears, repeated across several prompts and models.'],
-            ['Can AI answers change?', 'They can, and they do. That’s why I measure across multiple prompts and models and treat the result as a snapshot rather than a fixed ranking.'],
+            ['Can AI answers change?', 'They can, and they do. That’s why we measure across multiple prompts and models and treat the result as a snapshot rather than a fixed ranking.'],
             ['What do you need from me?', 'Just your restaurant’s website, your city, and an email address to send the results to.'],
-            ['What do you do with my details?', 'I only use them to prepare and send your report. I don’t sell your data or add you to a mailing list.'],
-            ['Who’s behind this?', `Finded is a small, independent project based in the Netherlands. You can reach me directly at ${CONTACT_EMAIL}.`],
+            ['What do you do with my details?', 'We only use them to prepare and send your report. We don’t sell your data or add you to a mailing list.'],
+            ['Who’s behind this?', `Finded is a small, independent team based in the Netherlands. You can reach us directly at ${CONTACT_EMAIL}.`],
           ].map(([q, a]) => (
             <details key={q} style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px' }}>
               <summary style={{ fontSize: 15, fontWeight: 700, color: INK, cursor: 'pointer', listStyle: 'none' }}>{q}</summary>
@@ -334,8 +334,8 @@ export default function LandingPage() {
           <div style={{ maxWidth: 320 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 8 }}>Finded</div>
             <p style={{ fontSize: 13, lineHeight: 1.6, color: MUTED }}>
-              Built in the Netherlands for restaurants navigating AI search. A small, independent project —
-              I&rsquo;ll check how ChatGPT, Claude, Gemini and Perplexity talk about your restaurant.
+              Built in the Netherlands for restaurants navigating AI search. A small, independent team —
+              we check how ChatGPT, Claude, Gemini and Perplexity talk about your restaurant.
             </p>
           </div>
           <div style={{ fontSize: 13, lineHeight: 1.9 }}>
@@ -350,7 +350,7 @@ export default function LandingPage() {
             <div style={{ color: INK }}>Netherlands</div>
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: INK, textDecoration: 'none', display: 'block' }}>{CONTACT_EMAIL}</a>
             <p style={{ color: FAINT, maxWidth: 240, marginTop: 8, lineHeight: 1.5 }}>
-              I only use your details to prepare and send your report, and never sell your data.
+              We only use your details to prepare and send your report, and never sell your data.
             </p>
           </div>
         </div>

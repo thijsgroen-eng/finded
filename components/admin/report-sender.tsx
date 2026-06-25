@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
-import { Download, Mail, Loader2, Check } from 'lucide-react'
+import { Download, Mail, Loader2, Check, Wand2 } from 'lucide-react'
 
 const PLANS = [
   { key: 'free', name: 'Free AI visibility check', price: '€0', desc: 'Score, mentions, basic competitors, summary — the lead magnet.' },
@@ -20,6 +20,27 @@ export function ReportSender({ auditId, defaultEmail }: { auditId: string; defau
   const [msg, setMsg] = useState<{ plan: string; text: string; ok: boolean } | null>(null)
 
   const dl = (plan: string) => `/api/report/${auditId}/pdf?plan=${plan}&lang=${lang}`
+
+  async function prepareAssets() {
+    setBusy('prepare'); setMsg(null)
+    try {
+      const res = await fetch('/api/admin/prepare-implementation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audit_id: auditId }),
+      })
+      const j = await res.json().catch(() => ({}))
+      setMsg({
+        plan: 'implementation', ok: res.ok,
+        text: res.ok
+          ? (j.queued > 0 ? `Generating ${j.queued} asset${j.queued === 1 ? '' : 's'} — ready in a few minutes, then email/download.` : 'All assets already generated.')
+          : (j.error ?? 'Could not start generation'),
+      })
+    } catch {
+      setMsg({ plan: 'implementation', ok: false, text: 'Could not start generation' })
+    }
+    setBusy(null)
+  }
 
   async function send(plan: string) {
     setBusy(plan); setMsg(null)
@@ -70,6 +91,13 @@ export function ReportSender({ auditId, defaultEmail }: { auditId: string; defau
                 <p className="text-xs text-gray-400 mt-0.5">{p.desc}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {p.key === 'implementation' && (
+                  <button onClick={prepareAssets} disabled={!!busy}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    title="Generate the schema/FAQ/content fix assets this package includes">
+                    {busy === 'prepare' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Generate assets
+                  </button>
+                )}
                 <a href={dl(p.key)} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">
                   <Download className="w-3.5 h-3.5" /> PDF

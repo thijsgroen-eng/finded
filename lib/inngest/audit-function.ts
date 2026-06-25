@@ -12,7 +12,7 @@ import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
-import { reliabilityFromAccounting } from '@/lib/audit/reliability'
+import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliability'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
 
@@ -30,6 +30,15 @@ async function isCancelled(auditId: string): Promise<boolean> {
 const SAMPLES = Math.min(5, Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 1)))
 const MAX_PROMPTS = Math.max(1, Number(process.env.AUDIT_MAX_PROMPTS ?? 32))
 const AUDIT_GROUNDED = (process.env.AUDIT_GROUNDED ?? 'true') !== 'false'
+// Pre-flight provider health check: one cheap call per provider before the full
+// matrix runs, so a dead provider (no credit / bad key) aborts the audit in
+// seconds instead of after dozens of failed calls. Set AUDIT_PREFLIGHT=false to
+// disable (reverts to running the full matrix regardless).
+const AUDIT_PREFLIGHT = (process.env.AUDIT_PREFLIGHT ?? 'true') !== 'false'
+
+const MODEL_LABELS: Record<string, string> = {
+  openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity',
+}
 
 export const auditFunction = inngest.createFunction(
   {
@@ -165,6 +174,52 @@ export const auditFunction = inngest.createFunction(
     // sample_index. The Inngest step name includes audit_id + prompt id + sample so
     // results are never cached (otherwise every "sample" would be identical).
     const providers = getAvailableProviders()
+
+    // ── Pre-flight provider health check ──────────────────────
+    // One cheap, ungrounded call per provider. If too few are reachable to clear
+    // the reliability gate, abort NOW with the real per-provider errors (e.g.
+    // "Claude: credit balance too low") instead of burning the whole matrix.
+    if (AUDIT_PREFLIGHT && providers.length > 0) {
+      const health = await step.run(`preflight-${audit_id}`, async () => {
+        return Promise.all(
+          providers.map(async (provider: any) => {
+            try {
+              const r = await provider.runPrompt('Reply with the single word: OK.', { temperature: 0, grounded: false })
+              return { model: provider.name, ok: !r.error && !!r.response, error: r.error ?? null }
+            } catch (e: any) {
+              return { model: provider.name, ok: false, error: e?.message ?? 'provider threw' }
+            }
+          }),
+        )
+      })
+
+      const healthy = health.filter((h: any) => h.ok)
+      const dead = health.filter((h: any) => !h.ok)
+      const preflightRel = assessReliability({
+        total: providers.length,
+        completed: healthy.length,
+        providers: health.map((h: any) => ({ model: h.model, completed: h.ok ? 1 : 0, failed: h.ok ? 0 : 1 })),
+      })
+
+      if (preflightRel.band === 'red') {
+        await step.run(`preflight-abort-${audit_id}`, async () => {
+          const reasons = dead
+            .map((d: any) => `${MODEL_LABELS[d.model] ?? d.model}: ${String(d.error ?? 'unavailable').slice(0, 160)}`)
+            .join(' | ')
+          await supabaseAdmin.from('audits').update({
+            status: 'incomplete',
+            reliability: preflightRel,
+            error_message:
+              `Audit aborted before running — only ${healthy.length} of ${providers.length} AI providers are reachable, ` +
+              `below the 50% reliability threshold. ${reasons}. Fix provider billing/keys and re-run.`,
+            completed_at: new Date().toISOString(),
+          }).eq('id', audit_id)
+          await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+        })
+        return { success: false, audit_id, reason: 'preflight failed', reliability: preflightRel }
+      }
+    }
+
     let totalSuccessful = 0
     let stopped = false
 

@@ -53,19 +53,28 @@ Gemini uses a different grounding mechanism, so it isn't subject to the OpenAI/A
 web-search entitlements. It wasn't "better" — it was simply the provider whose call shape
 the account is allowed to make.
 
-### Leading hypothesis (single cause explains all three)
-`AUDIT_GROUNDED=true` turns on **provider-specific web search** for OpenAI and Anthropic
-that the accounts aren't entitled to, while Gemini's grounding path is fine.
+### Confirmed root cause (2026-06-25): provider billing, not grounding
+The `model_runs.error` query below returned:
+- **Claude:** `400 invalid_request_error — "Your credit balance is too low to access the
+  Anthropic API."` → Anthropic account out of credit.
+- **ChatGPT:** `429 — "You exceeded your current quota..."` → OpenAI out of credit / billing cap.
 
-**Definitive check (one query):**
+Gemini runs on a separately-funded Google account, so it survived. The grounding-entitlement
+hypothesis was ruled out. **Fix is purely account billing** (top up OpenAI + Anthropic); no
+code change recovers it.
+
+> Wider blast radius: `ANTHROPIC_API_KEY` also powers entity extraction
+> (`entity-extractor.ts`), recommendation generation (`/api/recommendations`) and fix-asset
+> generation. While Anthropic was out of credit, even Gemini's answers had degraded
+> extraction (keyword fallback), and generating recommendations/implementation would fail.
+
+**The query used:**
 ```sql
 select model, status, left(error, 200) as error
 from model_runs
 where audit_id = '<AUDIT_ID>' and status = 'failed'
 order by model;
 ```
-**Fast confirmation:** set `AUDIT_GROUNDED=false` and re-run; if ChatGPT/Claude recover, it
-was grounding entitlement. If they still fail with auth/credit errors, it's the key.
 
 ---
 
@@ -151,15 +160,17 @@ Shipped:
 7. **Schema** (`017_reliability_gating.sql`): adds the `incomplete` status + durable
    `audits.reliability` snapshot.
 
+8. **Pre-flight provider health check** (`audit-function.ts`, `AUDIT_PREFLIGHT`, default on):
+   one cheap ungrounded call per provider before the matrix runs. If too few providers are
+   reachable to clear the gate, the audit aborts in seconds and stores the real per-provider
+   errors (e.g. "Claude: credit balance too low") instead of recording dozens of failures.
+   Set `AUDIT_PREFLIGHT=false` to disable.
+
 **Still recommended (not in this change):**
-- **Make grounding failures loud, not silent.** If a provider's grounded path errors
-  uniformly, fall back to its ungrounded path once before recording failure, and log the
-  entitlement error distinctly.
-- **Pre-flight provider health check** at audit start (one cheap call per provider); abort
-  early with a clear message if a provider is dead, instead of burning 24 calls.
 - **Fix the Wilson band** to be computed over *attempted* cells (or annotate it with the
   completion rate) so the interval reflects true uncertainty.
-- **Alerting**: emit a metric when any provider's per-audit failure rate is 100%.
+- **Alerting**: emit a metric when any provider's per-audit failure rate is 100%, so a dead
+  provider is caught before customers see it.
 
 ---
 

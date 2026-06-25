@@ -8,6 +8,7 @@ import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/l
 import { normalizeName } from '@/lib/engine/normalize'
 import { matchEntity } from '@/lib/audit/entity-matching'
 import { aggregateCompetitors } from '@/lib/audit/competitors'
+import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
@@ -367,7 +368,7 @@ export const auditFunction = inngest.createFunction(
       // Website AI-readiness signals → website_signal_score component.
       const { data: wa } = await supabaseAdmin
         .from('website_audits')
-        .select('schema_present, menu_present, opening_hours_present, reservation_links_present, social_links_present')
+        .select('schema_present, menu_present, opening_hours_present, reservation_links_present, social_links_present, review_signals, review_count')
         .eq('audit_id', audit_id)
         .single()
       const websiteSignals = wa
@@ -375,14 +376,25 @@ export const auditFunction = inngest.createFunction(
         : null
       const providersRan = new Set(mentions.map((m: any) => m.model)).size
 
+      // Authority signal (0–1): did AI cite the restaurant's own site, and does it
+      // have review signals? Real proxies for off-site authority (we don't crawl
+      // third-party platforms). Drives the new authority_score component.
+      const { data: srcRows } = await supabaseAdmin
+        .from('model_runs').select('sources').eq('audit_id', audit_id)
+      const allSources = (srcRows ?? []).flatMap((r: any) => Array.isArray(r.sources) ? r.sources : [])
+      const authoritySig = buildAuthoritySignals(allSources, (entity as any).domain ?? null)
+      const reviewSignals = !!(wa?.review_signals) || (wa?.review_count ?? 0) > 0
+      const authorityScore = (wa || allSources.length > 0)
+        ? (authoritySig.ownCited ? 0.6 : 0) + (reviewSignals ? 0.4 : 0)
+        : null
+
       // Transparent, documented, stored score breakdown — supersedes the opaque score.
       const breakdown = computeScoreBreakdown({
         mentionFrequency: metrics.mention_frequency,
-        avgPosition:      metrics.avg_position,
         modelConsensus:   metrics.model_consensus,
         providersRan:     Math.max(1, providersRan),
-        promptCoverage:   metrics.prompt_coverage,
         shareOfVoice:     metrics.share_of_voice,
+        authorityScore,
         websiteSignals,
         sampleCount:      metrics.sample_count,
       })

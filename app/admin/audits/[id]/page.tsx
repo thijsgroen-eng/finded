@@ -108,7 +108,6 @@ export default async function AuditDetailPage({
   const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
           runAccounting, promptEvidence, extractionConfidence, authority } = data
 
-  const oppScore       = visibilityScore?.opportunity_score ?? null
   const visScore       = visibilityScore?.visibility_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
   const auditLanguage  = languageForCountry(entity.country)
@@ -210,7 +209,6 @@ export default async function AuditDetailPage({
               </span>
               <p className="text-xs text-gray-400 mt-2">
                 Visibility score {visScore != null ? Math.round(visScore) : '—'}/100
-                {oppScore !== null ? ` · opportunity ${Math.round(oppScore)}/100` : ''}
               </p>
             </div>
           </div>

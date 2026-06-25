@@ -37,9 +37,7 @@ export function ScoreBreakdownCard({ breakdown }: { breakdown: ScoreBreakdown | 
         <div className="flex items-center justify-between">
           <CardTitle>How this score is calculated</CardTitle>
           {breakdown && (
-            <span className="text-xs text-gray-400">
-              method {breakdown.method_version} · confidence {Math.round(breakdown.confidence_score * 100)}%
-            </span>
+            <span className="text-xs text-gray-400">method {breakdown.method_version}</span>
           )}
         </div>
       </CardHeader>

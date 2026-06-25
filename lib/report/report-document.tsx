@@ -275,7 +275,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={[s.dqBadge, { backgroundColor: dqColor(data.dataQuality.level) }]}>{t.dataQuality}: {data.dataQuality.level}</Text>
-            <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100{data.opportunityScore != null ? ` · ${Math.round(data.opportunityScore)} ${t.opportunity}` : ''}</Text>
+            <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100</Text>
           </View>
         </View>
 

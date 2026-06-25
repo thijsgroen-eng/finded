@@ -16,21 +16,22 @@
  * remain interpretable.
  */
 
-export const METHOD_VERSION = 'v1'
+// v2: recommendation-visibility first. The score is driven by whether AI actually
+// recommends the restaurant and how it compares to competitors + authority — not
+// by technical website SEO (which is now a supporting input, not the driver).
+export const METHOD_VERSION = 'v2'
 
 export interface ScoreInputs {
   /** Fraction of sampled answers that mentioned the target (0–1). */
   mentionFrequency: number | null
-  /** Average rank when mentioned (1 = first). null = never mentioned / unknown. */
-  avgPosition: number | null
   /** Distinct models that mentioned the target. */
   modelConsensus: number | null
   /** How many providers actually ran (consensus denominator; >=1). */
   providersRan: number
-  /** Fraction of distinct prompts with at least one mention (0–1). */
-  promptCoverage: number | null
   /** Target's share of all mentions in its market (0–1). null if no competitor data. */
   shareOfVoice: number | null
+  /** Authority signal (0–1): AI citation of the restaurant's own site + review signals. */
+  authorityScore: number | null
   /** Website AI-readiness: how many key signals are present out of those checked. */
   websiteSignals: { present: number; total: number } | null
   /** Total sampled (model × prompt × sample) cells behind the audit. */
@@ -57,13 +58,14 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n))
 const round = (n: number) => Math.round(n * 100) / 100
 
 // Base weights (sum 1.0). Renormalized over whichever components have evidence.
+// Recommendation visibility (mentions + competitors + consensus) = 60%; authority
+// 15%; website clarity/structured-data 25%.
 const WEIGHTS = {
   mention_frequency_score: 0.30,
-  average_position_score: 0.20,
-  competitor_gap_score: 0.15,
-  model_consensus_score: 0.15,
-  prompt_coverage_score: 0.10,
-  website_signal_score: 0.10,
+  competitor_gap_score: 0.20,
+  model_consensus_score: 0.10,
+  authority_score: 0.15,
+  website_signal_score: 0.25,
 } as const
 
 /** Average rank → 0–100. Rank 1 = 100, then ~18 points per rank down, floored at 0. */
@@ -82,16 +84,6 @@ export function computeScoreBreakdown(input: ScoreInputs): ScoreBreakdown {
     detail: input.mentionFrequency != null
       ? `Mentioned in ${Math.round(input.mentionFrequency * 100)}% of sampled answers.`
       : 'No mention data.',
-  })
-
-  // average_position_score
-  raw.push({
-    key: 'average_position_score', label: 'Average position', weight: WEIGHTS.average_position_score,
-    present: input.avgPosition != null,
-    score: input.avgPosition != null ? positionScoreFromAvg(input.avgPosition) : 0,
-    detail: input.avgPosition != null
-      ? `Average rank ${input.avgPosition.toFixed(1)} when mentioned.`
-      : 'Not mentioned, so no position.',
   })
 
   // competitor_gap_score (share of voice)
@@ -115,14 +107,14 @@ export function computeScoreBreakdown(input: ScoreInputs): ScoreBreakdown {
       : 'No model data.',
   })
 
-  // prompt_coverage_score
+  // authority_score (AI cited your site + review signals)
   raw.push({
-    key: 'prompt_coverage_score', label: 'Prompt coverage', weight: WEIGHTS.prompt_coverage_score,
-    present: input.promptCoverage != null,
-    score: input.promptCoverage != null ? clamp(input.promptCoverage * 100) : 0,
-    detail: input.promptCoverage != null
-      ? `Appeared for ${Math.round(input.promptCoverage * 100)}% of distinct prompts.`
-      : 'No prompt data.',
+    key: 'authority_score', label: 'Authority & citations', weight: WEIGHTS.authority_score,
+    present: input.authorityScore != null,
+    score: input.authorityScore != null ? clamp(input.authorityScore * 100) : 0,
+    detail: input.authorityScore != null
+      ? `Authority signals (AI citation of your site + review presence): ${Math.round(input.authorityScore * 100)}%.`
+      : 'No authority data.',
   })
 
   // website_signal_score
@@ -164,7 +156,7 @@ export function computeScoreBreakdown(input: ScoreInputs): ScoreBreakdown {
     method_version: METHOD_VERSION,
     formula:
       'Weighted average of present components (weights renormalized when data is missing): ' +
-      'mention_frequency 30, average_position 20, competitor_gap 15, model_consensus 15, ' +
-      'prompt_coverage 10, website_signal 10. Confidence = 50% evidence completeness + 50% sample size (saturates at 24).',
+      'mention_frequency 30, competitor_gap 20, authority 15, website_signal 25, model_consensus 10. ' +
+      'Recommendation visibility drives the score; website signals are supporting evidence.',
   }
 }

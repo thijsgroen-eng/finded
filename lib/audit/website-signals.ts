@@ -11,6 +11,7 @@
  */
 
 import type { FixType } from '@/lib/engine/fix-types'
+import { Language } from '@/lib/i18n'
 
 export type SignalStatus = 'present' | 'weak' | 'missing'
 
@@ -46,6 +47,37 @@ const SIGNAL_META: Record<string, { why: string; impact: SignalImpact; recommend
   dietary_info: { why: 'Diners search AI for vegan/vegetarian/gluten-free/halal options — AI can only surface what you state.', impact: 'Medium', recommendation: 'State dietary options (vegan, vegetarian, gluten-free, halal) and allergen info in text.' },
   cuisine_clarity: { why: 'If your cuisine isn’t stated plainly, AI can’t match you to cuisine searches.', impact: 'High', recommendation: 'State your cuisine in the title, description and homepage copy.' },
   location_clarity: { why: 'If your city isn’t stated plainly, AI can’t match you to local searches.', impact: 'High', recommendation: 'State your city (and neighbourhood) in the title, description and copy.' },
+}
+
+// Dutch labels + insight text, keyed by signal key.
+const LABELS_NL: Record<string, string> = {
+  restaurant_schema: 'Restaurant-schema', localbusiness_schema: 'LocalBusiness-schema', address: 'Adres / locatie',
+  opening_hours: 'Openingstijden', reservation_link: 'Reservering / boeken', menu_link: 'Crawlbaar menu',
+  social_links: 'Social-medialinks', faq_content: 'FAQ-inhoud', reviews: 'Review- / testimonialsignalen',
+  title_quality: 'Titel-tag', meta_description_quality: 'Meta-beschrijving', menu_detail: 'Menudetail (rijk aan entiteiten)',
+  dietary_info: 'Dieetopties vermeld', cuisine_clarity: 'Keuken vermeld in titel/beschrijving', location_clarity: 'Stad vermeld in titel/beschrijving',
+}
+const SIGNAL_META_NL: Record<string, { why: string; impact: SignalImpact; recommendation: string }> = {
+  restaurant_schema: { why: 'Restaurant-schema laat AI je keuken, locatie en tijden direct lezen in plaats van gokken.', impact: 'High', recommendation: 'Voeg Restaurant JSON-LD toe met servesCuisine, adres en openingstijden.' },
+  localbusiness_schema: { why: 'LocalBusiness-schema versterkt wie en waar je bent voor lokale zoekopdrachten.', impact: 'Medium', recommendation: 'Voeg LocalBusiness- (of Restaurant-) JSON-LD toe met volledige NAW-gegevens.' },
+  address: { why: 'Een duidelijk, leesbaar adres koppelt je aan de stad waar AI naar gevraagd wordt.', impact: 'High', recommendation: 'Toon je volledige adres als tekst (niet alleen in een afbeelding/kaart).' },
+  opening_hours: { why: 'Openingstijden zijn een kernfeit dat AI gebruikt om te bepalen of het je kan aanraden.', impact: 'Medium', recommendation: 'Publiceer openingstijden als tekst en in openingHoursSpecification.' },
+  reservation_link: { why: 'Een reserveringslink signaleert een actief, boekbaar restaurant.', impact: 'Medium', recommendation: 'Voeg een duidelijke reserverings-/booklink toe (TheFork, eigen, enz.).' },
+  menu_link: { why: 'Een crawlbaar menu is hoe AI je gerechten en keuken leert kennen.', impact: 'High', recommendation: 'Publiceer het menu als echte tekst/HTML, niet als PDF of afbeelding.' },
+  social_links: { why: 'Socialprofielen geven bevestigende signalen over je restaurant.', impact: 'Low', recommendation: 'Link je Instagram/Facebook vanaf de site.' },
+  faq_content: { why: 'Restaurants die AI aanraadt beantwoorden vaak veelgestelde gastvragen in een FAQ.', impact: 'Medium', recommendation: 'Voeg een FAQ toe over reserveren, dieetopties, parkeren en besloten dineren.' },
+  reviews: { why: 'Reviewsignalen zijn een sterke vertrouwensindicator waar AI naar zoekt.', impact: 'Medium', recommendation: 'Toon aantallen reviews/beoordelingen en link naar je reviewprofielen.' },
+  title_quality: { why: 'De titel is het eerste dat AI leest — die moet vermelden wie en waar je bent.', impact: 'Medium', recommendation: 'Gebruik een titel als “{Naam} — {keuken} restaurant in {stad}”.' },
+  meta_description_quality: { why: 'Een duidelijke meta-beschrijving helpt AI samen te vatten wat je biedt.', impact: 'Low', recommendation: 'Schrijf een beschrijving van 50–160 tekens met keuken, stad en wat je onderscheidt.' },
+  menu_detail: { why: 'Beschrijvende gerechten (ingrediënten, bereiding) geven AI entiteiten om aan keuken-zoekopdrachten te koppelen.', impact: 'Medium', recommendation: 'Schrijf gerechten als “huisgemaakte truffelpasta met pecorino”, niet alleen “pasta”.' },
+  dietary_info: { why: 'Gasten zoeken via AI naar vegan/vegetarisch/glutenvrij/halal — AI kan alleen tonen wat je vermeldt.', impact: 'Medium', recommendation: 'Vermeld dieetopties (vegan, vegetarisch, glutenvrij, halal) en allergeneninfo in tekst.' },
+  cuisine_clarity: { why: 'Als je keuken niet duidelijk wordt vermeld, kan AI je niet koppelen aan keuken-zoekopdrachten.', impact: 'High', recommendation: 'Vermeld je keuken in de titel, beschrijving en homepage-tekst.' },
+  location_clarity: { why: 'Als je stad niet duidelijk wordt vermeld, kan AI je niet koppelen aan lokale zoekopdrachten.', impact: 'High', recommendation: 'Vermeld je stad (en buurt) in de titel, beschrijving en tekst.' },
+}
+const IMPACT_NL: Record<SignalImpact, string> = { High: 'Hoog', Medium: 'Gemiddeld', Low: 'Laag' }
+/** Localized impact word for display ('High' → 'Hoog'). */
+export function impactLabel(impact: string, lang: Language): string {
+  return lang === 'nl' ? (IMPACT_NL[impact as SignalImpact] ?? impact) : impact
 }
 
 export interface WebsiteAuditRow {
@@ -90,7 +122,7 @@ function metaMentions(wa: WebsiteAuditRow, term: string): boolean {
 }
 
 /** Build the typed signal checklist. Returns [] when there's no website audit. */
-export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: SignalContext): WebsiteSignal[] {
+export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: SignalContext, lang: Language = 'en'): WebsiteSignal[] {
   if (!wa) return []
 
   const types = (wa.schema_types ?? []).map((t) => t.toLowerCase())
@@ -213,8 +245,10 @@ export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: S
     recommendedFixType: 'faq_page',
   })
 
-  // Attach insight metadata (why it matters / impact / recommendation).
-  return signals.map((s) => ({ ...s, ...(SIGNAL_META[s.key] ?? {}) }))
+  // Attach insight metadata (why it matters / impact / recommendation), localized.
+  const meta = lang === 'nl' ? SIGNAL_META_NL : SIGNAL_META
+  const labels = lang === 'nl' ? LABELS_NL : null
+  return signals.map((s) => ({ ...s, ...(meta[s.key] ?? {}), label: labels?.[s.key] ?? s.label }))
 }
 
 /** Convenience: the signals that need attention (missing or weak). */

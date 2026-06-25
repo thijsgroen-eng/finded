@@ -26,6 +26,7 @@ import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { buildKeyFindings, buildCompetitorObservations } from '@/lib/audit/findings'
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { languageForCountry } from '@/lib/i18n'
+import { resolveAuditLanguage } from '@/lib/settings'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
@@ -118,7 +119,8 @@ export default async function AuditDetailPage({
 
   const visScore       = visibilityScore?.visibility_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
-  const auditLanguage  = languageForCountry(entity.country)
+  const auditLanguage  = await resolveAuditLanguage(entity.country)
+  const nl = auditLanguage === 'nl'
   const myMentions     = metrics.total_mentions
   const topComp        = competitors[0]?.mention_count ?? 0
 
@@ -126,21 +128,22 @@ export default async function AuditDetailPage({
   const specialty    = entity.cuisine ?? null
 
   // Website signals (with cuisine/location-clarity context) + the "why" synthesis.
-  const websiteSignals = toWebsiteSignals(websiteAudit, { cuisine: entity.cuisine, city: entity.city })
+  const websiteSignals = toWebsiteSignals(websiteAudit, { cuisine: entity.cuisine, city: entity.city }, auditLanguage)
   const mentioned = myMentions > 0
   const presentSignalLabels = websiteSignals.filter((s) => s.status === 'present').map((s) => s.label)
   const gapSignalLabels = gapSignals(websiteSignals).map((s) => s.label)
   const competitorList = competitors.map((c: { name: string; mention_count: number }) => ({ name: c.name, mention_count: c.mention_count ?? 0 }))
-  const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
+  const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers }, auditLanguage)
   const reliability = reliabilityFromAccounting(runAccounting)
-  const keyFindings = buildKeyFindings({ mentioned, ownCited: authority.ownCited, presentSignals: presentSignalLabels, gapSignals: gapSignalLabels })
-  const observations = buildCompetitorObservations({ mentioned, ownCited: authority.ownCited, authorityPlatforms: authority.platforms.map((p) => p.label), topCompetitors: competitorList, gapSignals: gapSignalLabels })
+  const keyFindings = buildKeyFindings({ mentioned, ownCited: authority.ownCited, presentSignals: presentSignalLabels, gapSignals: gapSignalLabels }, auditLanguage)
+  const observations = buildCompetitorObservations({ mentioned, ownCited: authority.ownCited, authorityPlatforms: authority.platforms.map((p) => p.label), topCompetitors: competitorList, gapSignals: gapSignalLabels }, auditLanguage)
   // Competitor visibility comparison — grade the same AI-readable signals for you vs each crawled competitor.
   const competitorComparison = buildCompetitorComparison(
     websiteAudit ?? {},
     competitorAudits.map((ca: { competitor_name: string; website: string | null; signals: any }) => ({
       name: ca.competitor_name, website: ca.website, signals: ca.signals,
     })),
+    auditLanguage,
   )
   const visibilitySummary = buildVisibilitySummary({
     restaurantName: entity.name,
@@ -153,7 +156,7 @@ export default async function AuditDetailPage({
     websiteGaps: gapSignals(websiteSignals).map((s) => s.label),
     authorityPlatforms: authority.platforms.map((p) => p.label),
     ownCited: authority.ownCited,
-  })
+  }, auditLanguage)
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
@@ -240,14 +243,14 @@ export default async function AuditDetailPage({
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI visibility status</p>
               <p className={`text-2xl font-bold ${mentioned ? 'text-emerald-600' : 'text-red-600'}`}>
-                {mentioned ? 'Recommended for some searches' : 'Not recommended'}
+                {mentioned ? (nl ? 'Aanbevolen voor sommige zoekopdrachten' : 'Recommended for some searches') : (nl ? 'Niet aanbevolen' : 'Not recommended')}
               </p>
               <p className="text-sm text-gray-600 mt-1">
                 Your restaurant appeared in <strong>{myMentions}</strong> of <strong>{runAccounting.completed}</strong> successful AI responses tested.
               </p>
               {topComp > myMentions && competitorList.length > 0 && (
                 <p className="text-sm text-gray-600 mt-1">
-                  AI frequently recommended competitors instead — {competitorList.slice(0, 3).map((c) => c.name).join(', ')}.
+                  {nl ? 'AI raadde vaak concurrenten aan in plaats daarvan' : 'AI frequently recommended competitors instead'} — {competitorList.slice(0, 3).map((c) => c.name).join(', ')}.
                 </p>
               )}
             </div>
@@ -259,7 +262,7 @@ export default async function AuditDetailPage({
                   : dataQuality.level === 'Medium' ? 'bg-amber-50 text-amber-700'
                   : 'bg-red-50 text-red-600'
                 }`}>
-                Data quality: {dataQuality.level}
+                {nl ? 'Datakwaliteit' : 'Data quality'}: {dataQuality.levelLabel ?? dataQuality.level}
               </span>
               <p className="text-xs text-gray-400 mt-2">
                 Visibility score {visScore != null ? Math.round(visScore) : '—'}/100

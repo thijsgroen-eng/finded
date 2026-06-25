@@ -81,14 +81,15 @@ export async function buildReportPdf(
   const metrics = computeMetrics(mentions ?? [])
   const runAccounting = buildRunAccounting(modelRuns ?? [])
   const reliability = reliabilityFromAccounting(runAccounting)
-  const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
+  const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers }, language)
   const allSources = (modelRuns ?? []).flatMap((r) => (Array.isArray(r.sources) ? r.sources : []))
   const authority = buildAuthoritySignals(allSources, restaurant.domain)
-  const wsSignals = toWebsiteSignals(websiteAudit, { cuisine: restaurant.cuisine, city: restaurant.city })
+  const wsSignals = toWebsiteSignals(websiteAudit, { cuisine: restaurant.cuisine, city: restaurant.city }, language)
   const promptEv = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [], entities ?? [])
   const competitorComparison = buildCompetitorComparison(
     websiteAudit ?? {},
     (competitorAudits ?? []).map((ca) => ({ name: ca.competitor_name, website: ca.website, signals: ca.signals })),
+    language,
   )
 
   const mentioned = metrics.total_mentions > 0
@@ -107,7 +108,7 @@ export async function buildReportPdf(
 
     status: visibilityStatus(mentionFreqPct, mentioned),
     appeared: { x: metrics.total_mentions, y: runAccounting.completed },
-    dataQuality: { level: dataQuality.level, reason: dataQuality.reason },
+    dataQuality: { level: dataQuality.level, levelLabel: dataQuality.levelLabel, reason: dataQuality.reason },
     reliability: { band: reliability.band, headline: reliability.headline, detail: reliability.detail },
 
     visibilityScore: Number(vs.visibility_score ?? 0),
@@ -124,7 +125,7 @@ export async function buildReportPdf(
       presentSignals: wsSignals.filter((s) => s.status === 'present').map((s) => s.label),
       gapSignals: gapSignals(wsSignals).map((s) => s.label),
     }),
-    websiteSnapshot: websiteSnapshot(wsSignals.map((s) => ({ key: s.key, status: s.status })), authority.ownCited),
+    websiteSnapshot: websiteSnapshot(wsSignals.map((s) => ({ key: s.key, status: s.status })), authority.ownCited, language),
     websiteReview: wsSignals.map((s) => ({ label: s.label, status: s.status, why: s.why ?? null, impact: s.impact ?? null, recommendation: s.recommendation ?? null })),
     authorityPlatforms: authority.platforms.map((p) => p.label),
     ownCited: authority.ownCited,
@@ -140,7 +141,7 @@ export async function buildReportPdf(
       mentioned: p.mentioned_any,
       sources: p.sources ?? [],
     })),
-    categoryPerformance: categoryPerformance(promptEv.map((p) => ({ category: p.category, mentioned_any: p.mentioned_any }))),
+    categoryPerformance: categoryPerformance(promptEv.map((p) => ({ category: p.category, mentioned_any: p.mentioned_any })), language),
     competitorComparison: {
       crawled: competitorComparison.crawled,
       rows: competitorComparison.rows.map((r) => ({ label: r.label, you: r.you, competitors: r.competitors })),
@@ -149,8 +150,8 @@ export async function buildReportPdf(
     },
 
     recommendations: recs,
-    actionPlan: actionPlanWeeks(recs),
-    roadmap: roadmap90(recs),
+    actionPlan: actionPlanWeeks(recs, language),
+    roadmap: roadmap90(recs, language),
     generatedAssets,
 
     formulaVersion: (vs.score_breakdown as { method_version?: string } | null)?.method_version ?? null,

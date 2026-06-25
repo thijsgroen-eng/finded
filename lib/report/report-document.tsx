@@ -2,6 +2,8 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { Language } from '@/lib/i18n'
 import { reportStrings } from './strings'
+import { statusLabel, strengthLabel } from '@/lib/audit/report-sections'
+import { impactLabel } from '@/lib/audit/website-signals'
 
 // Plan variants: free (concise teaser) · audit (the full "why") · implementation
 // (execution deliverables). full/teaser are kept as aliases.
@@ -20,7 +22,7 @@ export interface ReportData {
   auditDate: string
   status: string
   appeared: { x: number; y: number }
-  dataQuality: { level: string; reason: string }
+  dataQuality: { level: string; levelLabel?: string; reason: string }
   reliability: { band: 'green' | 'yellow' | 'red'; headline: string; detail: string }
   visibilityScore: number
   opportunityScore: number | null
@@ -368,17 +370,17 @@ function Footer({ caveat }: { caveat: string }) {
 }
 
 // Status hero (shared by all tiers).
-function StatusHero({ data, t }: { data: ReportData; t: ReturnType<typeof L> }) {
+function StatusHero({ data, t, lang }: { data: ReportData; t: ReturnType<typeof L>; lang: Language }) {
   return (
     <>
       <View style={s.hero}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 9, color: ORANGE, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 1 }}>{t.status}</Text>
-          <Text style={[s.statusBig, { color: statusColor(data.status) }]}>{data.status}</Text>
+          <Text style={[s.statusBig, { color: statusColor(data.status) }]}>{statusLabel(data.status, lang)}</Text>
           <Text style={s.heroSub}>{t.appeared(data.appeared.x, data.appeared.y)}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[s.dqBadge, { backgroundColor: dqColor(data.dataQuality.level) }]}>{t.dataQuality}: {data.dataQuality.level}</Text>
+          <Text style={[s.dqBadge, { backgroundColor: dqColor(data.dataQuality.level) }]}>{t.dataQuality}: {data.dataQuality.levelLabel ?? data.dataQuality.level}</Text>
           <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100</Text>
         </View>
       </View>
@@ -491,14 +493,14 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
         <>
           <Page size="A4" style={s.page}>
             <RunHeader data={data} planLabel={planLabel} />
-            <StatusHero data={data} t={t} />
+            <StatusHero data={data} t={t} lang={language} />
             <KeyFindings data={data} t={t} limit={3} />
             <CompetitorTable data={data} t={t} />
             <View style={s.section}>
               <SectionTitle>{t.snapshot}</SectionTitle>
               <View style={s.chipRow}>
                 {data.websiteSnapshot.map((r, i) => (
-                  <Text key={i} style={[s.chip, { color: strengthColor(r.strength) }]}>{r.label}: {r.strength}</Text>
+                  <Text key={i} style={[s.chip, { color: strengthColor(r.strength) }]}>{r.label}: {strengthLabel(r.strength, language)}</Text>
                 ))}
               </View>
             </View>
@@ -520,7 +522,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
       ) : (
         <Page size="A4" style={s.page}>
           <RunHeader data={data} planLabel={planLabel} />
-          <StatusHero data={data} t={t} />
+          <StatusHero data={data} t={t} lang={language} />
           <KeyFindings data={data} t={t} />
           <CompetitorTable data={data} t={t} />
 
@@ -578,7 +580,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
                 <View key={i} style={s.findingRow}>
                   <Text style={[s.findingMark, { color: sig.status === 'present' ? GREEN : sig.status === 'weak' ? AMBER : RED }]}>{sig.status === 'present' ? '✓' : sig.status === 'weak' ? '!' : '✕'}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 9.5, color: INK }}>{sig.label}{sig.status !== 'present' && sig.impact ? `  (${sig.impact} impact)` : ''}</Text>
+                    <Text style={{ fontSize: 9.5, color: INK }}>{sig.label}{sig.status !== 'present' && sig.impact ? `  (${impactLabel(sig.impact, language)})` : ''}</Text>
                     {sig.status !== 'present' && sig.recommendation && <Text style={{ fontSize: 8.5, color: MUTED }}>{sig.recommendation}</Text>}
                   </View>
                 </View>

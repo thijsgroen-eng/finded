@@ -83,23 +83,36 @@ export interface CompetitorComparison {
   crawled: number
 }
 
-export function buildCompetitorComparison(target: SiteSignals, competitors: CompetitorSite[]): CompetitorComparison {
+const SIGNAL_LABELS_NL: Record<SignalKey, string> = {
+  cuisine_clarity: 'Keukenduidelijkheid', location_clarity: 'Locatieduidelijkheid', menu: 'Menuvindbaarheid',
+  faq: 'FAQ-dekking', authority: 'Autoriteitssignalen', reviews: 'Reviewsignalen', schema: 'Gestructureerde data',
+}
+const signalLabel = (sig: { key: SignalKey; label: string }, lang: Lang) =>
+  lang === 'nl' ? SIGNAL_LABELS_NL[sig.key] : sig.label
+
+type Lang = 'nl' | 'en'
+
+export function buildCompetitorComparison(target: SiteSignals, competitors: CompetitorSite[], lang: Lang = 'en'): CompetitorComparison {
   const youScores = scoreSignals(target)
   const compScores = competitors.map((c) => ({ name: c.name, signals: c.signals, scores: c.signals ? scoreSignals(c.signals) : null }))
 
   const rows: ComparisonRow[] = COMPARISON_SIGNALS.map((sig) => ({
     key: sig.key,
-    label: sig.label,
+    label: signalLabel(sig, lang),
     you: youScores[sig.key],
     competitors: compScores.map((c) => ({ name: c.name, grade: c.scores ? c.scores[sig.key] : null })),
   }))
 
   // Why each (crawlable) competitor may win: list their Strong signals.
   const whyWin = compScores.filter((c) => c.scores).map((c) => {
-    const strong = COMPARISON_SIGNALS.filter((sig) => c.scores![sig.key] === 'Strong').map((sig) => sig.label.toLowerCase())
+    const strong = COMPARISON_SIGNALS.filter((sig) => c.scores![sig.key] === 'Strong').map((sig) => signalLabel(sig, lang).toLowerCase())
     const reasons = strong.length
-      ? `${c.name} shows strong ${strong.join(', ')} — signals AI can read and act on.`
-      : `${c.name} appears frequently, though its website signals are mixed.`
+      ? (lang === 'nl'
+          ? `${c.name} scoort sterk op ${strong.join(', ')} — signalen die AI kan lezen en gebruiken.`
+          : `${c.name} shows strong ${strong.join(', ')} — signals AI can read and act on.`)
+      : (lang === 'nl'
+          ? `${c.name} verschijnt vaak, al zijn de websitesignalen gemengd.`
+          : `${c.name} appears frequently, though its website signals are mixed.`)
     return { name: c.name, reasons }
   })
 
@@ -110,7 +123,10 @@ export function buildCompetitorComparison(target: SiteSignals, competitors: Comp
     if (RANK[youGrade] >= RANK.Medium) continue
     const aheadCount = compScores.filter((c) => c.scores && RANK[c.scores[sig.key]] >= RANK.Strong).length
     if (aheadCount > 0) {
-      gaps.push(`${aheadCount} of the top competitors provide strong ${sig.label.toLowerCase()} while your site does not.`)
+      const lbl = signalLabel(sig, lang).toLowerCase()
+      gaps.push(lang === 'nl'
+        ? `${aheadCount} van de topconcurrenten bieden sterke ${lbl} terwijl jouw site dat niet doet.`
+        : `${aheadCount} of the top competitors provide strong ${lbl} while your site does not.`)
     }
   }
 

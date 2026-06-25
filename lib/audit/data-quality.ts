@@ -1,8 +1,10 @@
 /**
  * Data quality rating (High / Medium / Low) — an honest replacement for an
  * arbitrary confidence percentage. Based on how many model calls actually
- * completed, not on a formula nobody can explain. Pure + testable.
+ * completed, not on a formula nobody can explain. Pure + testable. Bilingual.
  */
+
+import { Language } from '@/lib/i18n'
 
 export type DataQualityLevel = 'High' | 'Medium' | 'Low'
 
@@ -10,35 +12,41 @@ export interface ProviderCompletion { model: string; completed: number; failed: 
 
 export interface DataQuality {
   level: DataQualityLevel
+  /** Localized display label for `level` (English value kept for color/logic). */
+  levelLabel: string
   completionRate: number   // 0–1
   completed: number
   total: number
   reason: string
 }
 
+const LEVEL_NL: Record<DataQualityLevel, string> = { High: 'Hoog', Medium: 'Gemiddeld', Low: 'Laag' }
+
 const MODEL_LABELS: Record<string, string> = {
   openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity',
 }
 const label = (m: string) => MODEL_LABELS[m] ?? m
 
-function list(names: string[]): string {
+function list(names: string[], lang: Language): string {
   if (names.length === 0) return ''
   if (names.length === 1) return names[0]
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  const join = lang === 'nl' ? ' en ' : ' and '
+  return `${names.slice(0, -1).join(', ')}${join}${names[names.length - 1]}`
 }
 
 export function buildDataQuality(acc: {
   total_runs: number
   completed: number
   providers: ProviderCompletion[]
-}): DataQuality {
+}, lang: Language = 'en'): DataQuality {
+  const nl = lang === 'nl'
   const total = acc.total_runs
   const completed = acc.completed
   const completionRate = total > 0 ? completed / total : 0
 
-  const okProviders = acc.providers.filter((p) => p.completed > 0 && p.failed === 0).map((p) => label(p.model))
-  const partialProviders = acc.providers.filter((p) => p.completed > 0 && p.failed > 0).map((p) => label(p.model))
-  const deadProviders = acc.providers.filter((p) => p.completed === 0 && p.failed > 0).map((p) => label(p.model))
+  const okP = acc.providers.filter((p) => p.completed > 0 && p.failed === 0).map((p) => label(p.model))
+  const partialP = acc.providers.filter((p) => p.completed > 0 && p.failed > 0).map((p) => label(p.model))
+  const deadP = acc.providers.filter((p) => p.completed === 0 && p.failed > 0).map((p) => label(p.model))
   const providersWithData = acc.providers.filter((p) => p.completed > 0).length
 
   // Thresholds aligned with the reliability gate (lib/audit/reliability.ts):
@@ -50,12 +58,13 @@ export function buildDataQuality(acc: {
   else level = 'Low'
 
   const bits: string[] = []
-  if (okProviders.length) bits.push(`${list(okProviders)} completed successfully`)
-  if (partialProviders.length) bits.push(`${list(partialProviders)} returned incomplete results`)
-  if (deadProviders.length) bits.push(`${list(deadProviders)} failed`)
+  if (okP.length) bits.push(nl ? `${list(okP, lang)} voltooid` : `${list(okP, lang)} completed successfully`)
+  if (partialP.length) bits.push(nl ? `${list(partialP, lang)} gedeeltelijk mislukt` : `${list(partialP, lang)} returned incomplete results`)
+  if (deadP.length) bits.push(nl ? `${list(deadP, lang)} mislukt` : `${list(deadP, lang)} failed`)
   const reason = total === 0
-    ? 'No model responses were recorded.'
-    : `${bits.join('; ')}. ${completed} of ${total} model calls succeeded.`
+    ? (nl ? 'Er zijn geen modelantwoorden geregistreerd.' : 'No model responses were recorded.')
+    : (nl ? `${bits.join('; ')}. ${completed} van de ${total} modelaanroepen geslaagd.` : `${bits.join('; ')}. ${completed} of ${total} model calls succeeded.`)
 
-  return { level, completionRate, completed, total, reason }
+  const levelLabel = nl ? LEVEL_NL[level] : level
+  return { level, levelLabel, completionRate, completed, total, reason }
 }

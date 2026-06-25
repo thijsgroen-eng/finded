@@ -109,6 +109,10 @@ export const auditFunction = inngest.createFunction(
           booking_present:           result.booking_present,
           faq_present:               result.faq_present,
           menu_or_services_present:  result.menu_or_services_present,
+          // Menu & dietary discoverability (015)
+          menu_format:               result.menu_format,
+          menu_richness:             result.menu_richness,
+          dietary:                   result.dietary,
         })
       }
     })

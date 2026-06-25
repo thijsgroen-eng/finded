@@ -6,6 +6,7 @@
 
 import { assertPublicHttpUrl } from './url-guard'
 import { decodeHtmlEntities } from './html'
+import { analyzeMenu, analyzeDietary, type MenuFormat, type MenuRichness } from '@/lib/audit/menu-dietary'
 
 export interface WebsiteAuditResult {
   // Universal signals
@@ -22,6 +23,11 @@ export interface WebsiteAuditResult {
   // Content signals
   faq_present: boolean
   menu_or_services_present: boolean  // menu (restaurant) or services list (others)
+
+  // Menu & dietary discoverability
+  menu_format: MenuFormat            // how readable the menu is to AI
+  menu_richness: MenuRichness        // how descriptive the menu text is
+  dietary: string[]                  // dietary signals exposed (e.g. ["Vegan"])
 
   // Meta
   meta_title: string | null
@@ -111,6 +117,9 @@ export async function auditWebsite(url: string): Promise<WebsiteAuditResult> {
     booking_present: false,
     faq_present: false,
     menu_or_services_present: false,
+    menu_format: 'none',
+    menu_richness: 'none',
+    dietary: [],
     meta_title: null,
     meta_description: null,
     raw_html_snippet: null,
@@ -190,6 +199,12 @@ export async function auditWebsite(url: string): Promise<WebsiteAuditResult> {
 
     // Menu / services
     result.menu_or_services_present = SERVICE_SIGNALS.some(s => lower.includes(s))
+
+    // Menu discoverability (format + entity richness) + dietary signals
+    const menu = analyzeMenu(html)
+    result.menu_format = menu.format
+    result.menu_richness = menu.richness
+    result.dietary = analyzeDietary(html).detected
 
     // Reviews
     const reviewMatch = html.match(

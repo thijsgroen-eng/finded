@@ -42,6 +42,8 @@ const SIGNAL_META: Record<string, { why: string; impact: SignalImpact; recommend
   reviews: { why: 'Review signals are a strong trust cue AI looks for.', impact: 'Medium', recommendation: 'Surface review counts/ratings and link to your review profiles.' },
   title_quality: { why: 'The title is the first thing AI reads — it should state who and where you are.', impact: 'Medium', recommendation: 'Use a title like “{Name} — {cuisine} restaurant in {city}”.' },
   meta_description_quality: { why: 'A clear meta description helps AI summarise what you offer.', impact: 'Low', recommendation: 'Write a 50–160 char description naming cuisine, city and what makes you distinct.' },
+  menu_detail: { why: 'Descriptive dishes (ingredients, preparation) give AI entities to match to cuisine searches.', impact: 'Medium', recommendation: 'Write dishes as “homemade truffle pasta with pecorino”, not just “pasta”.' },
+  dietary_info: { why: 'Diners search AI for vegan/vegetarian/gluten-free/halal options — AI can only surface what you state.', impact: 'Medium', recommendation: 'State dietary options (vegan, vegetarian, gluten-free, halal) and allergen info in text.' },
   cuisine_clarity: { why: 'If your cuisine isn’t stated plainly, AI can’t match you to cuisine searches.', impact: 'High', recommendation: 'State your cuisine in the title, description and homepage copy.' },
   location_clarity: { why: 'If your city isn’t stated plainly, AI can’t match you to local searches.', impact: 'High', recommendation: 'State your city (and neighbourhood) in the title, description and copy.' },
 }
@@ -62,6 +64,9 @@ export interface WebsiteAuditRow {
   review_count?: number | null
   meta_title?: string | null
   meta_description?: string | null
+  menu_format?: string | null      // html | pdf | image | none
+  menu_richness?: string | null    // strong | weak | none
+  dietary?: string[] | null
 }
 
 const has = (...vals: (boolean | null | undefined)[]) => vals.some(Boolean)
@@ -127,7 +132,10 @@ export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: S
     {
       key: 'menu_link',
       label: 'Crawlable menu',
-      status: has(wa.menu_present, wa.menu_or_services_present) ? 'present' : 'missing',
+      status: wa.menu_format
+        ? (wa.menu_format === 'html' ? 'present' : wa.menu_format === 'none' ? 'missing' : 'weak')
+        : (has(wa.menu_present, wa.menu_or_services_present) ? 'present' : 'missing'),
+      evidence: wa.menu_format && wa.menu_format !== 'none' ? `${wa.menu_format} menu` : undefined,
       recommendedFixType: 'menu_structure',
     },
     {
@@ -184,6 +192,26 @@ export function toWebsiteSignals(wa: WebsiteAuditRow | null | undefined, ctx?: S
       recommendedFixType: 'location_page',
     })
   }
+
+  // Menu entity-richness — only when a menu exists.
+  if (wa.menu_format && wa.menu_format !== 'none') {
+    signals.push({
+      key: 'menu_detail',
+      label: 'Menu detail (entity-rich)',
+      status: wa.menu_richness === 'strong' ? 'present' : 'weak',
+      evidence: 'e.g. “homemade truffle pasta with pecorino” reads better than “pasta”',
+      recommendedFixType: 'menu_structure',
+    })
+  }
+
+  // Dietary signals (vegan/vegetarian/gluten-free/halal/allergens).
+  signals.push({
+    key: 'dietary_info',
+    label: 'Dietary options stated',
+    status: (wa.dietary?.length ?? 0) > 0 ? 'present' : 'missing',
+    evidence: wa.dietary?.length ? wa.dietary.join(', ') : undefined,
+    recommendedFixType: 'faq_page',
+  })
 
   // Attach insight metadata (why it matters / impact / recommendation).
   return signals.map((s) => ({ ...s, ...(SIGNAL_META[s.key] ?? {}) }))

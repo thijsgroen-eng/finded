@@ -99,16 +99,19 @@ export default function LandingPage() {
             Built in the Netherlands · for restaurants
           </div>
           <h1 style={{ fontSize: 'clamp(30px, 4.6vw, 46px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.3, marginBottom: 18 }}>
-            When guests ask AI where to eat, does it mention <span style={{ color: GREEN }}>your restaurant</span>?
+            Is your restaurant showing up when guests ask <span style={{ color: GREEN }}>AI</span> where to eat?
           </h1>
           <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 22, maxWidth: 520 }}>
-            More people ask ChatGPT, Claude, Gemini and Perplexity where to eat. We&rsquo;ll check how those
-            tools talk about your restaurant — and which restaurants they recommend instead.
+            We test ChatGPT, Claude, Gemini and Perplexity to see whether your restaurant gets recommended,
+            which competitors appear instead, and what you can do to improve visibility.
           </p>
           <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 18, boxShadow: '0 16px 40px -28px rgba(17,17,16,0.35)' }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: INK, marginBottom: 4 }}>See what AI says about your restaurant</div>
-            <div style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Free. Send your website and we&rsquo;ll email you what we find.</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: INK, marginBottom: 4 }}>Get your free AI visibility check</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 12 }}>Send your website and we&rsquo;ll email you what we find — free, no obligation.</div>
             <LeadForm />
+            <p style={{ fontSize: 12, color: FAINT, marginTop: 12, textAlign: 'center' }}>
+              <a href="#sample" style={{ color: DGREEN, fontWeight: 600, textDecoration: 'none' }}>View a sample audit →</a>
+            </p>
           </div>
         </div>
         <ConversationMock />

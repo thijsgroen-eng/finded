@@ -5,6 +5,7 @@ import { Badge, Card, EmptyState, Spinner, Button } from '@/components/ui'
 import { formatDateTime, statusVariant } from '@/lib/utils'
 import { ClipboardList, RefreshCw, ChevronRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { ProviderHealth } from '@/components/admin/provider-health'
 
 interface AuditRow {
   id: string
@@ -15,7 +16,7 @@ interface AuditRow {
   restaurant: { id: string; name: string; city: string } | null
 }
 
-const STATUS_FILTERS = ['all', 'queued', 'running', 'completed', 'failed']
+const STATUS_FILTERS = ['all', 'queued', 'running', 'completed', 'incomplete', 'failed']
 
 export default function AuditsPage() {
   const [audits, setAudits] = useState<AuditRow[]>([])
@@ -120,6 +121,9 @@ export default function AuditsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Provider health — at-a-glance reachability of each AI provider */}
+      <ProviderHealth />
 
       {/* Status filter tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">

@@ -19,7 +19,9 @@ import {
   selectTemplate,
   mergeTemplateRows,
   getQuickPrompts,
+  getFullPrompts,
   type GeneratedPrompt,
+  type BusinessProfile,
 } from './prompt-generator'
 
 type TemplateRow = { category: string; template: string; sort_order: number }
@@ -70,6 +72,28 @@ export async function getQuickPromptsFromStore(
   return getQuickPrompts(
     businessName, businessType, location, country, subtype, subtypes, language, override,
   )
+}
+
+/** Full prompt set (the complete corpus, e.g. the 32-prompt restaurant set), with overrides applied. */
+export async function getFullPromptsFromStore(
+  businessName: string,
+  businessType: string,
+  location: string,
+  country: string,
+  subtype: string | undefined,
+  subtypes: string[] | undefined,
+  language: Language,
+): Promise<GeneratedPrompt[]> {
+  const override = await loadTemplateSet(businessType, language)
+  const profile: BusinessProfile = {
+    name: businessName,
+    businessType: businessType.toLowerCase(),
+    subtypes: subtypes ?? (subtype ? [subtype] : []),
+    location,
+    country,
+    language,
+  }
+  return getFullPrompts(profile, override)
 }
 
 // ── Admin editing helpers ─────────────────────────────────────────────────────

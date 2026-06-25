@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { getAvailableProviders } from '@/lib/providers'
 import { AUDIT_TEMPERATURE } from '@/lib/providers/types'
 import { auditWebsite } from '@/lib/engine/website-auditor'
-import { getQuickPromptsFromStore } from '@/lib/engine/prompt-store'
+import { getFullPromptsFromStore } from '@/lib/engine/prompt-store'
 import { extractEntities, findTargetInEntities, keywordTargetMention } from '@/lib/engine/entity-extractor'
 import { normalizeName } from '@/lib/engine/normalize'
 import { matchEntity } from '@/lib/audit/entity-matching'
@@ -19,12 +19,13 @@ async function isCancelled(auditId: string): Promise<boolean> {
   return data?.status === 'cancelled'
 }
 
-// Each prompt is sampled SAMPLES times at the pinned AUDIT_TEMPERATURE (0.7);
-// every sample is written + parsed independently so metrics-v2 can report a
-// frequency band. The quick prompt set is capped at MAX_PROMPTS to bound cost
-// and stay within the serverless timeout. AUDIT_SAMPLES=1 → cheap single-shot.
-const SAMPLES = Math.min(5, Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 3)))
-const MAX_PROMPTS = 8
+// We run the full 32-prompt core set across all providers. With 32 prompts × 4
+// models the data is already dense, so the default is 1 sample per (prompt,model)
+// — the mention-frequency confidence band is computed over all those cells.
+// Raise AUDIT_SAMPLES for extra robustness (multiplies cost + time); MAX_PROMPTS
+// and SAMPLES are env-tunable to stay within the serverless timeout.
+const SAMPLES = Math.min(5, Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 1)))
+const MAX_PROMPTS = Math.max(1, Number(process.env.AUDIT_MAX_PROMPTS ?? 32))
 const AUDIT_GROUNDED = (process.env.AUDIT_GROUNDED ?? 'true') !== 'false'
 
 export const auditFunction = inngest.createFunction(
@@ -32,7 +33,7 @@ export const auditFunction = inngest.createFunction(
     id: 'run-full-audit',
     name: 'Run Full AI Visibility Audit',
     retries: 2,
-    timeouts: { finish: '15m' },
+    timeouts: { finish: '20m' },
     triggers: [{ event: 'audit/requested' }],
     // After all retries are exhausted, mark the audit failed with the error so it
     // doesn't sit on "running" forever with no explanation.
@@ -125,7 +126,7 @@ export const auditFunction = inngest.createFunction(
 
       // Cap at MAX_PROMPTS: sampling multiplies calls by SAMPLES × providers, so
       // we use the top of the (cuisine-forward) quick set to bound cost/timeout.
-      const generated = (await getQuickPromptsFromStore(
+      const generated = (await getFullPromptsFromStore(
         entity.name,
         businessType,
         entity.city,

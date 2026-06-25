@@ -132,51 +132,59 @@ const BUSINESS_TEMPLATES: Record<string, TemplateSet> = {
 
 // ── Dutch templates (restaurant-first; default for other types) ───────────────
 
+// Finded Core Prompt Set (32) — the canonical Dutch restaurant searches.
+// {location} = city ({stad}), {subtype} = primary cuisine ({keuken}).
 const BUSINESS_TEMPLATES_NL: Record<string, TemplateSet> = {
   restaurant: {
+    // General Discovery (6)
     discovery: [
-      'Beste restaurants in {location}',
-      'Leukste restaurants in {location}',
-      'Waar kun je goed eten in {location}',
-      'Beste plekken om te eten in {location}',
-      'Populaire restaurants in {location}',
-      'Aanraders om uit eten te gaan in {location}',
-      'Tips voor uit eten in {location}',
+      'Wat is een goed restaurant in {location}?',
+      'Wat zijn de beste restaurants in {location}?',
+      'Waar moet ik eten in {location}?',
+      'Welke restaurants raden jullie aan in {location}?',
+      'Wat zijn leuke restaurants in {location}?',
+      'Waar eten locals in {location}?',
     ],
+    // Cuisine Specific (8) — only rendered when the cuisine is known
     category: [
-      'Beste {subtype} restaurant {location}',
-      'Top {subtype} restaurants in {location}',
-      'Waar kun je {subtype} eten in {location}',
-      'Authentiek {subtype} restaurant {location}',
+      'Wat is het beste {subtype} restaurant in {location}?',
+      'Waar eet je goed {subtype} in {location}?',
+      'Welke {subtype} restaurants raden jullie aan in {location}?',
+      'Authentiek {subtype} restaurant in {location}',
+      'Beste restaurant voor {subtype} eten in {location}',
+      'Verborgen parel {subtype} restaurant in {location}',
+      'Beste restaurant in {location} voor {subtype}',
+      'Waar kan ik goede {subtype} gerechten eten in {location}?',
     ],
+    // Romantic & Premium (4) + Occasion-Based (4)
     occasions: [
-      'Romantisch restaurant {location}',
-      'Restaurant voor een date in {location}',
-      'Zakelijk diner {location}',
-      'Restaurant voor een verjaardag {location}',
-      'Familierestaurant {location}',
-      'Restaurant voor een groep {location}',
-      'Restaurant voor een speciale gelegenheid {location}',
+      'Romantisch restaurant in {location}',
+      'Beste restaurant voor een date in {location}',
+      'Fine dining restaurant in {location}',
+      'Luxe restaurant in {location}',
+      'Restaurant voor verjaardag in {location}',
+      'Restaurant voor groepsdiner in {location}',
+      'Restaurant voor zakelijke lunch in {location}',
+      'Restaurant voor familiediner in {location}',
     ],
+    // Tourist & Visitor (3)
     problemSolution: [
-      'Waar kun je eten met kinderen in {location}',
-      'Goed restaurant voor toeristen in {location}',
-      'Restaurant voor een zakenlunch {location}',
-      'Waar kun je {subtype} eten in {location}',
-      'Restaurants die laat open zijn in {location}',
-      'Restaurant met terras {location}',
+      'Waar moet ik eten als toerist in {location}?',
+      'Bekende restaurants in {location}',
+      'Must-visit restaurants in {location}',
     ],
+    // Local Discovery (4)
     trust: [
-      'Best beoordeelde restaurants {location}',
-      'Hoogst gewaardeerde restaurants {location}',
-      'Lokale favoriete restaurants {location}',
-      'Verborgen parels restaurants {location}',
-      'Bekroonde restaurants {location}',
+      'Verborgen parel restaurant in {location}',
+      'Ondergewaardeerd restaurant in {location}',
+      'Authentiek restaurant in {location}',
+      'Uniek restaurant in {location}',
     ],
+    // Practical (3)
     geographic: [
-      'Beste {subtype} restaurant in het centrum van {location}',
-      'Beste restaurants in de buurt van {location}',
-      '{subtype} restaurant centrum {location}',
+      'Restaurant met terras in {location}',
+      'Restaurant in het centrum van {location}',
+      'Kindvriendelijk restaurant in {location}',
     ],
   },
 

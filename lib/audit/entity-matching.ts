@@ -7,7 +7,7 @@
  * every bar) by matching on normalized tokens with length/containment guards.
  */
 
-import { normalizeName, domainFromUrl } from '@/lib/engine/normalize'
+import { normalizeName, domainFromUrl, identityKey } from '@/lib/engine/normalize'
 
 export interface MatchTarget {
   id?: string | null
@@ -68,6 +68,13 @@ export function matchEntity(candidate: MatchCandidate, target: MatchTarget): Mat
   if (names.includes(cn)) {
     const isAlias = cn !== normalizeName(target.name)
     return { matched: true, matchedRestaurantId: id, confidence: isAlias ? 0.92 : 1, reason: isAlias ? 'alias match' : 'exact name match' }
+  }
+
+  // 1b. Spacing-insensitive exact match ("Dekas" ↔ "De Kas" ↔ "Restaurant De
+  // Kas"). Guards tiny names so "de"/"la" can't collide.
+  const compact = identityKey(candidate.name)
+  if (compact.length >= 4 && [target.name, ...(target.aliases ?? [])].some((n) => identityKey(n) === compact)) {
+    return { matched: true, matchedRestaurantId: id, confidence: 0.9, reason: 'name match (spacing)' }
   }
 
   // 2. Domain match (strong identity signal).

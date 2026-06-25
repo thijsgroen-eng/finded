@@ -164,6 +164,11 @@ export function resolveEntityName(name: string, knownName: string): number {
 
   if (normName === normKnown) return 1.0
 
+  // Spacing-insensitive identity ("De Kas" ↔ "Dekas"). Guard tiny names.
+  const cName = normName.replace(/\s+/g, '')
+  const cKnown = normKnown.replace(/\s+/g, '')
+  if (cName.length >= 4 && cName === cKnown) return 1.0
+
   // Check if one contains the other
   if (normName.includes(normKnown) || normKnown.includes(normName)) return 0.9
 

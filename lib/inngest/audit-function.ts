@@ -485,7 +485,11 @@ export const auditFunction = inngest.createFunction(
         completionRate:   reliability.completionRate,
       })
 
-      await supabaseAdmin.from('visibility_scores').insert({
+      // Idempotent: clear any prior score for this audit (reprocessing), then
+      // insert and HARD-FAIL on error — never silently complete without a score
+      // (that's what left audits showing "—/100" and the PDF "no score" error).
+      await supabaseAdmin.from('visibility_scores').delete().eq('audit_id', audit_id)
+      const { error: vsError } = await supabaseAdmin.from('visibility_scores').insert({
         audit_id,
         restaurant_id:             restaurant_id,
         visibility_score:          breakdown.visibility_score,
@@ -521,6 +525,7 @@ export const auditFunction = inngest.createFunction(
         total_prompts:             metrics.total_prompts,
         total_model_runs:          metrics.total_model_runs,
       })
+      if (vsError) throw new Error(`Failed to save visibility score: ${vsError.message}`)
 
       // Aggregate competitors directly from the stored entity rows so every row is
       // traceable evidence (counts + provenance), not bare numbers.
@@ -532,6 +537,7 @@ export const auditFunction = inngest.createFunction(
         })),
         entity.name,
       )
+      await supabaseAdmin.from('competitors').delete().eq('audit_id', audit_id)
       if (competitorRows.length > 0) {
         await supabaseAdmin.from('competitors').insert(
           competitorRows.map((c) => ({ audit_id, ...c })),

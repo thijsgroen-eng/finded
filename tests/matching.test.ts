@@ -8,6 +8,11 @@ test('exact + suffix/case/accent-insensitive matches score high', () => {
   assert.ok(resolveEntityName('Café de Plek', 'de plek') >= 0.9)            // café stripped
 })
 
+test('matches across spacing differences ("Dekas" entered vs "De Kas")', () => {
+  assert.equal(resolveEntityName('Restaurant De Kas', 'Dekas'), 1)
+  assert.equal(resolveEntityName('De Kas', 'Dekas'), 1)
+})
+
 test('clearly different names do not false-positive (< threshold)', () => {
   assert.ok(resolveEntityName('Bar Centraal', 'Central Park') < 0.7)
 })

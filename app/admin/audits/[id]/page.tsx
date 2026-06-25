@@ -63,7 +63,7 @@ async function getAuditData(id: string) {
     supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status, sources').eq('audit_id', id),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', id),
     supabaseAdmin.from('entities').select('prompt_id, model, name, confidence, is_target, normalized_name').eq('audit_id', id),
-    supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).single(),
+    supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabaseAdmin.from('competitors').select('*').eq('audit_id', id).order('mention_count', { ascending: false }).limit(6),
     supabaseAdmin.from('signal_gaps').select('*').eq('restaurant_id', entity.id).order('severity'),
   ])

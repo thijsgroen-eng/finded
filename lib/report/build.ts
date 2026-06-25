@@ -48,7 +48,7 @@ export async function buildReportPdf(
   const language: Language = langParam ? asLanguage(langParam) : languageForCountry(restaurant.country)
 
   const [{ data: vs }, { data: mentions }, { data: competitors }, { data: recommendations }, { data: websiteAudit }, { data: modelRuns }, { data: promptRuns }, { data: entities }] = await Promise.all([
-    supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', auditId).single(),
+    supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', auditId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', auditId),
     supabaseAdmin.from('competitors').select('name, mention_count, providers').eq('audit_id', auditId).order('mention_count', { ascending: false }).limit(8),
     supabaseAdmin.from('recommendations').select('title, description, priority, suggested_fix, expected_impact, priority_rank, impact_level, effort').eq('audit_id', auditId).order('created_at', { ascending: true }),
@@ -62,7 +62,7 @@ export async function buildReportPdf(
   const { data: competitorAudits } = await supabaseAdmin
     .from('competitor_audits').select('competitor_name, website, signals').eq('audit_id', auditId)
 
-  if (!vs) return { ok: false, status: 409, error: 'Audit not complete — no visibility score yet' }
+  if (!vs) return { ok: false, status: 409, error: 'No visibility score for this audit yet — re-run the audit, then generate the report.' }
 
   // For the implementation package, pull the generated execution assets.
   let generatedAssets: { type: string; title: string; content: string; format: string }[] = []

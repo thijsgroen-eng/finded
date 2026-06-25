@@ -7,7 +7,7 @@
  * Pure + testable; composes the provenance helper. Saved to `competitors`.
  */
 
-import { normalizeName } from '@/lib/engine/normalize'
+import { normalizeName, identityKey } from '@/lib/engine/normalize'
 import { buildCompetitorProvenance, type ProvenanceEntity } from '@/lib/audit/competitor-evidence'
 
 export interface AggEntity extends ProvenanceEntity {
@@ -38,6 +38,7 @@ const sentimentValue = (s?: string | null) => (s === 'positive' ? 1 : s === 'neg
  */
 export function aggregateCompetitors(entities: AggEntity[], targetName: string, limit = 10): CompetitorRow[] {
   const targetKey = normalizeName(targetName)
+  const targetId = identityKey(targetName)
   const provByKey = buildCompetitorProvenance(entities, targetName)
 
   const groups = new Map<string, {
@@ -52,7 +53,8 @@ export function aggregateCompetitors(entities: AggEntity[], targetName: string, 
   for (const e of entities) {
     const key = e.normalized_name || normalizeName(e.name)
     if (!key) continue
-    if (e.is_target || key === targetKey) { targetMentions++; continue }
+    // Exclude the target even with different spacing ("De Kas" vs "Dekas").
+    if (e.is_target || key === targetKey || identityKey(e.name) === targetId) { targetMentions++; continue }
 
     const g = groups.get(key) ?? {
       surface: new Map<string, number>(), count: 0,

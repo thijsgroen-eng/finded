@@ -1,7 +1,7 @@
 import type { ExtractedEntity } from './entity-extractor'
 import { positionWeight, gradedMentionFrequency } from './metrics-core'
 import { estimateOpportunity } from '@/lib/estimates'
-import { normalizeName } from './normalize'
+import { normalizeName, identityKey } from './normalize'
 
 export interface CompetitorStats {
   name: string
@@ -223,10 +223,13 @@ export function computeFullMetrics(
     reasons: string[]
   }>()
   const targetKey = normalizeName(targetName)
+  const targetId = identityKey(targetName)
 
   for (const entity of allEntities) {
     const key = normalizeName(entity.name)
-    if (!key || key === targetKey) continue
+    // Exclude the target even when AI spells it with different spacing
+    // ("De Kas" vs entered "Dekas") so it isn't double-counted as a competitor.
+    if (!key || key === targetKey || identityKey(entity.name) === targetId) continue
 
     if (!competitorMap.has(key)) {
       competitorMap.set(key, { name: entity.name, count: 0, positions: [], sentiments: [], reasons: [] })

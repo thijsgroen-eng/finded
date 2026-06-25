@@ -29,6 +29,16 @@ export function normalizeName(name: string | null | undefined): string {
   return s
 }
 
+/**
+ * Space-insensitive identity key — the normalized name with internal spaces
+ * removed. Bridges spacing / data-entry differences so "Dekas" and "De Kas"
+ * (and "Restaurant De Kas") resolve to the same identity: "dekas". Use for
+ * IS-IT-THE-SAME-PLACE comparisons; keep normalizeName for tokenization.
+ */
+export function identityKey(name: string | null | undefined): string {
+  return normalizeName(name).replace(/\s+/g, '')
+}
+
 const CITY_ALIASES: Record<string, string> = {
   'den haag': 'Den Haag', "'s-gravenhage": 'Den Haag', 's gravenhage': 'Den Haag',
   "'s-hertogenbosch": "'s-Hertogenbosch", 'den bosch': "'s-Hertogenbosch",

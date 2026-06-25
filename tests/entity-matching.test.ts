@@ -35,3 +35,21 @@ test('avoids naive partial false positive on a single short token', () => {
   const r = matchEntity({ name: 'De' }, { name: 'De Kas' })
   assert.equal(r.matched, false)
 })
+
+test('matches across spacing differences: "Dekas" entered vs "Restaurant De Kas"', () => {
+  const r = matchEntity({ name: 'Restaurant De Kas' }, { id: 'r1', name: 'Dekas' })
+  assert.equal(r.matched, true)
+  assert.equal(r.matchedRestaurantId, 'r1')
+  assert.equal(r.reason, 'name match (spacing)')
+})
+
+test('spacing match also works the other direction ("De Kas" entered vs "DeKas")', () => {
+  const r = matchEntity({ name: 'DeKas' }, { name: 'De Kas' })
+  assert.equal(r.matched, true)
+})
+
+test('spacing match still guards tiny names', () => {
+  // "L A" → "la" compact (len 2) must not match a different two-letter place
+  const r = matchEntity({ name: 'L A' }, { name: 'La' })
+  assert.equal(r.matched, false)
+})

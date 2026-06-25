@@ -6,6 +6,8 @@ import { asLevel, computePriorityRank } from '@/lib/audit/recommendation-priorit
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting } from '@/lib/audit/reliability'
+import { resolveAuditLanguage } from '@/lib/settings'
+import { LANGUAGE_NAME_EN } from '@/lib/i18n'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -153,7 +155,12 @@ ${comparison.gaps.length ? comparison.gaps.map((g) => `- ${g}`).join('\n') : '- 
 - Meta title: ${websiteAudit.meta_title ?? 'Not found'}
 - Meta description: ${websiteAudit.meta_description ?? 'Not found'}` : 'No website audit data available'
 
+  const language = await resolveAuditLanguage((restaurant as { country?: string | null }).country)
+  const langName = LANGUAGE_NAME_EN[language]
+
   const prompt = `You are an AI visibility consultant for restaurants. Analyse this restaurant's AI visibility audit and generate specific, actionable recommendations.
+
+IMPORTANT: Write EVERY text field (title, what, why, evidence, impact) entirely in ${langName}. Do not mix languages.
 
 RESTAURANT: ${restaurant.name}
 CITY: ${restaurant.city}
@@ -208,6 +215,7 @@ Rules:
 - Reference real platforms (Google Business Profile, TripAdvisor, etc.)
 - PRIORITISE the cuisine-specific gaps above — a ${cuisineLabel} restaurant should appear for those queries. If it is MISSING from them, the top recommendations must make the cuisine explicit and machine-readable: state ${cuisineLabel} clearly in the homepage copy and meta description, add Restaurant schema with servesCuisine="${restaurant.cuisine ?? '...'}", and ensure the menu is crawlable (not an image/PDF).
 - Do NOT recommend competing for generic "best restaurants in ${restaurant.city}" — that is not where a typical ${cuisineLabel} restaurant wins; focus on cuisine, occasion and neighbourhood queries.
+- Write all text fields in ${langName}.
 - Return ONLY the JSON array, no other text`
 
   try {

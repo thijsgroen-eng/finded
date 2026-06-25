@@ -88,6 +88,15 @@ const L = (lang: Language) => lang === 'nl' ? {
   ctaPrice: '€49 — eenmalig', ctaSub: 'Direct toegang · geen abonnement · geen verkoopgesprek',
   fixExamples: ['Restaurant-schema (JSON-LD) toevoegen', 'Keuken benoemen in metadata & homepage', 'Crawlbaar HTML-menu met gerechten', 'Over-pagina met verhaal & credentials', 'Google-bedrijfsprofiel claimen & optimaliseren'],
   included: ['ChatGPT-, Claude-, Gemini- & Perplexity-analyse', 'Nederlandse & Engelse bewijzen per zoekopdracht', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Geprioriteerde aanbevelingen + 30-dagen actieplan'],
+  coverSubFree: 'Een snelle blik op of AI jouw restaurant aanraadt.',
+  coverSubImpl: 'Kant-en-klare onderdelen om te verbeteren hoe AI jouw restaurant aanraadt.',
+  coverSubAudit: 'Waarom AI sommige restaurants aanraadt en andere niet — en wat je eraan kunt doen.',
+  restaurantCol: 'Restaurant', youSuffix: '(jij)',
+  rankDoFirst: 'EERST DOEN', rankDoNext: 'DAARNA', rankOptional: 'OPTIONEEL',
+  impactLabel: 'Impact', effortLabel: 'inspanning',
+  noCitations: 'Geen bronvermeldingen gevonden voor deze audit.',
+  implPlaceholder: 'Genereer de fix-onderdelen uit de audit (schema, FAQ, content) om ze hier op te nemen.',
+  followUpBody: 'Nadat de wijzigingen live zijn, draaien we de audit opnieuw en tonen we de zichtbaarheid vóór/na, zodat je de impact ziet.',
 } : {
   planFree: 'FREE CHECK', planAudit: 'FULL AUDIT', planImpl: 'IMPLEMENTATION',
   status: 'AI visibility status', appeared: (x: number, y: number) => `Appeared in ${x} of ${y} successful AI responses tested.`,
@@ -111,6 +120,15 @@ const L = (lang: Language) => lang === 'nl' ? {
   ctaPrice: '€49 — one-time', ctaSub: 'Instant access · no subscription · no sales call',
   fixExamples: ['Add Restaurant JSON-LD structured data', 'Declare your cuisine in metadata & homepage', 'Crawlable HTML menu with dishes', 'About page with story & credentials', 'Claim & optimise Google Business Profile'],
   included: ['ChatGPT, Claude, Gemini & Perplexity analysis', 'Dutch & English prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data review', 'Prioritised recommendations + 30-day action plan'],
+  coverSubFree: 'A quick look at whether AI recommends your restaurant.',
+  coverSubImpl: 'Ready-to-use deliverables to improve how AI recommends your restaurant.',
+  coverSubAudit: 'Why AI recommends some restaurants and not others — and what to do about it.',
+  restaurantCol: 'Restaurant', youSuffix: '(you)',
+  rankDoFirst: 'DO FIRST', rankDoNext: 'DO NEXT', rankOptional: 'OPTIONAL',
+  impactLabel: 'Impact', effortLabel: 'effort',
+  noCitations: 'No citation sources were returned for this audit.',
+  implPlaceholder: 'Generate the fix assets from the audit (schema, FAQ, content) to include them here.',
+  followUpBody: 'After the changes are live, we re-run the audit and show before / after visibility so you can see the impact.',
 }
 
 const s = StyleSheet.create({
@@ -210,7 +228,7 @@ function CompetitorTable({ data, t }: { data: ReportData; t: ReturnType<typeof L
       <SectionTitle>{t.competitors}</SectionTitle>
       <View style={s.table}>
         <View style={s.tHead}>
-          <Text style={[s.tHeadCell, { flex: 1 }]}>Restaurant</Text>
+          <Text style={[s.tHeadCell, { flex: 1 }]}>{t.restaurantCol}</Text>
           <Text style={[s.tHeadCell, { width: 70, textAlign: 'right' }]}>{t.mentions}</Text>
         </View>
         {data.competitors.map((c, i) => (
@@ -223,7 +241,7 @@ function CompetitorTable({ data, t }: { data: ReportData; t: ReturnType<typeof L
           </View>
         ))}
         <View style={[s.tRow, { backgroundColor: PANEL }]}>
-          <Text style={[s.tName, { fontFamily: 'Helvetica-Bold' }]}>{data.restaurantName} (you)</Text>
+          <Text style={[s.tName, { fontFamily: 'Helvetica-Bold' }]}>{data.restaurantName} {t.youSuffix}</Text>
           <Text style={[s.tNum, { fontFamily: 'Helvetica-Bold', color: data.appeared.x > 0 ? INK : RED }]}>{data.appeared.x}×</Text>
         </View>
       </View>
@@ -291,7 +309,7 @@ function Recommendations({ data, t }: { data: ReportData; t: ReturnType<typeof L
   if (data.recommendations.length === 0) return null
   const order: Record<string, number> = { do_first: 0, do_next: 1, optional: 2 }
   const recs = [...data.recommendations].sort((a, b) => (order[a.priority_rank ?? 'do_next'] ?? 1) - (order[b.priority_rank ?? 'do_next'] ?? 1))
-  const rankLabel = (r?: string | null) => r === 'do_first' ? 'DO FIRST' : r === 'optional' ? 'OPTIONAL' : 'DO NEXT'
+  const rankLabel = (r?: string | null) => r === 'do_first' ? t.rankDoFirst : r === 'optional' ? t.rankOptional : t.rankDoNext
   return (
     <View style={s.section}>
       <SectionTitle>{t.recommendations}</SectionTitle>
@@ -301,7 +319,7 @@ function Recommendations({ data, t }: { data: ReportData; t: ReturnType<typeof L
           <View style={s.recBody}>
             <Text style={s.recTitle}>{r.title}  <Text style={[s.recMeta, { color: rankColor(r.priority_rank) }]}>{rankLabel(r.priority_rank)}</Text></Text>
             <Text style={s.recDesc}>{r.description}</Text>
-            {r.expected_impact && <Text style={[s.recDesc, { color: GREEN }]}>Impact: {r.expected_impact} · effort {r.effort ?? '—'}</Text>}
+            {r.expected_impact && <Text style={[s.recDesc, { color: GREEN }]}>{t.impactLabel}: {r.expected_impact} · {t.effortLabel} {r.effort ?? '—'}</Text>}
           </View>
         </View>
       ))}
@@ -462,9 +480,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
           <Text style={s.coverMeta}>{[data.city, data.cuisine].filter(Boolean).join('  ·  ') || ' '}</Text>
           <View style={s.coverRule} />
           <Text style={s.coverTitle}>
-            {isFree ? 'A quick look at whether AI recommends your restaurant.'
-              : isImpl ? 'Ready-to-use deliverables to improve how AI recommends your restaurant.'
-              : 'Why AI recommends some restaurants and not others — and what to do about it.'}
+            {isFree ? t.coverSubFree : isImpl ? t.coverSubImpl : t.coverSubAudit}
           </Text>
         </View>
         <Text style={s.coverFoot}>{rs.auditedOn} {data.auditDate}</Text>
@@ -577,7 +593,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
                   <View style={s.chipRow}>{data.authorityPlatforms.map((p, i) => <Text key={i} style={s.chip}>{p}</Text>)}</View>
                   <Text style={[s.body, { marginTop: 6 }]}>{data.ownCited ? t.cited : t.notCited}.</Text>
                 </>
-              ) : <Text style={s.body}>No citation sources were returned for this audit.</Text>}
+              ) : <Text style={s.body}>{t.noCitations}</Text>}
             </View>
 
             {/* Recommendations */}
@@ -593,7 +609,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             <View style={s.section}>
               <SectionTitle>{t.execution}</SectionTitle>
               {data.generatedAssets.length === 0 ? (
-                <Text style={s.body}>Generate the fix assets from the audit (schema, FAQ, content) to include them here.</Text>
+                <Text style={s.body}>{t.implPlaceholder}</Text>
               ) : (
                 data.generatedAssets.map((a, i) => (
                   <View key={i} style={s.asset} wrap={false}>
@@ -606,7 +622,7 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             <PlanBuckets title={t.roadmap} buckets={data.roadmap} />
             <View style={s.section}>
               <SectionTitle>{t.followUp}</SectionTitle>
-              <Text style={s.body}>After the changes are live, we re-run the audit and show before / after visibility so you can see the impact.</Text>
+              <Text style={s.body}>{t.followUpBody}</Text>
             </View>
           </>
         )}

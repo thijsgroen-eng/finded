@@ -16,12 +16,14 @@ import { AuditControls } from '@/components/admin/audit-controls'
 import { ReportSender } from '@/components/admin/report-sender'
 import {
   ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel, AuthorityPanel,
+  CompetitorComparisonCard,
 } from '@/components/admin/audit-evidence'
 import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { buildVisibilitySummary } from '@/lib/audit/summary'
 import { buildDataQuality } from '@/lib/audit/data-quality'
 import { buildKeyFindings, buildCompetitorObservations } from '@/lib/audit/findings'
+import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
@@ -69,6 +71,10 @@ async function getAuditData(id: string) {
   const { data: req } = await supabaseAdmin
     .from('audit_requests').select('email').eq('audit_id', id).maybeSingle()
 
+  // Crawled competitor sites for the comparison ("why they win").
+  const { data: competitorAudits } = await supabaseAdmin
+    .from('competitor_audits').select('competitor_name, website, signals').eq('audit_id', id)
+
   const metrics = computeMetrics(mentions ?? [])
   const runAccounting = buildRunAccounting(modelRuns ?? [])
   const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [], entities ?? [])
@@ -79,6 +85,7 @@ async function getAuditData(id: string) {
     audit, entity, websiteAudit, metrics, modelRuns: modelRuns ?? [], visibilityScore,
     competitors: competitors ?? [], signalGaps: signalGaps ?? [],
     runAccounting, promptEvidence, extractionConfidence, authority, requestEmail: req?.email ?? null,
+    competitorAudits: competitorAudits ?? [],
   }
 }
 
@@ -106,7 +113,7 @@ export default async function AuditDetailPage({
   if (!data) notFound()
 
   const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
-          runAccounting, promptEvidence, extractionConfidence, authority } = data
+          runAccounting, promptEvidence, extractionConfidence, authority, competitorAudits } = data
 
   const visScore       = visibilityScore?.visibility_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
@@ -126,6 +133,13 @@ export default async function AuditDetailPage({
   const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
   const keyFindings = buildKeyFindings({ mentioned, ownCited: authority.ownCited, presentSignals: presentSignalLabels, gapSignals: gapSignalLabels })
   const observations = buildCompetitorObservations({ mentioned, ownCited: authority.ownCited, authorityPlatforms: authority.platforms.map((p) => p.label), topCompetitors: competitorList, gapSignals: gapSignalLabels })
+  // Competitor visibility comparison — grade the same AI-readable signals for you vs each crawled competitor.
+  const competitorComparison = buildCompetitorComparison(
+    websiteAudit ?? {},
+    competitorAudits.map((ca: { competitor_name: string; website: string | null; signals: any }) => ({
+      name: ca.competitor_name, website: ca.website, signals: ca.signals,
+    })),
+  )
   const visibilitySummary = buildVisibilitySummary({
     restaurantName: entity.name,
     totalMentions: myMentions,
@@ -333,6 +347,9 @@ export default async function AuditDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Why competitors may be winning — signal-by-signal comparison of crawled competitor sites */}
+      <CompetitorComparisonCard comparison={competitorComparison} />
 
       {/* Model breakdown + sentiment */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">

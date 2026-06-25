@@ -462,6 +462,32 @@ export const auditFunction = inngest.createFunction(
         .eq('id', audit_id)
     })
 
+    // ── Step 6b: Crawl top competitors (why they're recommended instead) ──────
+    // Reuses the website crawler (no external API). Resolves each competitor's
+    // own site from the AI citation sources; skips ones we can't confidently match.
+    await step.run(`crawl-competitors-${audit_id}`, async () => {
+      const [{ data: comps }, { data: srcRows }] = await Promise.all([
+        supabaseAdmin.from('competitors').select('name, canonical_key, mention_count').eq('audit_id', audit_id).order('mention_count', { ascending: false }).limit(3),
+        supabaseAdmin.from('model_runs').select('sources').eq('audit_id', audit_id),
+      ])
+      if (!comps || comps.length === 0) return { crawled: 0 }
+      const sources = (srcRows ?? []).flatMap((r: any) => Array.isArray(r.sources) ? r.sources : [])
+
+      const { resolveCompetitorUrl } = await import('@/lib/audit/competitor-resolve')
+      let crawled = 0
+      for (const c of comps) {
+        const url = resolveCompetitorUrl(c.name, sources)
+        if (!url) continue
+        const signals = await auditWebsite(url).catch(() => null)
+        if (!signals || signals.error) continue
+        await supabaseAdmin.from('competitor_audits').insert({
+          audit_id, competitor_name: c.name, normalized_name: c.canonical_key, website: url, signals,
+        })
+        crawled++
+      }
+      return { crawled }
+    })
+
     // ── Step 6c: Save score history ───────────────────────────
     await step.run(`save-score-history-${audit_id}`, async () => {
       const { data: vs } = await supabaseAdmin

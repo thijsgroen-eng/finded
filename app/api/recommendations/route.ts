@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeMetrics } from '@/lib/engine/metrics'
 import { FIX_TYPES, FIX_TYPE_HINTS, asFixType } from '@/lib/engine/fix-types'
 import { asLevel, computePriorityRank } from '@/lib/audit/recommendation-priority'
+import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -22,12 +23,13 @@ export async function POST(request: NextRequest) {
 
   if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
 
-  const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }, { data: competitors }, { data: vs }] = await Promise.all([
+  const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }, { data: competitors }, { data: vs }, { data: competitorAudits }] = await Promise.all([
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', audit_id).single(),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, prompt_text').eq('audit_id', audit_id),
     supabaseAdmin.from('competitors').select('name, mention_count, providers').eq('audit_id', audit_id).order('mention_count', { ascending: false }).limit(5),
     supabaseAdmin.from('visibility_scores').select('score_breakdown, visibility_score, confidence_score').eq('audit_id', audit_id).single(),
+    supabaseAdmin.from('competitor_audits').select('competitor_name, website, signals').eq('audit_id', audit_id),
   ])
 
   const metrics = computeMetrics(mentions ?? [])
@@ -65,6 +67,23 @@ CUISINE-SPECIFIC VISIBILITY (the queries a ${cuisineLabel} restaurant should win
     : `\n\nCOMPETITOR GAP (AI recommends these instead — close this gap):\n${(competitors ?? [])
         .map(c => `- ${c.name}: ${c.mention_count} mentions vs your ${myMentions}`).join('\n')}`
 
+  // Competitor signal comparison: we DID crawl the top competitors' websites, so
+  // we can connect "competitor signal → visibility outcome → suggested action".
+  // Only signals actually detected appear here (no SEO/backlink/authority claims).
+  const comparison = buildCompetitorComparison(
+    websiteAudit ?? {},
+    (competitorAudits ?? []).map((ca) => ({ name: ca.competitor_name, website: ca.website, signals: ca.signals })),
+  )
+  const competitorSignals = comparison.crawled === 0
+    ? '\n\nCOMPETITOR WEBSITE SIGNALS: no competitor sites could be crawled — do NOT make any claims about competitors\' websites.'
+    : `\n\nCOMPETITOR WEBSITE SIGNALS (${comparison.crawled} competitor site${comparison.crawled === 1 ? '' : 's'} crawled — these signals were actually detected, safe to cite):
+Signal-by-signal grade (You vs competitors):
+${comparison.rows.map((r) => `- ${r.label}: you=${r.you}; ${r.competitors.map((c) => `${c.name}=${c.grade ?? 'n/a'}`).join('; ')}`).join('\n')}
+Why competitors may win:
+${comparison.whyWin.map((w) => `- ${w.reasons}`).join('\n')}
+Biggest competitive gaps (turn these into recommendations):
+${comparison.gaps.length ? comparison.gaps.map((g) => `- ${g}`).join('\n') : '- none — your signals match or exceed the crawled competitors'}`
+
   // Stored score breakdown: target the weakest components.
   const breakdown = (vs?.score_breakdown as { components?: { label: string; score: number }[] } | null)?.components
   const scoreContext = breakdown?.length
@@ -101,7 +120,7 @@ SENTIMENT: ${metrics.sentiment_breakdown.positive} positive, ${metrics.sentiment
 
 WEBSITE SIGNALS:
 ${websiteSignals}
-${cuisineAnalysis}${competitorGap}${scoreContext}
+${cuisineAnalysis}${competitorGap}${competitorSignals}${scoreContext}
 
 Generate exactly 5 specific, prioritised recommendations to improve this restaurant's AI visibility.
 Base each recommendation on the evidence above: the weakest score components, missing website signals, the competitor gap, and the cuisine prompt misses.
@@ -127,7 +146,8 @@ Rules:
 - "type" MUST be exactly one of the listed values or null — do not invent types.
 - "impact_level" = how much this is likely to move AI visibility; "effort" = how hard it is for the owner.
 - "evidence" must quote a real number/signal from the audit data above, not a generality.
-- Where relevant, tie the recommendation to the COMPETITOR GAP — reference the competitors that are named instead and the specific prompts where they appear and this restaurant doesn't. Do NOT claim anything about competitors' own websites (we didn't inspect them); only cite the mention/prompt evidence above.
+- Where relevant, tie the recommendation to the COMPETITOR GAP — reference the competitors that are named instead and the specific prompts where they appear and this restaurant doesn't.
+- When COMPETITOR WEBSITE SIGNALS are available, connect the chain explicitly: competitor signal → why AI can recommend them → the specific action that closes the gap (e.g. "Competitor X has a crawlable HTML menu and you have a PDF — publish your menu as HTML text"). ONLY cite competitor website signals that appear in the COMPETITOR WEBSITE SIGNALS block above; if none were crawled, make NO claims about competitors' websites. Never mention domain authority, backlinks, or traditional SEO — only what AI can read and extract.
 - Be SPECIFIC to this restaurant's actual data
 - Prioritise by impact: fix what will move the needle most first
 - Give concrete actions, not vague advice

@@ -37,6 +37,12 @@ export interface ReportData {
   competitors: { name: string; mention_count: number; providers: string[] }[]
   promptEvidence: { prompt: string; category: string | null; recommended: string[]; mentioned: boolean; sources: string[] }[]
   categoryPerformance: { category: string; appeared: number; total: number }[]
+  competitorComparison: {
+    crawled: number
+    rows: { label: string; you: string; competitors: { name: string; grade: string | null }[] }[]
+    whyWin: { name: string; reasons: string }[]
+    gaps: string[]
+  }
   recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null }[]
   actionPlan: { label: string; items: string[] }[]
   roadmap: { label: string; items: string[] }[]
@@ -55,6 +61,7 @@ const statusColor = (s: string) => s.startsWith('Strong') ? GREEN : s.startsWith
 const dqColor = (l: string) => l === 'High' ? GREEN : l === 'Medium' ? AMBER : RED
 const strengthColor = (s: string) => (s === 'Strong' || s === 'Present') ? GREEN : s === 'Weak' ? AMBER : RED
 const rankColor = (r?: string | null) => r === 'do_first' ? RED : r === 'optional' ? FAINT : AMBER
+const gradeColor = (g?: string | null) => g === 'Strong' ? GREEN : g === 'Medium' ? AMBER : g == null ? FAINT : RED
 
 // Bilingual labels for the new sections (methodology/limitations come from reportStrings).
 const L = (lang: Language) => lang === 'nl' ? {
@@ -65,6 +72,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   mentions: 'vermeldingen', snapshot: 'Website-overzicht', perModel: 'Per AI-model',
   categoryPerf: 'Prestatie per categorie', promptEvidence: 'Bewijs per zoekopdracht',
   recommended: 'AI raadde aan', yours: 'Jouw restaurant', notMentioned: 'niet genoemd', mentioned: 'genoemd', sources: 'Bronnen',
+  whyWin: 'Waarom concurrenten mogelijk winnen', whyWinSignal: 'Signaal', whyWinYou: 'Jij', whyWinGaps: 'Grootste concurrentieverschillen',
   websiteReview: 'Websiteanalyse', structuredData: 'Gestructureerde data', authority: 'Bronnen waar AI op vertrouwt',
   recommendations: 'Aanbevelingen', actionPlan: '30-dagen actieplan', roadmap: '90-dagen routekaart',
   execution: 'Implementatiepakket — kant-en-klare onderdelen', faqPackage: 'FAQ-pakket', schemaPackage: 'Gestructureerde-datapakket',
@@ -78,6 +86,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   mentions: 'mentions', snapshot: 'Website snapshot', perModel: 'Per AI model',
   categoryPerf: 'Performance by search type', promptEvidence: 'Prompt-level evidence',
   recommended: 'AI recommended', yours: 'Your restaurant', notMentioned: 'not mentioned', mentioned: 'mentioned', sources: 'Sources',
+  whyWin: 'Why competitors may be winning', whyWinSignal: 'Signal', whyWinYou: 'You', whyWinGaps: 'Biggest competitive gaps',
   websiteReview: 'Website review', structuredData: 'Structured data', authority: 'Sources AI relied on',
   recommendations: 'Recommendations', actionPlan: '30-day action plan', roadmap: '90-day roadmap',
   execution: 'Implementation package — ready-to-use deliverables', faqPackage: 'FAQ package', schemaPackage: 'Structured-data package',
@@ -178,6 +187,46 @@ function CompetitorTable({ data, t }: { data: ReportData; t: ReturnType<typeof L
           <Text style={[s.tNum, { fontFamily: 'Helvetica-Bold', color: data.appeared.x > 0 ? INK : RED }]}>{data.appeared.x}×</Text>
         </View>
       </View>
+    </View>
+  )
+}
+
+function CompetitorComparison({ data, t }: { data: ReportData; t: ReturnType<typeof L> }) {
+  const cc = data.competitorComparison
+  if (!cc || cc.crawled === 0) return null
+  const names = cc.rows[0]?.competitors.map((c) => c.name) ?? []
+  return (
+    <View style={s.section} wrap={false}>
+      <SectionTitle>{t.whyWin}</SectionTitle>
+      <View style={s.table}>
+        <View style={s.tHead}>
+          <Text style={[s.tHeadCell, { flex: 1.4 }]}>{t.whyWinSignal}</Text>
+          <Text style={[s.tHeadCell, { flex: 1 }]}>{t.whyWinYou}</Text>
+          {names.map((n, i) => <Text key={i} style={[s.tHeadCell, { flex: 1 }]}>{n}</Text>)}
+        </View>
+        {cc.rows.map((r, i) => (
+          <View key={i} style={s.tRow}>
+            <Text style={[{ flex: 1.4, fontSize: 9, color: INK }]}>{r.label}</Text>
+            <Text style={[{ flex: 1, fontSize: 9, fontFamily: 'Helvetica-Bold', color: gradeColor(r.you) }]}>{r.you}</Text>
+            {r.competitors.map((c, j) => (
+              <Text key={j} style={[{ flex: 1, fontSize: 9, fontFamily: 'Helvetica-Bold', color: gradeColor(c.grade) }]}>{c.grade ?? '—'}</Text>
+            ))}
+          </View>
+        ))}
+      </View>
+      {cc.whyWin.length > 0 && (
+        <View style={{ marginTop: 8 }}>
+          {cc.whyWin.map((w, i) => (
+            <Text key={i} style={[s.body, { marginBottom: 2 }]}><Text style={{ fontFamily: 'Helvetica-Bold', color: INK }}>{w.name}: </Text>{w.reasons}</Text>
+          ))}
+        </View>
+      )}
+      {cc.gaps.length > 0 && (
+        <View style={{ marginTop: 8, backgroundColor: PANEL, borderRadius: 6, padding: 10 }}>
+          <Text style={[s.recMeta, { color: AMBER, marginBottom: 4 }]}>{t.whyWinGaps}</Text>
+          {cc.gaps.map((g, i) => <Text key={i} style={[s.body, { marginBottom: 2 }]}>• {g}</Text>)}
+        </View>
+      )}
     </View>
   )
 }
@@ -350,6 +399,9 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
                 ))}
               </View>
             )}
+
+            {/* Why competitors may be winning — signal comparison of crawled competitor sites */}
+            <CompetitorComparison data={data} t={t} />
 
             {/* Website review */}
             <View style={s.section}>

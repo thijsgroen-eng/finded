@@ -314,6 +314,73 @@ export function AuthorityPanel({ authority }: { authority: AuthoritySignals }) {
   )
 }
 
+// ── Competitor comparison (why they're recommended instead) ─────────────────────
+type Grade = 'Strong' | 'Medium' | 'Weak' | 'Missing'
+export interface CompetitorComparison {
+  rows: { key: string; label: string; you: Grade; competitors: { name: string; grade: Grade | null }[] }[]
+  whyWin: { name: string; reasons: string }[]
+  gaps: string[]
+  crawled: number
+}
+
+const gradeStyle = (g: Grade | null) =>
+  g === 'Strong' ? 'text-emerald-600' : g === 'Medium' ? 'text-amber-600' : g == null ? 'text-gray-300' : 'text-red-500'
+
+export function CompetitorComparisonCard({ comparison }: { comparison: CompetitorComparison }) {
+  if (comparison.crawled === 0) return null
+  const names = comparison.rows[0]?.competitors.map((c) => c.name) ?? []
+  return (
+    <Card className="mb-5">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Why competitors may be winning</CardTitle>
+          <span className="text-xs text-gray-400">{comparison.crawled} competitor site{comparison.crawled === 1 ? '' : 's'} analysed</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs text-gray-400">
+                <th className="py-2 pr-4 font-medium">Signal</th>
+                <th className="py-2 pr-4 font-medium">You</th>
+                {names.map((n) => <th key={n} className="py-2 pr-4 font-medium truncate max-w-[120px]" title={n}>{n}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.rows.map((r) => (
+                <tr key={r.key} className="border-b border-gray-50 last:border-0">
+                  <td className="py-2 pr-4 text-gray-700">{r.label}</td>
+                  <td className={`py-2 pr-4 font-medium ${gradeStyle(r.you)}`}>{r.you}</td>
+                  {r.competitors.map((c, i) => (
+                    <td key={i} className={`py-2 pr-4 font-medium ${gradeStyle(c.grade)}`}>{c.grade ?? '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {comparison.whyWin.length > 0 && (
+          <div className="space-y-1.5 mb-3">
+            {comparison.whyWin.map((w, i) => (
+              <p key={i} className="text-sm text-gray-600"><span className="font-medium text-gray-800">{w.name}:</span> {w.reasons}</p>
+            ))}
+          </div>
+        )}
+        {comparison.gaps.length > 0 && (
+          <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-3">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Biggest competitive gaps</p>
+            <ul className="space-y-1">
+              {comparison.gaps.map((g, i) => <li key={i} className="text-sm text-gray-700 flex gap-2"><span className="text-amber-400">•</span><span>{g}</span></li>)}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── Methodology & limitations ───────────────────────────────────────────────────
 export function MethodologyCard({ acc, language }: { acc: RunAccounting; language: string }) {
   return (

@@ -8,6 +8,7 @@ import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { buildRunAccounting, buildPromptEvidence } from '@/lib/engine/audit-evidence'
 import { buildDataQuality } from '@/lib/audit/data-quality'
 import { buildKeyFindings } from '@/lib/audit/findings'
+import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { visibilityStatus, websiteSnapshot, categoryPerformance, actionPlanWeeks, roadmap90 } from '@/lib/audit/report-sections'
 import { ReportDocument, ReportData, ReportVariant, normalizeVariant } from '@/lib/report/report-document'
 
@@ -50,6 +51,10 @@ export async function buildReportPdf(
     supabaseAdmin.from('entities').select('prompt_id, model, name, confidence, is_target, normalized_name').eq('audit_id', auditId),
   ])
 
+  // Crawled competitor sites → signal-by-signal comparison ("why competitors may be winning").
+  const { data: competitorAudits } = await supabaseAdmin
+    .from('competitor_audits').select('competitor_name, website, signals').eq('audit_id', auditId)
+
   if (!vs) return { ok: false, status: 409, error: 'Audit not complete — no visibility score yet' }
 
   // For the implementation package, pull the generated execution assets.
@@ -71,6 +76,10 @@ export async function buildReportPdf(
   const authority = buildAuthoritySignals(allSources, restaurant.domain)
   const wsSignals = toWebsiteSignals(websiteAudit, { cuisine: restaurant.cuisine, city: restaurant.city })
   const promptEv = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [], entities ?? [])
+  const competitorComparison = buildCompetitorComparison(
+    websiteAudit ?? {},
+    (competitorAudits ?? []).map((ca) => ({ name: ca.competitor_name, website: ca.website, signals: ca.signals })),
+  )
 
   const mentioned = metrics.total_mentions > 0
   const mentionFreqPct = Number(vs.mention_frequency ?? metrics.mention_frequency ?? 0) * 100
@@ -121,6 +130,12 @@ export async function buildReportPdf(
       sources: p.sources ?? [],
     })),
     categoryPerformance: categoryPerformance(promptEv.map((p) => ({ category: p.category, mentioned_any: p.mentioned_any }))),
+    competitorComparison: {
+      crawled: competitorComparison.crawled,
+      rows: competitorComparison.rows.map((r) => ({ label: r.label, you: r.you, competitors: r.competitors })),
+      whyWin: competitorComparison.whyWin,
+      gaps: competitorComparison.gaps,
+    },
 
     recommendations: recs,
     actionPlan: actionPlanWeeks(recs),

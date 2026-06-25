@@ -113,10 +113,15 @@ export const auditFunction = inngest.createFunction(
 
     // ── Step 3: Generate prompts ──────────────────────────────
     const { prompts } = await step.run(`generate-prompts-${audit_id}`, async () => {
-      // Use business_type if available, fall back to cuisine/category, then 'restaurant'
-      const businessType = entity.business_type ?? 'restaurant'
-      const subtypes: string[] = entity.subtypes
-        ?? (entity.cuisine ? [entity.cuisine] : [businessType])
+      // Finded is restaurant-first, so always generate RESTAURANT prompts. A stored
+      // business_type like 'other' would otherwise hit the generic fallback templates
+      // and produce meaningless prompts ("Beste other other Amsterdam"). Cuisine
+      // (when known) drives the cuisine-specific prompts; no cuisine → those are
+      // simply skipped rather than filled with a placeholder.
+      const businessType = 'restaurant'
+      const subtypes: string[] = (entity.subtypes && entity.subtypes.length)
+        ? entity.subtypes
+        : (entity.cuisine ? [entity.cuisine] : [])
 
       // Cap at MAX_PROMPTS: sampling multiplies calls by SAMPLES × providers, so
       // we use the top of the (cuisine-forward) quick set to bound cost/timeout.

@@ -32,7 +32,7 @@ export async function createAuditFromRequest(req: AuditRequestRow): Promise<{ au
       city,
       country:       business?.country || 'Netherlands',
       cuisine:       business?.subtypes?.[0] || null,
-      business_type: business?.business_type || 'restaurant',
+      business_type: 'restaurant', // restaurant-only product; never store the generic 'other'
       subtypes:      business?.subtypes?.length ? business.subtypes : null,
     })
     .select()

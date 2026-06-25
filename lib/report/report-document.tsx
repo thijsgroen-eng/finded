@@ -80,6 +80,14 @@ const L = (lang: Language) => lang === 'nl' ? {
   execution: 'Implementatiepakket — kant-en-klare onderdelen', faqPackage: 'FAQ-pakket', schemaPackage: 'Gestructureerde-datapakket',
   positioning: 'Concurrentiepositionering', followUp: 'Vervolg-zichtbaarheidscheck',
   upgradeTitle: 'Wil je weten waaróm?', cited: 'jouw site werd genoemd', notCited: 'jouw site werd niet genoemd',
+  pitchKicker: 'VOLLEDIGE AUDIT', pitchTitle: 'Ontdek waaróm AI je concurrenten aanraadt',
+  pitchSub: 'Deze gratis check laat zien dát je niet wordt aanbevolen. De volledige audit laat zien waaróm — en wat je eraan kunt doen.',
+  previewTitle: 'Voorbeeld: jij vs. de top concurrenten', previewCaption: 'De volledige audit beoordeelt elk signaal voor jou én elke concurrent.',
+  locked: 'Vergrendeld', sampleFixesTitle: 'Voorbeelden van de verbeteringen die we prioriteren',
+  includedTitle: 'Inbegrepen in de volledige audit', ctaTitle: 'Ontgrendel de volledige audit',
+  ctaPrice: '€49 — eenmalig', ctaSub: 'Direct toegang · geen abonnement · geen verkoopgesprek',
+  fixExamples: ['Restaurant-schema (JSON-LD) toevoegen', 'Keuken benoemen in metadata & homepage', 'Crawlbaar HTML-menu met gerechten', 'Over-pagina met verhaal & credentials', 'Google-bedrijfsprofiel claimen & optimaliseren'],
+  included: ['ChatGPT-, Claude-, Gemini- & Perplexity-analyse', 'Nederlandse & Engelse bewijzen per zoekopdracht', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Geprioriteerde aanbevelingen + 30-dagen actieplan'],
 } : {
   planFree: 'FREE CHECK', planAudit: 'FULL AUDIT', planImpl: 'IMPLEMENTATION',
   status: 'AI visibility status', appeared: (x: number, y: number) => `Appeared in ${x} of ${y} successful AI responses tested.`,
@@ -95,6 +103,14 @@ const L = (lang: Language) => lang === 'nl' ? {
   execution: 'Implementation package — ready-to-use deliverables', faqPackage: 'FAQ package', schemaPackage: 'Structured-data package',
   positioning: 'Competitor positioning', followUp: 'Follow-up visibility check',
   upgradeTitle: 'Want to know why?', cited: 'your site was cited', notCited: 'your site was not cited',
+  pitchKicker: 'FULL AUDIT', pitchTitle: 'See why AI recommends your competitors',
+  pitchSub: 'This free check shows that you’re not being recommended. The full audit shows why — and exactly what to do about it.',
+  previewTitle: 'Preview: you vs. the top competitors', previewCaption: 'The full audit grades every signal for you and each competitor.',
+  locked: 'Locked', sampleFixesTitle: 'Examples of the fixes we prioritise',
+  includedTitle: 'Included in the full audit', ctaTitle: 'Unlock the full audit',
+  ctaPrice: '€49 — one-time', ctaSub: 'Instant access · no subscription · no sales call',
+  fixExamples: ['Add Restaurant JSON-LD structured data', 'Declare your cuisine in metadata & homepage', 'Crawlable HTML menu with dishes', 'About page with story & credentials', 'Claim & optimise Google Business Profile'],
+  included: ['ChatGPT, Claude, Gemini & Perplexity analysis', 'Dutch & English prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data review', 'Prioritised recommendations + 30-day action plan'],
 }
 
 const s = StyleSheet.create({
@@ -110,7 +126,7 @@ const s = StyleSheet.create({
   coverTitle: { fontSize: 13, color: '#cdd9e5', marginTop: 22, maxWidth: 400, lineHeight: 1.5 },
   coverFoot: { fontSize: 9, color: '#6f8298' },
 
-  page: { padding: 40, paddingBottom: 64, fontSize: 10, color: INK, fontFamily: 'Helvetica', lineHeight: 1.45 },
+  page: { paddingTop: 60, paddingLeft: 40, paddingRight: 40, paddingBottom: 64, fontSize: 10, color: INK, fontFamily: 'Helvetica', lineHeight: 1.45 },
   section: { marginBottom: 18 },
   sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
   body: { fontSize: 9.5, color: MUTED, lineHeight: 1.5 },
@@ -160,6 +176,27 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 26, left: 40, right: 40, borderTop: `1pt solid ${LINE}`, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 6.5, color: FAINT, maxWidth: 380, lineHeight: 1.3 },
   footerBrand: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: FAINT },
+
+  // Running header — repeated on every content page for a consistent look.
+  runHeader: { position: 'absolute', top: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1pt solid ${LINE}`, paddingBottom: 7 },
+  rhLeft: { flexDirection: 'row', alignItems: 'center' },
+  rhDot: { width: 8, height: 8, borderRadius: 2, backgroundColor: ORANGE, marginRight: 6 },
+  rhBrand: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: NAVY },
+  rhName: { fontSize: 9, color: MUTED },
+  rhBadge: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: NAVY, backgroundColor: '#fbe8d6', paddingVertical: 2, paddingHorizontal: 6, borderRadius: 3, letterSpacing: 0.5, marginLeft: 8 },
+
+  // Free-report "full audit" pitch.
+  pitchHero: { backgroundColor: NAVY, borderRadius: 10, padding: 22, marginBottom: 16 },
+  pitchKicker: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: ORANGE, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  pitchTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: WHITE, lineHeight: 1.2 },
+  pitchSub: { fontSize: 10, color: '#cdd9e5', marginTop: 8, lineHeight: 1.5 },
+  lockCell: { flex: 1, fontSize: 9, fontFamily: 'Helvetica-Bold', color: FAINT },
+  caption: { fontSize: 8.5, color: FAINT, marginTop: 6 },
+  twoCol: { flexDirection: 'row', gap: 14, marginBottom: 16 },
+  ctaBox: { backgroundColor: ORANGE, borderRadius: 10, padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ctaTitle: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: NAVY },
+  ctaSub: { fontSize: 9, color: '#5a3a1a', marginTop: 3 },
+  ctaPrice: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: NAVY },
 })
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -287,6 +324,123 @@ function PlanBuckets({ title, buckets }: { title: string; buckets: { label: stri
   )
 }
 
+// Consistent chrome repeated on every content page.
+function RunHeader({ data, planLabel }: { data: ReportData; planLabel: string }) {
+  return (
+    <View style={s.runHeader} fixed>
+      <View style={s.rhLeft}>
+        <View style={s.rhDot} />
+        <Text style={s.rhBrand}>Finded</Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={s.rhName}>{data.restaurantName}</Text>
+        <Text style={s.rhBadge}>{planLabel}</Text>
+      </View>
+    </View>
+  )
+}
+
+function Footer({ caveat }: { caveat: string }) {
+  return (
+    <View style={s.footer} fixed>
+      <Text style={s.footerText}>{caveat}</Text>
+      <Text style={s.footerBrand} render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `finded.vercel.app  ·  ${pageNumber}/${totalPages}`} />
+    </View>
+  )
+}
+
+// Status hero (shared by all tiers).
+function StatusHero({ data, t }: { data: ReportData; t: ReturnType<typeof L> }) {
+  return (
+    <>
+      <View style={s.hero}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 9, color: ORANGE, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 1 }}>{t.status}</Text>
+          <Text style={[s.statusBig, { color: statusColor(data.status) }]}>{data.status}</Text>
+          <Text style={s.heroSub}>{t.appeared(data.appeared.x, data.appeared.y)}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[s.dqBadge, { backgroundColor: dqColor(data.dataQuality.level) }]}>{t.dataQuality}: {data.dataQuality.level}</Text>
+          <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100</Text>
+        </View>
+      </View>
+      {data.reliability.band === 'yellow' && (
+        <View style={{ backgroundColor: '#fef3c7', border: `1pt solid #fcd34d`, borderRadius: 6, padding: 10, marginBottom: 16 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: AMBER }}>{t.reducedConfidence}</Text>
+          <Text style={{ fontSize: 8.5, color: '#92400e', marginTop: 2 }}>{data.reliability.detail}</Text>
+        </View>
+      )}
+    </>
+  )
+}
+
+// Free-tier conversion page: preview of the locked analysis + what you get + CTA.
+function FullAuditPitch({ data, t }: { data: ReportData; t: ReturnType<typeof L> }) {
+  const cc = data.competitorComparison
+  const names = cc?.rows?.[0]?.competitors?.map((c) => c.name).slice(0, 3) ?? []
+  const lockCols = names.length ? names : ['', '', '']
+  const showPreview = !!cc && cc.rows.length > 0
+  return (
+    <>
+      <View style={s.pitchHero}>
+        <Text style={s.pitchKicker}>{t.pitchKicker} · {t.ctaPrice}</Text>
+        <Text style={s.pitchTitle}>{t.pitchTitle}</Text>
+        <Text style={s.pitchSub}>{t.pitchSub}</Text>
+      </View>
+
+      {showPreview && (
+        <View style={s.section}>
+          <SectionTitle>{t.previewTitle}</SectionTitle>
+          <View style={s.table}>
+            <View style={s.tHead}>
+              <Text style={[s.tHeadCell, { flex: 1.4 }]}>{t.whyWinSignal}</Text>
+              <Text style={[s.tHeadCell, { flex: 1 }]}>{t.whyWinYou}</Text>
+              {lockCols.map((n, i) => <Text key={i} style={[s.tHeadCell, { flex: 1 }]}>{n || t.locked}</Text>)}
+            </View>
+            {cc!.rows.map((r, i) => (
+              <View key={i} style={s.tRow}>
+                <Text style={[{ flex: 1.4, fontSize: 9, color: INK }]}>{r.label}</Text>
+                <Text style={[{ flex: 1, fontSize: 9, fontFamily: 'Helvetica-Bold', color: gradeColor(r.you) }]}>{r.you}</Text>
+                {lockCols.map((_, j) => <Text key={j} style={s.lockCell}>•••</Text>)}
+              </View>
+            ))}
+          </View>
+          <Text style={s.caption}>{t.previewCaption}</Text>
+        </View>
+      )}
+
+      <View style={s.twoCol}>
+        <View style={{ flex: 1 }}>
+          <SectionTitle>{t.sampleFixesTitle}</SectionTitle>
+          {t.fixExamples.map((f, i) => (
+            <View key={i} style={s.findingRow}>
+              <Text style={[s.findingMark, { color: ORANGE }]}>+</Text>
+              <Text style={{ fontSize: 9.5, color: INK, flex: 1 }}>{f}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={{ flex: 1 }}>
+          <SectionTitle>{t.includedTitle}</SectionTitle>
+          {t.included.map((f, i) => (
+            <View key={i} style={s.findingRow}>
+              <Text style={[s.findingMark, { color: GREEN }]}>✓</Text>
+              <Text style={{ fontSize: 9.5, color: INK, flex: 1 }}>{f}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={s.ctaBox}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.ctaTitle}>{t.ctaTitle}</Text>
+          <Text style={s.ctaSub}>{t.ctaSub}</Text>
+        </View>
+        <Text style={s.ctaPrice}>€49</Text>
+      </View>
+    </>
+  )
+}
+
 export function ReportDocument({ data, language, variant }: { data: ReportData; language: Language; variant: ReportVariant }) {
   const t = L(language)
   const rs = reportStrings(language)
@@ -316,38 +470,14 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
         <Text style={s.coverFoot}>{rs.auditedOn} {data.auditDate}</Text>
       </Page>
 
-      {/* Body */}
-      <Page size="A4" style={s.page}>
-        {/* Status hero (all tiers) */}
-        <View style={s.hero}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 9, color: ORANGE, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 1 }}>{t.status}</Text>
-            <Text style={[s.statusBig, { color: statusColor(data.status) }]}>{data.status}</Text>
-            <Text style={s.heroSub}>{t.appeared(data.appeared.x, data.appeared.y)}</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={[s.dqBadge, { backgroundColor: dqColor(data.dataQuality.level) }]}>{t.dataQuality}: {data.dataQuality.level}</Text>
-            <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100</Text>
-          </View>
-        </View>
-
-        {/* Reduced-confidence banner when the audit cleared the gate but had failures. */}
-        {data.reliability.band === 'yellow' && (
-          <View style={{ backgroundColor: '#fef3c7', border: `1pt solid #fcd34d`, borderRadius: 6, padding: 10, marginBottom: 16 }}>
-            <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: AMBER }}>{t.reducedConfidence}</Text>
-            <Text style={{ fontSize: 8.5, color: '#92400e', marginTop: 2 }}>{data.reliability.detail}</Text>
-          </View>
-        )}
-
-        {/* Key findings — top 3 (free) or all (paid/impl) */}
-        <KeyFindings data={data} t={t} limit={isFree ? 3 : undefined} />
-
-        {/* Competitors recommended instead (all) */}
-        <CompetitorTable data={data} t={t} />
-
-        {/* ───── FREE: snapshot + upgrade CTA ───── */}
-        {isFree && (
-          <>
+      {/* ───── FREE: 3 clean pages — cover, what we found, the upgrade pitch ───── */}
+      {isFree ? (
+        <>
+          <Page size="A4" style={s.page}>
+            <RunHeader data={data} planLabel={planLabel} />
+            <StatusHero data={data} t={t} />
+            <KeyFindings data={data} t={t} limit={3} />
+            <CompetitorTable data={data} t={t} />
             <View style={s.section}>
               <SectionTitle>{t.snapshot}</SectionTitle>
               <View style={s.chipRow}>
@@ -356,18 +486,29 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
                 ))}
               </View>
             </View>
-            <View style={s.upgrade}>
-              <Text style={s.upgradeTitle}>{t.upgradeTitle}</Text>
-              <Text style={s.upgradeItem}>• Which prompts your competitors win</Text>
-              <Text style={s.upgradeItem}>• Why competitors appear (website, schema, authority)</Text>
-              <Text style={s.upgradeItem}>• Per-model + per-category visibility</Text>
-              <Text style={s.upgradeItem}>• Prioritised recommendations + a 30-day action plan</Text>
+            <View style={s.section}>
+              <SectionTitle>{rs.methodology}</SectionTitle>
+              <Text style={s.body}>{rs.methodologyBody(data.modelBreakdown.length || 4, data.sampleCount)}</Text>
+              <Text style={[s.sectionTitle, { marginTop: 8 }]}>{rs.limitations}</Text>
+              <Text style={s.body}>{rs.limitationsBody}</Text>
             </View>
-          </>
-        )}
+            <Footer caveat={rs.estimateCaveat} />
+          </Page>
 
-        {/* ───── PAID + IMPLEMENTATION: the full "why" ───── */}
-        {!isFree && (
+          <Page size="A4" style={s.page}>
+            <RunHeader data={data} planLabel={planLabel} />
+            <FullAuditPitch data={data} t={t} />
+            <Footer caveat={rs.estimateCaveat} />
+          </Page>
+        </>
+      ) : (
+        <Page size="A4" style={s.page}>
+          <RunHeader data={data} planLabel={planLabel} />
+          <StatusHero data={data} t={t} />
+          <KeyFindings data={data} t={t} />
+          <CompetitorTable data={data} t={t} />
+
+          {/* ───── PAID + IMPLEMENTATION: the full "why" ───── */}
           <>
             {/* Per-model */}
             {data.modelBreakdown.length > 0 && (
@@ -445,7 +586,6 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             {/* PAID: 30-day plan */}
             {isPaid && <PlanBuckets title={t.actionPlan} buckets={data.actionPlan} />}
           </>
-        )}
 
         {/* ───── IMPLEMENTATION: execution deliverables ───── */}
         {isImpl && (
@@ -471,19 +611,17 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
           </>
         )}
 
-        {/* Methodology & limitations (all) */}
-        <View style={s.section} wrap={false}>
-          <SectionTitle>{rs.methodology}</SectionTitle>
-          <Text style={s.body}>{rs.methodologyBody(data.modelBreakdown.length || 4, data.sampleCount)}</Text>
-          <Text style={[s.sectionTitle, { marginTop: 8 }]}>{rs.limitations}</Text>
-          <Text style={s.body}>{rs.limitationsBody}</Text>
-        </View>
+          {/* Methodology & limitations */}
+          <View style={s.section}>
+            <SectionTitle>{rs.methodology}</SectionTitle>
+            <Text style={s.body}>{rs.methodologyBody(data.modelBreakdown.length || 4, data.sampleCount)}</Text>
+            <Text style={[s.sectionTitle, { marginTop: 8 }]}>{rs.limitations}</Text>
+            <Text style={s.body}>{rs.limitationsBody}</Text>
+          </View>
 
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>{rs.estimateCaveat}</Text>
-          <Text style={s.footerBrand} render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `finded.vercel.app  ·  ${pageNumber}/${totalPages}`} />
-        </View>
-      </Page>
+          <Footer caveat={rs.estimateCaveat} />
+        </Page>
+      )}
     </Document>
   )
 }

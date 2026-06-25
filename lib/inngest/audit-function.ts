@@ -11,6 +11,8 @@ import { aggregateCompetitors } from '@/lib/audit/competitors'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
+import { buildRunAccounting } from '@/lib/engine/audit-evidence'
+import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { languageForCountry, asLanguage } from '@/lib/i18n'
 
@@ -318,21 +320,42 @@ export const auditFunction = inngest.createFunction(
       return { success: false, audit_id, cancelled: true }
     }
 
-    // If every model call failed (bad/missing key or no credit), fail with a clear
-    // reason instead of completing with silent zeros (raw errors are in model_runs).
-    if (totalSuccessful === 0) {
-      await step.run(`no-successful-runs-${audit_id}`, async () => {
+    // ── Reliability gate ──────────────────────────────────────
+    // Assess how many model calls actually succeeded, per provider, from the
+    // model_runs ledger (which records failures too). This is the single guard
+    // that stops the audit presenting low-confidence data as fact:
+    //   red  (<50% success / no provider with data) → mark 'incomplete', request
+    //        a rerun, and STOP before scoring/competitors/recommendations.
+    //   yellow/green → continue; the band + completion rate are stored and feed
+    //        the confidence score and the report's warning banner.
+    const reliability = await step.run(`assess-reliability-${audit_id}`, async () => {
+      const { data: runs } = await supabaseAdmin
+        .from('model_runs')
+        .select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status')
+        .eq('audit_id', audit_id)
+      const acc = buildRunAccounting((runs ?? []) as any[])
+      const rel = reliabilityFromAccounting(acc)
+      // Durable snapshot for the admin list/detail + report (no recompute needed).
+      await supabaseAdmin.from('audits').update({ reliability: rel }).eq('id', audit_id)
+      return rel
+    })
+
+    if (reliability.band === 'red') {
+      await step.run(`incomplete-${audit_id}`, async () => {
         await supabaseAdmin
           .from('audits')
           .update({
-            status: 'failed',
-            error_message: 'All model calls failed — check provider API keys and credit balance (see model_runs for details).',
+            status: 'incomplete',
+            error_message:
+              `Audit incomplete — ${reliability.detail} Below the 50% reliability threshold, ` +
+              `so no visibility score, competitor analysis or recommendations were generated. Please re-run the audit ` +
+              `(check provider API keys and credit balance — see model_runs for the per-call errors).`,
             completed_at: new Date().toISOString(),
           })
           .eq('id', audit_id)
         await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
       })
-      return { success: false, audit_id, reason: 'no successful model responses' }
+      return { success: false, audit_id, reason: 'reliability below threshold', reliability }
     }
 
     // ── Step 6: Compute scores ────────────────────────────────
@@ -378,7 +401,10 @@ export const auditFunction = inngest.createFunction(
       const websiteSignals = wa
         ? { present: [wa.schema_present, wa.menu_present, wa.opening_hours_present, wa.reservation_links_present, wa.social_links_present].filter(Boolean).length, total: 5 }
         : null
-      const providersRan = new Set(mentions.map((m: any) => m.model)).size
+      // Consensus denominator = providers we ATTEMPTED, not just the ones that
+      // succeeded. Otherwise a run where only Gemini answered reads as "1 of 1
+      // models" (100% consensus) instead of the honest "1 of 3".
+      const providersRan = Math.max(providers.length, new Set(mentions.map((m: any) => m.model)).size)
 
       // Authority signal (0–1): did AI cite the restaurant's own site, and does it
       // have review signals? Real proxies for off-site authority (we don't crawl
@@ -401,6 +427,7 @@ export const auditFunction = inngest.createFunction(
         authorityScore,
         websiteSignals,
         sampleCount:      metrics.sample_count,
+        completionRate:   reliability.completionRate,
       })
 
       await supabaseAdmin.from('visibility_scores').insert({

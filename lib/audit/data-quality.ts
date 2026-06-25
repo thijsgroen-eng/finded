@@ -41,9 +41,12 @@ export function buildDataQuality(acc: {
   const deadProviders = acc.providers.filter((p) => p.completed === 0 && p.failed > 0).map((p) => label(p.model))
   const providersWithData = acc.providers.filter((p) => p.completed > 0).length
 
+  // Thresholds aligned with the reliability gate (lib/audit/reliability.ts):
+  // <50% completion is Low (= red, results withheld), 50–80% Medium (= yellow),
+  // ≥80% across 2+ providers High (= green).
   let level: DataQualityLevel
   if (completionRate >= 0.8 && providersWithData >= 2) level = 'High'
-  else if (completionRate >= 0.4 && providersWithData >= 1) level = 'Medium'
+  else if (completionRate >= 0.5 && providersWithData >= 1) level = 'Medium'
   else level = 'Low'
 
   const bits: string[] = []

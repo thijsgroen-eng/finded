@@ -36,6 +36,9 @@ export interface ScoreInputs {
   websiteSignals: { present: number; total: number } | null
   /** Total sampled (model × prompt × sample) cells behind the audit. */
   sampleCount: number
+  /** Share of attempted model calls that succeeded (0–1). Drags confidence down
+   *  when calls failed. Defaults to 1 (fully reliable) when not provided. */
+  completionRate?: number
 }
 
 export interface ScoreComponent {
@@ -144,10 +147,13 @@ export function computeScoreBreakdown(input: ScoreInputs): ScoreBreakdown {
     : 0
 
   // Confidence: half from evidence completeness, half from sample size
-  // (saturating at 24 sampled answers). Deterministic, 0–1.
+  // (saturating at 24 sampled answers), then scaled by how many model calls
+  // actually succeeded — so a run riddled with provider failures can never read
+  // as high-confidence even if the surviving cells look complete. Deterministic, 0–1.
   const completeness = present.length / raw.length
   const sampleFactor = Math.min(1, input.sampleCount / 24)
-  const confidence_score = round((0.5 * completeness + 0.5 * sampleFactor))
+  const reliabilityFactor = input.completionRate == null ? 1 : Math.max(0, Math.min(1, input.completionRate))
+  const confidence_score = round((0.5 * completeness + 0.5 * sampleFactor) * reliabilityFactor)
 
   return {
     visibility_score,

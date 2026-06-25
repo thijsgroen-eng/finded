@@ -32,6 +32,7 @@ export function statusVariant(status: string) {
     case 'completed': return 'success'
     case 'running':   return 'info'
     case 'queued':    return 'warning'
+    case 'incomplete':return 'warning'
     case 'failed':    return 'danger'
     default:          return 'default'
   }

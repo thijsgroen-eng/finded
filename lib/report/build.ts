@@ -9,6 +9,7 @@ import { buildRunAccounting, buildPromptEvidence } from '@/lib/engine/audit-evid
 import { buildDataQuality } from '@/lib/audit/data-quality'
 import { buildKeyFindings } from '@/lib/audit/findings'
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
+import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { visibilityStatus, websiteSnapshot, categoryPerformance, actionPlanWeeks, roadmap90 } from '@/lib/audit/report-sections'
 import { ReportDocument, ReportData, ReportVariant, normalizeVariant } from '@/lib/report/report-document'
 
@@ -32,10 +33,16 @@ export async function buildReportPdf(
 
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('id, restaurant_id, created_at, restaurant:restaurants(name, city, cuisine, country, domain)')
+    .select('id, restaurant_id, created_at, status, restaurant:restaurants(name, city, cuisine, country, domain)')
     .eq('id', auditId)
     .single()
   if (!audit) return { ok: false, status: 404, error: 'Audit not found' }
+
+  // Incomplete audits (reliability gate) never produced a score — refuse to
+  // render a report that would present low-confidence data as findings.
+  if (audit.status === 'incomplete') {
+    return { ok: false, status: 409, error: 'Audit is incomplete (too many model calls failed). Re-run the audit before generating a report.' }
+  }
 
   const restaurant = (audit.restaurant ?? {}) as { name?: string; city?: string | null; cuisine?: string | null; country?: string | null; domain?: string | null }
   const language: Language = langParam ? asLanguage(langParam) : languageForCountry(restaurant.country)
@@ -71,6 +78,7 @@ export async function buildReportPdf(
 
   const metrics = computeMetrics(mentions ?? [])
   const runAccounting = buildRunAccounting(modelRuns ?? [])
+  const reliability = reliabilityFromAccounting(runAccounting)
   const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
   const allSources = (modelRuns ?? []).flatMap((r) => (Array.isArray(r.sources) ? r.sources : []))
   const authority = buildAuthoritySignals(allSources, restaurant.domain)
@@ -98,6 +106,7 @@ export async function buildReportPdf(
     status: visibilityStatus(mentionFreqPct, mentioned),
     appeared: { x: metrics.total_mentions, y: runAccounting.completed },
     dataQuality: { level: dataQuality.level, reason: dataQuality.reason },
+    reliability: { band: reliability.band, headline: reliability.headline, detail: reliability.detail },
 
     visibilityScore: Number(vs.visibility_score ?? 0),
     opportunityScore: vs.opportunity_score != null ? Number(vs.opportunity_score) : null,

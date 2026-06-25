@@ -22,6 +22,7 @@ import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { buildVisibilitySummary } from '@/lib/audit/summary'
 import { buildDataQuality } from '@/lib/audit/data-quality'
+import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { buildKeyFindings, buildCompetitorObservations } from '@/lib/audit/findings'
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { languageForCountry } from '@/lib/i18n'
@@ -131,6 +132,7 @@ export default async function AuditDetailPage({
   const gapSignalLabels = gapSignals(websiteSignals).map((s) => s.label)
   const competitorList = competitors.map((c: { name: string; mention_count: number }) => ({ name: c.name, mention_count: c.mention_count ?? 0 }))
   const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
+  const reliability = reliabilityFromAccounting(runAccounting)
   const keyFindings = buildKeyFindings({ mentioned, ownCited: authority.ownCited, presentSignals: presentSignalLabels, gapSignals: gapSignalLabels })
   const observations = buildCompetitorObservations({ mentioned, ownCited: authority.ownCited, authorityPlatforms: authority.platforms.map((p) => p.label), topCompetitors: competitorList, gapSignals: gapSignalLabels })
   // Competitor visibility comparison — grade the same AI-readable signals for you vs each crawled competitor.
@@ -193,6 +195,44 @@ export default async function AuditDetailPage({
         </div>
       </div>
 
+      {/* ── Reliability gate banner ── */}
+      {reliability.band === 'red' && (
+        <Card className="mb-5 border-red-200 bg-red-50">
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">⛔</span>
+              <div>
+                <p className="text-sm font-bold text-red-700">Audit incomplete — results withheld</p>
+                <p className="text-sm text-red-600 mt-1">{reliability.detail}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  Below the 50% reliability threshold, so no visibility score, competitor analysis or recommendations
+                  are shown — they would present low-confidence data as fact. Use <strong>Re-run</strong> above
+                  (after checking provider API keys and credit). Per-call errors are in the run accounting below.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {reliability.band === 'yellow' && (
+        <Card className="mb-5 border-amber-200 bg-amber-50">
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">⚠️</span>
+              <div>
+                <p className="text-sm font-bold text-amber-700">Reduced confidence</p>
+                <p className="text-sm text-amber-700 mt-1">{reliability.detail}</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Results are shown but should be read as directional — a re-run with all providers healthy will be
+                  more reliable.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {reliability.band !== 'red' && (<>
       {/* ── 1. AI visibility status — lead with the finding, not the score ── */}
       <Card className="mb-5">
         <CardContent className="pt-5">
@@ -266,6 +306,8 @@ export default async function AuditDetailPage({
           </CardContent>
         </Card>
       )}
+
+      </>)}
 
       {/* ── 5. Prompt-level evidence (the story) ── */}
       <PromptEvidenceCard prompts={promptEvidence} />

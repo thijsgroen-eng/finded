@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { inngest } from '@/lib/inngest/client'
 import { asFixType } from '@/lib/engine/fix-types'
+import { buildRunAccounting } from '@/lib/engine/audit-evidence'
+import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,6 +28,18 @@ export async function POST(request: NextRequest) {
 
   if (!recs || recs.length === 0) {
     return NextResponse.json({ error: 'No recommendations to generate from — generate recommendations first.' }, { status: 409 })
+  }
+
+  // Reliability gate: don't build an implementation package on an audit that
+  // didn't clear the minimum share of successful model calls.
+  const { data: relRuns } = await supabaseAdmin
+    .from('model_runs').select('model, raw_response, status').eq('audit_id', auditId)
+  const reliability = reliabilityFromAccounting(buildRunAccounting((relRuns ?? []) as any[]))
+  if (!reliability.allow.recommendations) {
+    return NextResponse.json(
+      { error: `Audit reliability too low to build an implementation package. ${reliability.detail} Re-run the audit first.`, reliability },
+      { status: 422 },
+    )
   }
 
   const existingTypes = new Set((assets ?? []).map((a) => a.type))

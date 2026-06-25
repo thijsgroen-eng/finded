@@ -21,6 +21,7 @@ export interface ReportData {
   status: string
   appeared: { x: number; y: number }
   dataQuality: { level: string; reason: string }
+  reliability: { band: 'green' | 'yellow' | 'red'; headline: string; detail: string }
   visibilityScore: number
   opportunityScore: number | null
   mentionFrequency: number
@@ -72,6 +73,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   mentions: 'vermeldingen', snapshot: 'Website-overzicht', perModel: 'Per AI-model',
   categoryPerf: 'Prestatie per categorie', promptEvidence: 'Bewijs per zoekopdracht',
   recommended: 'AI raadde aan', yours: 'Jouw restaurant', notMentioned: 'niet genoemd', mentioned: 'genoemd', sources: 'Bronnen',
+  reducedConfidence: 'Beperkte betrouwbaarheid',
   whyWin: 'Waarom concurrenten mogelijk winnen', whyWinSignal: 'Signaal', whyWinYou: 'Jij', whyWinGaps: 'Grootste concurrentieverschillen',
   websiteReview: 'Websiteanalyse', structuredData: 'Gestructureerde data', authority: 'Bronnen waar AI op vertrouwt',
   recommendations: 'Aanbevelingen', actionPlan: '30-dagen actieplan', roadmap: '90-dagen routekaart',
@@ -86,6 +88,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   mentions: 'mentions', snapshot: 'Website snapshot', perModel: 'Per AI model',
   categoryPerf: 'Performance by search type', promptEvidence: 'Prompt-level evidence',
   recommended: 'AI recommended', yours: 'Your restaurant', notMentioned: 'not mentioned', mentioned: 'mentioned', sources: 'Sources',
+  reducedConfidence: 'Reduced confidence',
   whyWin: 'Why competitors may be winning', whyWinSignal: 'Signal', whyWinYou: 'You', whyWinGaps: 'Biggest competitive gaps',
   websiteReview: 'Website review', structuredData: 'Structured data', authority: 'Sources AI relied on',
   recommendations: 'Recommendations', actionPlan: '30-day action plan', roadmap: '90-day roadmap',
@@ -327,6 +330,14 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
             <Text style={s.heroScore}>{t.score} {Math.round(data.visibilityScore)}/100</Text>
           </View>
         </View>
+
+        {/* Reduced-confidence banner when the audit cleared the gate but had failures. */}
+        {data.reliability.band === 'yellow' && (
+          <View style={{ backgroundColor: '#fef3c7', border: `1pt solid #fcd34d`, borderRadius: 6, padding: 10, marginBottom: 16 }}>
+            <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: AMBER }}>{t.reducedConfidence}</Text>
+            <Text style={{ fontSize: 8.5, color: '#92400e', marginTop: 2 }}>{data.reliability.detail}</Text>
+          </View>
+        )}
 
         {/* Key findings — top 3 (free) or all (paid/impl) */}
         <KeyFindings data={data} t={t} limit={isFree ? 3 : undefined} />

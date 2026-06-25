@@ -4,6 +4,8 @@ import { computeMetrics } from '@/lib/engine/metrics'
 import { FIX_TYPES, FIX_TYPE_HINTS, asFixType } from '@/lib/engine/fix-types'
 import { asLevel, computePriorityRank } from '@/lib/audit/recommendation-priority'
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
+import { buildRunAccounting } from '@/lib/engine/audit-evidence'
+import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -22,6 +24,19 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (!audit) return NextResponse.json({ error: 'Audit not found' }, { status: 404 })
+
+  // Reliability gate: never generate recommendations from an audit that didn't
+  // clear the minimum share of successful model calls — they would be advice
+  // built on too little data presented as fact.
+  const { data: relRuns } = await supabaseAdmin
+    .from('model_runs').select('model, raw_response, status').eq('audit_id', audit_id)
+  const reliability = reliabilityFromAccounting(buildRunAccounting((relRuns ?? []) as any[]))
+  if (!reliability.allow.recommendations) {
+    return NextResponse.json(
+      { error: `Audit reliability too low to generate recommendations. ${reliability.detail} Re-run the audit first.`, reliability },
+      { status: 422 },
+    )
+  }
 
   const [{ data: mentions }, { data: websiteAudit }, { data: promptRuns }, { data: competitors }, { data: vs }, { data: competitorAudits }] = await Promise.all([
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment').eq('audit_id', audit_id),

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
-import { ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle, AlertTriangle } from 'lucide-react'
+import { ChevronDown, ChevronUp, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 
 // Shapes mirror lib/engine/audit-evidence.ts + lib/engine/scoring.ts (serialized).
 export interface RunAccounting {
@@ -16,6 +16,7 @@ export interface PromptEvidence {
   locale: string | null; mentioned_any: boolean
   models: { model: string; ran: number; failed: number; mentioned: boolean; mention_rate: number | null; best_position: number | null; model_version: string | null; grounded: boolean | null }[]
   top_competitors?: { name: string; count: number }[]
+  sources?: string[]
 }
 export interface ScoreComponent { key: string; label: string; score: number; weight: number; detail: string }
 export interface ScoreBreakdown {
@@ -27,7 +28,6 @@ const MODEL_LABELS: Record<string, string> = {
   openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity',
 }
 const label = (m: string) => MODEL_LABELS[m] ?? m
-const pct = (n: number | null) => (n == null ? '—' : `${Math.round(n * 100)}%`)
 
 // ── Score breakdown ───────────────────────────────────────────────────────────
 export function ScoreBreakdownCard({ breakdown }: { breakdown: ScoreBreakdown | null }) {
@@ -133,14 +133,6 @@ export function RunAccountingCard({ acc, extractionConfidence }: { acc: RunAccou
 }
 
 // ── Prompt-level evidence (collapsible) ─────────────────────────────────────────
-function MentionIcon({ m }: { m: PromptEvidence['models'][number] }) {
-  if (m.ran === 0) return <MinusCircle className="w-4 h-4 text-gray-300" />
-  if (m.failed === m.ran) return <XCircle className="w-4 h-4 text-red-400" />
-  return m.mentioned
-    ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-    : <XCircle className="w-4 h-4 text-gray-300" />
-}
-
 export function PromptEvidenceCard({ prompts }: { prompts: PromptEvidence[] }) {
   const [open, setOpen] = useState(false)
   if (prompts.length === 0) return null
@@ -155,45 +147,44 @@ export function PromptEvidenceCard({ prompts }: { prompts: PromptEvidence[] }) {
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
-        {shown.map((p) => (
-          <div key={p.prompt_id} className="border border-gray-100 rounded-lg p-3">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">{p.prompt_text ?? p.prompt_id}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {[p.category, p.intent, p.locale?.toUpperCase()].filter(Boolean).join(' · ')}
-                </p>
-              </div>
-              {p.mentioned_any
-                ? <Badge variant="success">mentioned</Badge>
-                : <Badge variant="outline">not mentioned</Badge>}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {p.models.map((m) => (
-                <div key={m.model} className="flex items-center gap-2 text-xs bg-gray-50 rounded-md px-2 py-1.5">
-                  <MentionIcon m={m} />
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-700 truncate">{label(m.model)}</p>
-                    <p className="text-gray-400">
-                      {m.ran === 0
-                        ? 'no run'
-                        : m.failed === m.ran
-                          ? 'failed'
-                          : m.mentioned
-                            ? `rate ${pct(m.mention_rate)}${m.best_position != null ? ` · #${m.best_position}` : ''}`
-                            : 'absent'}
-                    </p>
-                  </div>
+        {shown.map((p) => {
+          const ranModels = p.models.filter((m) => m.ran > 0 && m.failed < m.ran)
+          const mentionedModels = p.models.filter((m) => m.mentioned).map((m) => label(m.model))
+          return (
+            <div key={p.prompt_id} className="border border-gray-100 rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{p.prompt_text ?? p.prompt_id}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {[p.category, p.intent, p.locale?.toUpperCase()].filter(Boolean).join(' · ')}
+                    {ranModels.length > 0 ? ` · asked ${ranModels.map((m) => label(m.model)).join(', ')}` : ''}
+                  </p>
                 </div>
-              ))}
+                {p.mentioned_any
+                  ? <Badge variant="success">you appeared</Badge>
+                  : <Badge variant="outline">not mentioned</Badge>}
+              </div>
+
+              <div className="text-sm space-y-1">
+                <p className="text-gray-700">
+                  <span className="text-gray-400">AI recommended: </span>
+                  {p.top_competitors && p.top_competitors.length > 0
+                    ? p.top_competitors.map((c) => c.name).join(', ')
+                    : <span className="text-gray-400">no specific restaurants extracted</span>}
+                </p>
+                <p className="text-gray-700">
+                  <span className="text-gray-400">Your restaurant: </span>
+                  {p.mentioned_any
+                    ? <span className="text-emerald-600 font-medium">mentioned{mentionedModels.length ? ` by ${mentionedModels.join(', ')}` : ''}</span>
+                    : <span className="text-red-500 font-medium">not mentioned</span>}
+                </p>
+                {p.sources && p.sources.length > 0 && (
+                  <p className="text-xs text-gray-400">Sources used: {p.sources.join(' · ')}</p>
+                )}
+              </div>
             </div>
-            {p.top_competitors && p.top_competitors.length > 0 && (
-              <p className="text-xs text-gray-400 mt-2">
-                AI named instead: {p.top_competitors.map((c) => `${c.name} (${c.count})`).join(' · ')}
-              </p>
-            )}
-          </div>
-        ))}
+          )
+        })}
         {prompts.length > 4 && (
           <button
             onClick={() => setOpen((v) => !v)}
@@ -211,6 +202,7 @@ export function PromptEvidenceCard({ prompts }: { prompts: PromptEvidence[] }) {
 export interface WebsiteSignal {
   key: string; label: string; status: 'present' | 'weak' | 'missing'
   evidence?: string; recommendedFixType?: string
+  why?: string; impact?: 'High' | 'Medium' | 'Low'; recommendation?: string
 }
 
 function SignalIcon({ status }: { status: WebsiteSignal['status'] }) {
@@ -243,13 +235,19 @@ export function WebsiteSignalsPanel({ signals }: { signals: WebsiteSignal[] }) {
             <div key={s.key} className="flex items-start gap-2 py-2 border-b border-gray-50">
               <SignalIcon status={s.status} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-gray-800">{s.label}</span>
                   {s.status === 'weak' && <Badge variant="warning">weak</Badge>}
+                  {s.status !== 'present' && s.impact && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{s.impact} impact</span>
+                  )}
                 </div>
                 {s.evidence && <p className="text-xs text-gray-400 truncate" title={s.evidence}>{s.evidence}</p>}
-                {s.status !== 'present' && s.recommendedFixType && (
-                  <p className="text-xs text-gray-400">fix: <span className="font-mono">{s.recommendedFixType}</span></p>
+                {s.status !== 'present' && (
+                  <>
+                    {s.why && <p className="text-xs text-gray-500 mt-0.5">{s.why}</p>}
+                    {s.recommendation && <p className="text-xs text-gray-700 mt-0.5"><span className="text-gray-400">Do: </span>{s.recommendation}</p>}
+                  </>
                 )}
               </div>
             </div>
@@ -272,7 +270,7 @@ export function AuthorityPanel({ authority }: { authority: AuthoritySignals }) {
   if (authority.totalSources === 0) {
     return (
       <Card className="mb-5">
-        <CardHeader><CardTitle>Authority &amp; citations</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Sources AI relied on</CardTitle></CardHeader>
         <CardContent className="pt-0">
           <p className="text-sm text-gray-400">
             The AI models didn&rsquo;t return citation sources for this audit (grounding off or none provided),
@@ -286,7 +284,7 @@ export function AuthorityPanel({ authority }: { authority: AuthoritySignals }) {
     <Card className="mb-5">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Authority &amp; citations</CardTitle>
+          <CardTitle>Sources AI relied on</CardTitle>
           <span className="text-xs text-gray-400">{authority.totalSources} sources AI cited</span>
         </div>
       </CardHeader>

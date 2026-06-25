@@ -21,6 +21,19 @@ export interface ModelRunRow {
   /** First-class lifecycle status (013). Older rows may be null → fall back to the
    *  raw_response 'ERROR:' prefix. */
   status?: string | null
+  /** Grounding citation sources (urls or {url}) returned by the model, if any. */
+  sources?: unknown[] | null
+}
+
+function sourceDomain(s: unknown): string | null {
+  const url = typeof s === 'string' ? s : (s && typeof s === 'object'
+    ? ((s as Record<string, unknown>).url ?? (s as Record<string, unknown>).uri ?? (s as Record<string, unknown>).link)
+    : null)
+  if (typeof url !== 'string') return null
+  try {
+    const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`
+    return new URL(withProto).hostname.replace(/^www\./i, '').toLowerCase() || null
+  } catch { return null }
 }
 
 export interface MentionRow {
@@ -160,6 +173,8 @@ export interface PromptEvidence {
   models: PromptEvidenceModel[]
   /** Competitors AI named for this prompt (top by count) — "who won instead". */
   top_competitors: { name: string; count: number }[]
+  /** Distinct citation source domains AI used for this prompt. */
+  sources: string[]
 }
 
 const PROVIDER_ORDER = ['openai', 'anthropic', 'gemini', 'perplexity']
@@ -240,6 +255,13 @@ export function buildPromptEvidence(
       .sort((a, b) => b.count - a.count)
       .slice(0, 3)
 
+    const sources = [...new Set(
+      [...runsByModel.values()].flat()
+        .flatMap((r) => (Array.isArray(r.sources) ? r.sources : []))
+        .map(sourceDomain)
+        .filter((d): d is string => !!d),
+    )].slice(0, 6)
+
     return {
       prompt_id: p.prompt_id,
       prompt_text: p.prompt_text,
@@ -249,6 +271,7 @@ export function buildPromptEvidence(
       mentioned_any: models.some((m) => m.mentioned),
       models,
       top_competitors,
+      sources,
     }
   })
 }

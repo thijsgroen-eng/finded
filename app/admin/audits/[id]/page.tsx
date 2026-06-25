@@ -4,7 +4,7 @@ import {
   buildRunAccounting, buildPromptEvidence, averageExtractionConfidence,
 } from '@/lib/engine/audit-evidence'
 import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
-import { formatDateTime, formatPercent, statusVariant } from '@/lib/utils'
+import { formatDateTime, statusVariant } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import { ExternalLink, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -20,6 +20,8 @@ import {
 import { toWebsiteSignals, gapSignals } from '@/lib/audit/website-signals'
 import { buildAuthoritySignals } from '@/lib/audit/authority'
 import { buildVisibilitySummary } from '@/lib/audit/summary'
+import { buildDataQuality } from '@/lib/audit/data-quality'
+import { buildKeyFindings, buildCompetitorObservations } from '@/lib/audit/findings'
 import { languageForCountry } from '@/lib/i18n'
 
 async function getAuditData(id: string) {
@@ -106,25 +108,25 @@ export default async function AuditDetailPage({
   const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
           runAccounting, promptEvidence, extractionConfidence, authority } = data
 
-  const totalPrompts   = runAccounting.distinct_prompts || audit.total_prompts || metrics.total_prompts
   const oppScore       = visibilityScore?.opportunity_score ?? null
-  const oppLabel       = visibilityScore?.opportunity_label ?? null
   const visScore       = visibilityScore?.visibility_score ?? null
-  const confidence     = visibilityScore?.confidence_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
   const auditLanguage  = languageForCountry(entity.country)
   const myMentions     = metrics.total_mentions
   const topComp        = competitors[0]?.mention_count ?? 0
-
-  const oppColor = oppScore !== null
-    ? oppScore >= 75 ? 'text-red-600' : oppScore >= 50 ? 'text-amber-600' : oppScore >= 25 ? 'text-blue-600' : 'text-gray-500'
-    : 'text-gray-400'
 
   const businessType = entity.business_type ?? 'business'
   const specialty    = entity.cuisine ?? null
 
   // Website signals (with cuisine/location-clarity context) + the "why" synthesis.
   const websiteSignals = toWebsiteSignals(websiteAudit, { cuisine: entity.cuisine, city: entity.city })
+  const mentioned = myMentions > 0
+  const presentSignalLabels = websiteSignals.filter((s) => s.status === 'present').map((s) => s.label)
+  const gapSignalLabels = gapSignals(websiteSignals).map((s) => s.label)
+  const competitorList = competitors.map((c: { name: string; mention_count: number }) => ({ name: c.name, mention_count: c.mention_count ?? 0 }))
+  const dataQuality = buildDataQuality({ total_runs: runAccounting.total_runs, completed: runAccounting.completed, providers: runAccounting.providers })
+  const keyFindings = buildKeyFindings({ mentioned, ownCited: authority.ownCited, presentSignals: presentSignalLabels, gapSignals: gapSignalLabels })
+  const observations = buildCompetitorObservations({ mentioned, ownCited: authority.ownCited, authorityPlatforms: authority.platforms.map((p) => p.label), topCompetitors: competitorList, gapSignals: gapSignalLabels })
   const visibilitySummary = buildVisibilitySummary({
     restaurantName: entity.name,
     totalMentions: myMentions,
@@ -178,55 +180,45 @@ export default async function AuditDetailPage({
         </div>
       </div>
 
-      {/* Score trend */}
-      <ScoreTrend restaurantId={entity.id} />
-
-      {/* Consolidated score header — headline scores + key stats in one place */}
+      {/* ── 1. AI visibility status — lead with the finding, not the score ── */}
       <Card className="mb-5">
         <CardContent className="pt-5">
-          <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Visibility score</p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-4xl font-bold text-gray-900">{visScore != null ? Math.round(visScore) : '—'}</span>
-                <span className="text-gray-400 text-lg">/100</span>
-              </div>
-              {confidence != null && <span className="text-xs text-gray-400">confidence {Math.round(confidence * 100)}%</span>}
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI visibility status</p>
+              <p className={`text-2xl font-bold ${mentioned ? 'text-emerald-600' : 'text-red-600'}`}>
+                {mentioned ? 'Recommended for some searches' : 'Not recommended'}
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Your restaurant appeared in <strong>{myMentions}</strong> of <strong>{runAccounting.completed}</strong> successful AI responses tested.
+              </p>
+              {topComp > myMentions && competitorList.length > 0 && (
+                <p className="text-sm text-gray-600 mt-1">
+                  AI frequently recommended competitors instead — {competitorList.slice(0, 3).map((c) => c.name).join(', ')}.
+                </p>
+              )}
             </div>
-            {oppScore !== null && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Opportunity</p>
-                <div className="flex items-baseline gap-1.5">
-                  <span className={`text-4xl font-bold ${oppColor}`}>{Math.round(oppScore)}</span>
-                  <span className="text-gray-400 text-lg">/100</span>
-                </div>
-                {oppLabel && <span className={`text-xs font-medium ${oppColor}`}>{oppLabel.replace('_', ' ')} opportunity</span>}
-              </div>
-            )}
-            <div className="ml-auto flex flex-wrap gap-x-8 gap-y-3">
-              <div>
-                <p className="text-lg font-bold text-gray-900">{formatPercent(metrics.mention_frequency)}</p>
-                <p className="text-xs text-gray-400">mention freq · {myMentions} of {totalPrompts}</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">{metrics.model_consensus}/4</p>
-                <p className="text-xs text-gray-400">models mentioned</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">{totalPrompts}</p>
-                <p className="text-xs text-gray-400">prompts · {runAccounting.completed}/{runAccounting.total_runs} calls ok</p>
-              </div>
+            <div className="text-right shrink-0">
+              <span
+                title={dataQuality.reason}
+                className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  dataQuality.level === 'High' ? 'bg-emerald-50 text-emerald-700'
+                  : dataQuality.level === 'Medium' ? 'bg-amber-50 text-amber-700'
+                  : 'bg-red-50 text-red-600'
+                }`}>
+                Data quality: {dataQuality.level}
+              </span>
+              <p className="text-xs text-gray-400 mt-2">
+                Visibility score {visScore != null ? Math.round(visScore) : '—'}/100
+                {oppScore !== null ? ` · opportunity ${Math.round(oppScore)}/100` : ''}
+              </p>
             </div>
           </div>
-          {topComp > myMentions && (
-            <p className="text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100">
-              Top competitor mentioned <strong>{topComp}×</strong> vs your <strong>{myMentions}×</strong>
-            </p>
-          )}
+          <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">{dataQuality.reason}</p>
         </CardContent>
       </Card>
 
-      {/* Why this result — plain-language synthesis */}
+      {/* ── 2. Why this result — plain-language synthesis ── */}
       <Card className="mb-5 border-gray-200">
         <CardHeader><CardTitle>Why this result</CardTitle></CardHeader>
         <CardContent className="pt-0">
@@ -234,13 +226,36 @@ export default async function AuditDetailPage({
         </CardContent>
       </Card>
 
-      {/* How the score is calculated (stored breakdown) */}
-      <ScoreBreakdownCard breakdown={scoreBreakdown} />
+      {/* ── 3. Key findings ── */}
+      <Card className="mb-5">
+        <CardHeader><CardTitle>Key findings</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2">
+            {keyFindings.map((f, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className={`font-bold ${f.ok ? 'text-emerald-500' : 'text-red-400'}`}>{f.ok ? '✓' : '✕'}</span>
+                <span className="text-sm text-gray-700">{f.label}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Run accounting — explains prompts vs model calls */}
-      <RunAccountingCard acc={runAccounting} extractionConfidence={extractionConfidence} />
+      {/* ── 4. Why competitors may be winning ── */}
+      {observations.length > 0 && (
+        <Card className="mb-5">
+          <CardHeader><CardTitle>Why competitors may be winning</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <ul className="space-y-2">
+              {observations.map((o, i) => (
+                <li key={i} className="text-sm text-gray-700 flex gap-2"><span className="text-gray-300">•</span><span>{o}</span></li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Prompt-level evidence */}
+      {/* ── 5. Prompt-level evidence (the story) ── */}
       <PromptEvidenceCard prompts={promptEvidence} />
 
       {/* Signal gaps — root causes */}
@@ -277,7 +292,7 @@ export default async function AuditDetailPage({
       {/* Competitor comparison */}
       {competitors.length > 0 && (
         <Card className="mb-5">
-          <CardHeader><CardTitle>Competitor comparison</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Restaurants AI recommends instead</CardTitle></CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
               <div className="flex items-center gap-3 py-2 border-b border-gray-100">
@@ -376,11 +391,17 @@ export default async function AuditDetailPage({
       {/* Authority & citations — which third-party sources AI leaned on */}
       <AuthorityPanel authority={authority} />
 
-      {/* Methodology & limitations */}
-      <MethodologyCard acc={runAccounting} language={auditLanguage} />
-
-      {/* Recommendations + Fix Now */}
+      {/* ── Prioritized recommendations ── */}
       <Recommendations auditId={id} />
+
+      {/* ── Technical findings (the score math, kept but de-emphasised) ── */}
+      <div className="mt-2 mb-3">
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Technical findings</h2>
+      </div>
+      <ScoreBreakdownCard breakdown={scoreBreakdown} />
+      <RunAccountingCard acc={runAccounting} extractionConfidence={extractionConfidence} />
+      <MethodologyCard acc={runAccounting} language={auditLanguage} />
+      <ScoreTrend restaurantId={entity.id} />
 
       {/* Outreach email (NL/EN) */}
       <OutreachEmail auditId={id} restaurantName={entity.name} defaultLanguage={languageForCountry(entity.country)} />

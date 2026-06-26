@@ -1,41 +1,56 @@
-import { NextResponse } from 'next/server'
-import { loadObservations, computeBenchmark, computePatterns, patternEvidence, FACTS } from '@/lib/observations'
+import { NextRequest, NextResponse } from 'next/server'
+import { loadObservations, computeBenchmark, computePatterns, patternEvidence, FACTS, ObsRow } from '@/lib/observations'
 import { getSettings } from '@/lib/settings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const norm = (s: string | null) => (s ?? '').trim().toLowerCase()
+
 /**
- * GET /api/admin/insights  (admin-gated)
- * Aggregate-only industry intelligence from the Observation Engine: overall +
- * per-segment benchmarks and evidence-backed patterns. Never returns individual
- * customer rows.
+ * GET /api/admin/insights?cuisine=&city=  (admin-gated)
+ * Filterable, aggregate-only industry intelligence from the Observation Engine.
+ * Returns the benchmark + patterns for the current filter, the filter options,
+ * and per-segment tables. Never returns individual customer rows.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const sp = new URL(request.url).searchParams
+  const cuisine = sp.get('cuisine') || ''
+  const city = sp.get('city') || ''
+
   const rows = await loadObservations()
   const lang = (await getSettings()).defaultLanguage
 
-  const overall = computeBenchmark(rows)
-  const patterns = computePatterns(rows).map((p) => ({ ...p, evidence: patternEvidence(p, lang) }))
+  // Filter options with counts.
+  const tally = (pick: (r: ObsRow) => string | null) => {
+    const m = new Map<string, number>()
+    for (const r of rows) { const k = norm(pick(r)); if (k) m.set(k, (m.get(k) ?? 0) + 1) }
+    return [...m.entries()].map(([key, n]) => ({ key, n })).sort((a, b) => b.n - a.n)
+  }
 
-  // Segment benchmarks with a minimum sample size so nothing thin is shown.
-  const norm = (s: string | null) => (s ?? '').trim().toLowerCase()
-  const cuisines = [...new Set(rows.map((r) => norm(r.cuisine)).filter(Boolean))]
-  const cities = [...new Set(rows.map((r) => norm(r.city)).filter(Boolean))]
+  // Current-filter slice.
+  const filtered = rows.filter((r) => (!cuisine || norm(r.cuisine) === norm(cuisine)) && (!city || norm(r.city) === norm(city)))
+  const benchmark = computeBenchmark(rows, { cuisine, city })
+
+  // Patterns: prefer the filtered slice when it's big enough, else fall back to all.
+  const basis = filtered.length >= 12 ? filtered : rows
+  const patternScope = filtered.length >= 12 && (cuisine || city) ? 'segment' : 'all'
+  const patterns = computePatterns(basis).map((p) => ({ ...p, evidence: patternEvidence(p, lang) }))
+
   const MIN = 5
-  const byCuisine = cuisines
-    .map((c) => ({ key: c, ...computeBenchmark(rows, { cuisine: c }) }))
-    .filter((b) => b.n >= MIN).sort((a, b) => b.n - a.n)
-  const byCity = cities
-    .map((c) => ({ key: c, ...computeBenchmark(rows, { city: c }) }))
-    .filter((b) => b.n >= MIN).sort((a, b) => b.n - a.n)
+  const byCuisine = tally((r) => r.cuisine).map((c) => ({ key: c.key, ...computeBenchmark(rows, { cuisine: c.key }) })).filter((b) => b.n >= MIN)
+  const byCity = tally((r) => r.city).map((c) => ({ key: c.key, ...computeBenchmark(rows, { city: c.key }) })).filter((b) => b.n >= MIN)
 
   return NextResponse.json({
     total: rows.length,
-    overall,
+    filter: { cuisine, city },
+    filterN: filtered.length,
+    benchmark,
     patterns,
+    patternScope,
     byCuisine,
     byCity,
+    options: { cuisines: tally((r) => r.cuisine), cities: tally((r) => r.city) },
     facts: FACTS.map((f) => ({ key: f.key, label: lang === 'nl' ? f.nl : f.en })),
   })
 }

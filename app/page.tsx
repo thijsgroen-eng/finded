@@ -325,8 +325,8 @@ export default async function LandingPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, alignItems: 'stretch' }}>
           {[
             { name: 'Free AI Visibility Check', price: '€0', cadence: '', q: 'Is AI recommending my restaurant?',
-              features: ['AI visibility status', 'Competitors mentioned instead', 'Top 3 findings', 'Website signal snapshot'],
-              cta: 'Run my free check', href: '#check', note: 'No account, no card, no obligation.', highlight: false },
+              features: ['Your AI Visibility Dashboard', 'AI visibility status & score', 'Competitors mentioned instead', 'Top 3 findings + website snapshot', 'Download a summary PDF anytime'],
+              cta: 'Open my free dashboard', href: '#check', note: 'No account, no card, no obligation.', highlight: false },
             { name: 'AI Visibility Audit', price: '€49', cadence: 'one-time', q: 'Why do competitors appear more often?',
               features: ['Everything in the free check', 'All four AI models analysed', 'Prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data analysis', 'Evidence-backed recommendations', '30-day action plan'],
               cta: 'Get the full audit', href: `mailto:${contactEmail}?subject=AI Visibility Audit`, note: 'Understand exactly why competitors appear more often.', highlight: true },
@@ -391,7 +391,7 @@ export default async function LandingPage() {
       <section id="check" style={{ background: INK, scrollMarginTop: 58 }}>
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 34px)', fontWeight: 800, letterSpacing: -0.9, marginBottom: 12, color: '#fff' }}>See whether AI recommends your restaurant</h2>
-          <p style={{ fontSize: 16.5, color: '#b9b8b3', lineHeight: 1.6, marginBottom: 28 }}>Send your website and city, and we&rsquo;ll email you your free AI visibility check.</p>
+          <p style={{ fontSize: 16.5, color: '#b9b8b3', lineHeight: 1.6, marginBottom: 28 }}>Send your website and city, and we&rsquo;ll email you a link to your free AI Visibility Dashboard.</p>
           <div style={{ background: BG, borderRadius: 16, padding: 'clamp(18px, 3vw, 26px)', textAlign: 'left' }}>
             <LeadForm />
           </div>

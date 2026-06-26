@@ -54,6 +54,14 @@ const STR = {
     gapHours: 'Openingstijden niet gestructureerd gevonden.',
     gapReservation: 'Geen reserveringslink gedetecteerd.',
     gapSchemaT: 'Geen Restaurant-schema', gapMenuT: 'Menu niet gevonden', gapHoursT: 'Openingstijden ontbreken', gapReservationT: 'Reserveringslink ontbreekt',
+    downloadPdf: 'Download PDF', unlockImplNav: 'Implementatie ontgrendelen →',
+    implTitle: 'Implementatiecentrum', implSub: 'Werk je verbeteringen één voor één af — kant-en-klaar.',
+    implFollowUp: 'Vervolg-audit inbegrepen — we meten opnieuw zodra de wijzigingen live zijn.', implReady: 'Klaar', download: 'Downloaden',
+    auditUnlockTitle: 'Ontgrendel de volledige audit', auditUnlockSub: 'Zie precies waarom concurrenten vaker verschijnen — alle modellen, bewijs, concurrentievergelijking en aanbevelingen.', auditUnlockCta: 'Ontgrendel volledige audit — €49',
+    implUnlockTitle: 'Ontgrendel het implementatiecentrum', implUnlockSub: 'Zet aanbevelingen om in kant-en-klare onderdelen: schema, FAQ, content, lokale SEO, prioriteiten en een vervolg-audit.', implUnlockCta: 'Ontgrendel implementatie — €299',
+    monitorSoonTitle: 'Maandelijkse AI-zichtbaarheidsmonitoring', monitorSoonBadge: 'Binnenkort',
+    monitorFeatures: ['Maandelijkse automatische checks', 'Historische grafieken', 'Concurrentiebeweging', 'Waarschuwingen bij grote veranderingen', 'Nieuwe aanbevelingen', 'Maandelijkse PDF-export'],
+    historyTitle: 'Zichtbaarheid over tijd', historyEmpty: 'Je zichtbaarheid over tijd verschijnt hier zodra er meer audits zijn.',
   },
   en: {
     badge: 'AI Visibility Report',
@@ -103,6 +111,14 @@ const STR = {
     gapHours: 'Opening hours not clearly structured.',
     gapReservation: 'No reservation link detected.',
     gapSchemaT: 'No Restaurant schema', gapMenuT: 'Menu not found', gapHoursT: 'Opening hours missing', gapReservationT: 'Reservation link missing',
+    downloadPdf: 'Download PDF', unlockImplNav: 'Unlock implementation →',
+    implTitle: 'Implementation Centre', implSub: 'Work through your improvements one by one — ready to use.',
+    implFollowUp: 'Follow-up audit included — we re-measure once your changes are live.', implReady: 'Ready', download: 'Download',
+    auditUnlockTitle: 'Unlock the full audit', auditUnlockSub: 'See exactly why competitors appear more often — every model, evidence, competitor comparison and recommendations.', auditUnlockCta: 'Unlock full audit — €49',
+    implUnlockTitle: 'Unlock the Implementation Workspace', implUnlockSub: 'Turn recommendations into ready-to-use assets: schema, FAQ, content, local SEO, priorities and a follow-up audit.', implUnlockCta: 'Unlock implementation — €299',
+    monitorSoonTitle: 'Monthly AI visibility monitoring', monitorSoonBadge: 'Coming soon',
+    monitorFeatures: ['Automatic monthly checks', 'Historical charts', 'Competitor movement', 'Alerts on big changes', 'New recommendations', 'Monthly PDF exports'],
+    historyTitle: 'Visibility over time', historyEmpty: 'Your visibility over time will appear here as more audits run.',
   },
 } as const
 
@@ -200,7 +216,18 @@ async function getReportData(slug: string) {
   }
   const confidenceScore = vs?.confidence_score != null ? Number(vs.confidence_score) : null
 
-  return { restaurant, audit, headline, perModel, sentiment, competitors: competitors ?? [], websiteAudit, gaps, scoreBreakdown, confidenceScore }
+  // Implementation workspace + history (tiered dashboard).
+  const [{ data: recsRaw }, { data: assetsRaw }, { data: history }] = await Promise.all([
+    supabaseAdmin.from('recommendations').select('title, why, suggested_fix, priority_rank, asset_type, type, confidence, benchmark, data_source, impact_level').eq('audit_id', audit.id).order('created_at', { ascending: true }),
+    supabaseAdmin.from('generated_assets').select('type, title, content, format, created_at').eq('audit_id', audit.id).order('created_at', { ascending: false }),
+    supabaseAdmin.from('score_history').select('visibility_score, snapshot_date').eq('restaurant_id', restaurant.id).order('snapshot_date', { ascending: true }).limit(24),
+  ])
+  // newest asset per type
+  const seenAsset = new Set<string>()
+  const assets = (assetsRaw ?? []).filter((a) => a.type && !seenAsset.has(a.type) && seenAsset.add(a.type))
+  const recommendations = recsRaw ?? []
+
+  return { restaurant, audit, headline, perModel, sentiment, competitors: competitors ?? [], websiteAudit, gaps, scoreBreakdown, confidenceScore, recommendations, assets, history: history ?? [] }
 }
 
 function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
@@ -225,6 +252,20 @@ function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
 
 const SEV_COLOR: Record<string, string> = { critical: '#d94f4f', high: '#c47d14', medium: '#1f6feb', low: '#7a7874' }
 
+function Sparkline({ points }: { points: number[] }) {
+  const w = 600, h = 60, pad = 4
+  const max = Math.max(100, ...points), min = Math.min(0, ...points)
+  const x = (i: number) => pad + (i / Math.max(1, points.length - 1)) * (w - pad * 2)
+  const y = (v: number) => h - pad - ((v - min) / Math.max(1, max - min)) * (h - pad * 2)
+  const d = points.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 60, marginBottom: 12 }}>
+      <path d={d} fill="none" stroke="#16a37a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={2.5} fill="#16a37a" />)}
+    </svg>
+  )
+}
+
 export default async function PreviewReportPage({
   params, searchParams,
 }: {
@@ -239,8 +280,15 @@ export default async function PreviewReportPage({
   const data = await getReportData(slug)
   if (!data) notFound()
 
-  const { restaurant, audit, headline, perModel, sentiment, competitors, websiteAudit, gaps, scoreBreakdown, confidenceScore } = data
-  const paid = restaurant.report_paid
+  const { restaurant, audit, headline, perModel, sentiment, competitors, websiteAudit, gaps, scoreBreakdown, confidenceScore, recommendations, assets, history } = data
+  // Tier: free → audit (€49) → implementation (€299). Falls back to legacy report_paid.
+  const plan: 'free' | 'audit' | 'implementation' =
+    restaurant.plan === 'implementation' ? 'implementation'
+    : restaurant.plan === 'audit' || restaurant.report_paid ? 'audit'
+    : 'free'
+  const paid = plan !== 'free'              // audit content unlocked
+  const impl = plan === 'implementation'    // implementation workspace unlocked
+  const pdfHref = `/api/report/${audit.id}/pdf?plan=${plan}&lang=${lang}`
 
   const freqPct = headline ? Math.round(headline.mentionFrequency * 100) : null
   const showBand = !!(headline && headline.sampleCount && headline.sampleCount > 1 && headline.confidenceLo != null && headline.confidenceHi != null)
@@ -271,8 +319,16 @@ export default async function PreviewReportPage({
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#fafaf8', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' }}>
       {/* Nav */}
       <nav style={{ background: '#fff', borderBottom: '1px solid #e2e1dc', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-        <span style={{ fontSize: 17, fontWeight: 800, color: '#111110', letterSpacing: -0.5 }}>Finded</span>
-        {!paid && <a href="#unlock" style={{ background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.unlockNav}</a>}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: '#111110', letterSpacing: -0.5 }}>Finded</span>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: '#7a7874', background: '#f2f1ee', border: '1px solid #e2e1dc', borderRadius: 5, padding: '2px 7px' }}>
+            {plan === 'implementation' ? 'Implementation' : plan === 'audit' ? 'Full audit' : 'Free'} dashboard
+          </span>
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <a href={pdfHref} target="_blank" rel="noreferrer" style={{ color: '#111110', border: '1px solid #e2e1dc', background: '#fff', padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.downloadPdf}</a>
+          {!impl && <a href="#unlock" style={{ background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{paid ? t.unlockImplNav : t.unlockNav}</a>}
+        </span>
       </nav>
 
       {/* Hero / header */}
@@ -448,27 +504,63 @@ export default async function PreviewReportPage({
           </div>
         )}
 
-        {/* Unlock CTA */}
-        {!paid && (
-          <div id="unlock" style={{ background: '#111110', borderRadius: 12, padding: '32px 28px', textAlign: 'center', marginBottom: 20 }}>
+        {/* ── Implementation Centre (€299) — workspace when unlocked, else the €299 unlock ── */}
+        {impl ? (
+          <div style={{ ...card }}>
+            <div style={cardTitle}>{t.implTitle}</div>
+            <p style={{ fontSize: 13, color: '#7a7874', marginTop: -6, marginBottom: 14 }}>{t.implSub}</p>
+            {recommendations.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#7a7874' }}>—</p>
+            ) : (
+              recommendations.map((r: any, i: number) => {
+                const asset = assets.find((a: any) => a.type && (a.type === r.asset_type || a.type === r.type))
+                const ext = asset?.format === 'json' ? 'json' : asset?.format === 'html' ? 'html' : 'txt'
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #f2f1ee' }}>
+                    <span style={{ width: 22, height: 22, borderRadius: 11, background: asset ? '#edf8f3' : '#f2f1ee', color: asset ? '#0d6b50' : '#b0aea8', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{asset ? '✓' : i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#111110' }}>{r.title}</div>
+                      {r.why && <div style={{ fontSize: 12.5, color: '#7a7874', marginTop: 2, lineHeight: 1.5 }}>{r.why}</div>}
+                      {asset ? (
+                        <div style={{ marginTop: 8 }}>
+                          <a download={`${asset.type || 'asset'}.${ext}`} href={`data:text/plain;charset=utf-8,${encodeURIComponent(asset.content || '')}`} style={{ display: 'inline-block', background: '#111110', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 6, textDecoration: 'none' }}>{t.download}</a>
+                          <details style={{ marginTop: 8 }}>
+                            <summary style={{ fontSize: 12, color: '#0d6b50', cursor: 'pointer' }}>Preview</summary>
+                            <pre style={{ fontSize: 11, background: '#f7f6f3', border: '1px solid #e2e1dc', borderRadius: 8, padding: 12, overflowX: 'auto', marginTop: 6, whiteSpace: 'pre-wrap' }}>{(asset.content || '').slice(0, 1200)}{(asset.content || '').length > 1200 ? '\n…' : ''}</pre>
+                          </details>
+                        </div>
+                      ) : r.suggested_fix ? <div style={{ fontSize: 12.5, color: '#111110', marginTop: 6 }}>{r.suggested_fix}</div> : null}
+                    </div>
+                    {asset && <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#0d6b50', flexShrink: 0 }}>{t.implReady}</span>}
+                  </div>
+                )
+              })
+            )}
+            <p style={{ fontSize: 12.5, color: '#7a7874', marginTop: 14 }}>{t.implFollowUp}</p>
+          </div>
+        ) : (
+          <div id="unlock" style={{ background: '#111110', borderRadius: 12, padding: '30px 28px', textAlign: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t.unlockKicker}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: -0.5, marginBottom: 8, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{t.unlockHeadline}</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 24, lineHeight: 1.6 }}>{t.unlockSub}</div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
-              {t.unlockFeatures.map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'rgba(255,255,255,0.65)' }}><span style={{ color: '#16a37a' }}>✓</span> {f}</div>
-              ))}
-            </div>
-            <a href={`/checkout?slug=${restaurant.preview_slug}`} style={{ display: 'inline-block', background: '#fff', color: '#111110', padding: '14px 32px', borderRadius: 8, fontSize: 15, fontWeight: 800, textDecoration: 'none', letterSpacing: -0.3 }}>{t.unlockCta}</a>
+            <div style={{ fontSize: 25, fontWeight: 800, color: '#fff', letterSpacing: -0.5, marginBottom: 8, lineHeight: 1.2 }}>{paid ? t.implUnlockTitle : t.auditUnlockTitle}</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 22, lineHeight: 1.6, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>{paid ? t.implUnlockSub : t.auditUnlockSub}</div>
+            <a href={`/checkout?slug=${restaurant.preview_slug}${paid ? '&plan=implementation' : ''}`} style={{ display: 'inline-block', background: '#fff', color: '#111110', padding: '14px 32px', borderRadius: 8, fontSize: 15, fontWeight: 800, textDecoration: 'none', letterSpacing: -0.3 }}>{paid ? t.implUnlockCta : t.auditUnlockCta}</a>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 12 }}>{t.unlockFine}</div>
           </div>
         )}
 
-        {/* Monitoring upsell */}
-        <div style={{ background: '#f7f6f3', border: '1px solid #e2e1dc', borderRadius: 10, padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#111110', marginBottom: 6 }}>{t.monitorTitle}</div>
-          <div style={{ fontSize: 13, color: '#7a7874', marginBottom: 16, lineHeight: 1.6 }}>{t.monitorBody}</div>
-          <a href={`/checkout?slug=${restaurant.preview_slug}&plan=monthly`} style={{ display: 'inline-block', background: '#fff', border: '1px solid #e2e1dc', color: '#111110', padding: '10px 24px', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>{t.monitorCta}</a>
+        {/* ── Monthly AI visibility monitoring — Coming soon ── */}
+        <div style={{ ...card, marginTop: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+            <div style={cardTitle}>{t.monitorSoonTitle}</div>
+            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6, color: '#0d6b50', background: '#edf8f3', border: '1px solid #cce9dd', borderRadius: 20, padding: '3px 9px' }}>{t.monitorSoonBadge}</span>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{t.historyTitle}</div>
+          {history.length >= 2 ? <Sparkline points={history.map((h: any) => Number(h.visibility_score ?? 0))} /> : <p style={{ fontSize: 13, color: '#b0aea8', marginBottom: 12 }}>{t.historyEmpty}</p>}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 8 }}>
+            {t.monitorFeatures.map((f) => (
+              <div key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#7a7874' }}><span style={{ color: '#b0aea8' }}>○</span>{f}</div>
+            ))}
+          </div>
         </div>
       </div>
 

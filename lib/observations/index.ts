@@ -307,6 +307,36 @@ export async function backfillObservations(limit = 2000): Promise<{ scanned: num
   return { scanned: (audits ?? []).length, recorded, skipped }
 }
 
+export interface PlatformStats {
+  audits: number; restaurants: number; cities: number; cuisines: number; searches: number; models: number
+  n: number; pctMentioned: number; factRates: Record<FactKey, number>
+}
+
+/**
+ * Headline platform counters for the homepage ("Finded Insights"). Aggregate
+ * only. Grows automatically as audits complete — drives the live proof that
+ * Finded continuously measures AI recommendations.
+ */
+export async function platformStats(): Promise<PlatformStats> {
+  const { supabaseAdmin } = await import('@/lib/supabase/client')
+  const [{ data: obs }, runs] = await Promise.all([
+    supabaseAdmin.from('observations').select('restaurant_id, city, cuisine, mentioned_any, facts').limit(5000),
+    supabaseAdmin.from('model_runs').select('id', { count: 'exact', head: true }),
+  ])
+  const rows = (obs ?? []) as any[]
+  const bench = computeBenchmark(rows.map((r) => toObsRow(r)))
+  const distinct = (vals: (string | null)[]) => new Set(vals.map((v) => norm(v)).filter(Boolean)).size
+  return {
+    audits: rows.length,
+    restaurants: new Set(rows.map((r) => r.restaurant_id).filter(Boolean)).size,
+    cities: distinct(rows.map((r) => r.city)),
+    cuisines: distinct(rows.map((r) => r.cuisine)),
+    searches: runs.count ?? 0,
+    models: 4,
+    n: bench.n, pctMentioned: bench.pctMentioned, factRates: bench.factRates,
+  }
+}
+
 /** Load all observation rows as ObsRows (server). */
 export async function loadObservations(): Promise<ObsRow[]> {
   const { supabaseAdmin } = await import('@/lib/supabase/client')

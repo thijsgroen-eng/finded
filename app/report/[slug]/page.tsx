@@ -62,6 +62,8 @@ const STR = {
     monitorSoonTitle: 'Maandelijkse AI-zichtbaarheidsmonitoring', monitorSoonBadge: 'Binnenkort',
     monitorFeatures: ['Maandelijkse automatische checks', 'Historische grafieken', 'Concurrentiebeweging', 'Waarschuwingen bij grote veranderingen', 'Nieuwe aanbevelingen', 'Maandelijkse PDF-export'],
     historyTitle: 'Zichtbaarheid over tijd', historyEmpty: 'Je zichtbaarheid over tijd verschijnt hier zodra er meer audits zijn.',
+    lockedTitle: 'Ontgrendel met de volledige audit', lockedSub: 'Deze onderdelen zitten in de volledige audit (€49) — in ditzelfde dashboard.',
+    lockedItems: ['Gedetailleerde AI-modelanalyse', 'Bewijs per zoekopdracht', 'Website-signaalanalyse', 'Gestructureerde-data-review', 'Concurrentievergelijking', 'Actieplan', 'PDF-download'],
   },
   en: {
     badge: 'AI Visibility Report',
@@ -119,6 +121,8 @@ const STR = {
     monitorSoonTitle: 'Monthly AI visibility monitoring', monitorSoonBadge: 'Coming soon',
     monitorFeatures: ['Automatic monthly checks', 'Historical charts', 'Competitor movement', 'Alerts on big changes', 'New recommendations', 'Monthly PDF exports'],
     historyTitle: 'Visibility over time', historyEmpty: 'Your visibility over time will appear here as more audits run.',
+    lockedTitle: 'Unlock with the full audit', lockedSub: 'These are included in the full audit (€49) — right here in the same dashboard.',
+    lockedItems: ['Detailed AI model analysis', 'Prompt-by-prompt evidence', 'Website signal breakdown', 'Structured data review', 'Competitor comparison', 'Action plan', 'PDF download'],
   },
 } as const
 
@@ -326,7 +330,7 @@ export default async function PreviewReportPage({
           </span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          <a href={pdfHref} target="_blank" rel="noreferrer" style={{ color: '#111110', border: '1px solid #e2e1dc', background: '#fff', padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.downloadPdf}</a>
+          {paid && <a href={pdfHref} target="_blank" rel="noreferrer" style={{ color: '#111110', border: '1px solid #e2e1dc', background: '#fff', padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.downloadPdf}</a>}
           {!impl && <a href="#unlock" style={{ background: '#111110', color: '#fff', padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{paid ? t.unlockImplNav : t.unlockNav}</a>}
         </span>
       </nav>
@@ -375,30 +379,35 @@ export default async function PreviewReportPage({
           </div>
         )}
 
-        {/* Competitor comparison — prominent, near top. Hidden if no rows. Gated for free. */}
+        {/* Top competitors mentioned instead — FREE (names + counts). */}
         {competitors.length > 0 && (
-          <div style={{ position: 'relative', marginBottom: 20 }}>
-            <div style={{ ...card, marginBottom: 0, filter: paid ? 'none' : 'blur(6px)', pointerEvents: paid ? 'auto' : 'none', userSelect: paid ? 'auto' : 'none' }}>
-              <div style={cardTitle}>{t.competitorsTitle}</div>
-              {competitors.map((c, i) => (
-                <div key={`${c.name}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f2f1ee' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#111110' }}>{i + 1}. {c.name}</span>
-                  <span style={{ fontSize: 13, color: '#7a7874' }}>
-                    {c.mention_count} {t.mentions.toLowerCase()}
-                    {c.share_of_voice != null ? ` · ${Math.round(Number(c.share_of_voice) * 100)}% ${t.shareOfVoice.toLowerCase()}` : ''}
-                  </span>
+          <div style={{ ...card, marginBottom: 20 }}>
+            <div style={cardTitle}>{t.competitorsTitle}</div>
+            {competitors.map((c, i) => (
+              <div key={`${c.name}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f2f1ee' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#111110' }}>{i + 1}. {c.name}</span>
+                <span style={{ fontSize: 13, color: '#7a7874' }}>
+                  {c.mention_count} {t.mentions.toLowerCase()}
+                  {paid && c.share_of_voice != null ? ` · ${Math.round(Number(c.share_of_voice) * 100)}% ${t.shareOfVoice.toLowerCase()}` : ''}
+                </span>
+              </div>
+            ))}
+            {!paid && <p style={{ fontSize: 12, color: '#b0aea8', marginTop: 12 }}>🔒 {t.competitorsLockBody} — {t.lockedTitle.toLowerCase()}.</p>}
+          </div>
+        )}
+
+        {/* What the full audit unlocks (free only) — visible but locked, with explanation. */}
+        {!paid && (
+          <div style={{ ...card, marginBottom: 20 }}>
+            <div style={cardTitle}>{t.lockedTitle}</div>
+            <p style={{ fontSize: 13, color: '#7a7874', marginTop: -6, marginBottom: 12 }}>{t.lockedSub}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+              {t.lockedItems.map((it) => (
+                <div key={it} style={{ display: 'flex', gap: 9, alignItems: 'center', fontSize: 13.5, color: '#111110' }}>
+                  <span style={{ opacity: 0.55 }}>🔒</span>{it}
                 </div>
               ))}
             </div>
-            {!paid && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(250,250,248,0.7)', borderRadius: 10 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, marginBottom: 8 }}>🔒</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111110', marginBottom: 4 }}>{t.competitorsLockTitle}</div>
-                  <div style={{ fontSize: 12, color: '#7a7874' }}>{t.competitorsLockBody}</div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 

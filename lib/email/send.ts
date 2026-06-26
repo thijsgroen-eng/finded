@@ -65,17 +65,18 @@ export function requestReceivedEmail(): { subject: string; html: string; text: s
 export function reportReadyEmail(opts: { restaurantName?: string | null; reportUrl?: string | null }): { subject: string; html: string; text: string } {
   const name = opts.restaurantName?.trim() || 'your restaurant'
   const cta = opts.reportUrl
-    ? `<p style="margin:20px 0"><a href="${opts.reportUrl}" style="background:#111110;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;display:inline-block">View your report</a></p>
-       <p style="font-size:13px;color:#7a7874">Or paste this link into your browser:<br>${opts.reportUrl}</p>`
-    : `<p>Reply to this email and we\'ll send your report over.</p>`
+    ? `<p style="margin:22px 0"><a href="${opts.reportUrl}" style="background:#0f766e;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;display:inline-block">Open your dashboard</a></p>
+       <p style="font-size:13px;color:#7a7874">This is your private link — keep it to return any time:<br><a href="${opts.reportUrl}" style="color:#0f766e">${opts.reportUrl}</a></p>
+       <p style="font-size:13px;color:#7a7874;margin-top:14px">You can download a PDF export from the dashboard whenever you need one.</p>`
+    : `<p>Reply to this email and we\'ll send your dashboard link over.</p>`
   return {
-    subject: `Your AI visibility report for ${name} is ready`,
+    subject: `Your AI Visibility Dashboard for ${name} is ready`,
     html: wrap(
-      `<h2 style="font-size:20px;margin:0 0 12px">Your report is ready</h2>
-       <p>We finished checking how AI tools recommend restaurants like ${name}, which competitors appear instead, and what to fix.</p>${cta}`,
+      `<h2 style="font-size:20px;margin:0 0 12px">Your dashboard is ready</h2>
+       <p>We measured how ChatGPT, Claude, Gemini and Perplexity recommend restaurants like ${name}, which competitors appear instead, and what to improve. It&rsquo;s all in your dashboard — your permanent home for these results.</p>${cta}`,
     ),
     text: opts.reportUrl
-      ? `Your AI visibility report for ${name} is ready: ${opts.reportUrl}`
-      : `Your AI visibility report for ${name} is ready — reply and we'll send it over.`,
+      ? `Your AI Visibility Dashboard for ${name} is ready. Open it here (your private link): ${opts.reportUrl}`
+      : `Your AI Visibility Dashboard for ${name} is ready — reply and we'll send your link over.`,
   }
 }

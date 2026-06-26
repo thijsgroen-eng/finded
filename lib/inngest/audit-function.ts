@@ -14,6 +14,7 @@ import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliability'
 import { recordObservation } from '@/lib/observations'
+import { ensureDashboardSlug, dashboardUrl } from '@/lib/dashboard'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { asLanguage } from '@/lib/i18n'
 import { resolveAuditLanguage, getSettings } from '@/lib/settings'
@@ -650,33 +651,28 @@ export const auditFunction = inngest.createFunction(
       })
     })
 
-    // ── Step 7: Complete ──────────────────────────────────────
-    await step.run(`complete-${audit_id}`, async () => {
+    // ── Step 7: Complete + create the permanent dashboard ─────
+    // Every audit yields a dashboard — a secure, hard-to-guess slug the customer
+    // returns to. Created here (not gated on checkout), so the magic-link email
+    // always has a destination.
+    const dashboardSlug = await step.run(`complete-${audit_id}`, async () => {
       await supabaseAdmin
         .from('audits')
-        .update({
-          status:       'completed',
-          completed_at: new Date().toISOString(),
-        })
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', audit_id)
-
-      await supabaseAdmin
-        .from('audit_queue')
-        .delete()
-        .eq('audit_id', audit_id)
+      await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+      return ensureDashboardSlug(restaurant_id, entity.name)
     })
 
-    // Email the requester their report (only when this audit came from a public
-    // request and email is configured). Best-effort — never fails the audit.
+    // Email the requester a MAGIC LINK to their dashboard (the dashboard is the
+    // product; the PDF is just an export from it). Best-effort — never fails the
+    // audit. Only when the audit came from a public request and email is set up.
     await step.run(`notify-requester-${audit_id}`, async () => {
       const { data: req } = await supabaseAdmin
         .from('audit_requests').select('email').eq('audit_id', audit_id).maybeSingle()
       if (!req?.email) return { skipped: true }
-      const { data: r } = await supabaseAdmin
-        .from('restaurants').select('name, preview_slug').eq('id', restaurant_id).single()
-      const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://finded.vercel.app').replace(/\/$/, '')
-      const reportUrl = r?.preview_slug ? `${base}/report/${r.preview_slug}` : null
-      const mail = reportReadyEmail({ restaurantName: r?.name, reportUrl })
+      const reportUrl = dashboardSlug ? dashboardUrl(dashboardSlug) : null
+      const mail = reportReadyEmail({ restaurantName: entity.name, reportUrl })
       return sendEmail({ to: req.email, subject: mail.subject, html: mail.html, text: mail.text })
     })
 

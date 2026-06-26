@@ -62,6 +62,10 @@ const data: ReportData = {
   actionPlan: [{ label: 'Week 1', items: ['Add schema', 'Fix meta'] }, { label: 'Week 2', items: ['About page'] }],
   roadmap: [{ label: 'Days 1–30', items: ['Schema, meta, menu'] }],
   generatedAssets: [],
+  industryInsights: {
+    segmentLabel: 'Mediterranean · Amsterdam', segmentN: 24, avgVisibility: 52, pctMentioned: 61, yourVisibility: 36,
+    patterns: ['Restaurants with an HTML (crawlable) menu were mentioned 2.1× more often by AI (based on 40 measured restaurants).'],
+  },
   formulaVersion: 'v2',
 }
 

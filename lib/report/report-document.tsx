@@ -50,6 +50,14 @@ export interface ReportData {
   actionPlan: { label: string; items: string[] }[]
   roadmap: { label: string; items: string[] }[]
   generatedAssets: { type: string; title: string; content: string; format: string }[]
+  industryInsights: {
+    segmentLabel: string
+    segmentN: number
+    avgVisibility: number | null
+    pctMentioned: number | null
+    yourVisibility: number
+    patterns: string[]
+  } | null
   formulaVersion: string | null
 }
 
@@ -99,6 +107,9 @@ const L = (lang: Language) => lang === 'nl' ? {
   noCitations: 'Geen bronvermeldingen gevonden voor deze audit.',
   implPlaceholder: 'Genereer de fix-onderdelen uit de audit (schema, FAQ, content) om ze hier op te nemen.',
   followUpBody: 'Nadat de wijzigingen live zijn, draaien we de audit opnieuw en tonen we de zichtbaarheid vóór/na, zodat je de impact ziet.',
+  insightsTitle: 'Branche-inzichten', insightsBench: (seg: string, n: number) => `Gemeten over ${n} ${seg}-audits`,
+  insightsAvg: 'Gemiddelde zichtbaarheid', insightsYou: 'Jij', insightsPctRec: '% aanbevolen',
+  insightsCaption: 'Op basis van Finded’s eigen metingen — geen algemeen advies.',
 } : {
   planFree: 'FREE CHECK', planAudit: 'FULL AUDIT', planImpl: 'IMPLEMENTATION',
   status: 'AI visibility status', appeared: (x: number, y: number) => `Appeared in ${x} of ${y} successful AI responses tested.`,
@@ -131,6 +142,9 @@ const L = (lang: Language) => lang === 'nl' ? {
   noCitations: 'No citation sources were returned for this audit.',
   implPlaceholder: 'Generate the fix assets from the audit (schema, FAQ, content) to include them here.',
   followUpBody: 'After the changes are live, we re-run the audit and show before / after visibility so you can see the impact.',
+  insightsTitle: 'Industry insights', insightsBench: (seg: string, n: number) => `Measured across ${n} ${seg} audits`,
+  insightsAvg: 'Average visibility', insightsYou: 'You', insightsPctRec: '% recommended',
+  insightsCaption: 'Based on Finded’s own measurements — not generic advice.',
 }
 
 const s = StyleSheet.create({
@@ -461,6 +475,40 @@ function FullAuditPitch({ data, t }: { data: ReportData; t: ReturnType<typeof L>
   )
 }
 
+// Industry insights from the Observation Engine (proprietary benchmark + patterns).
+function IndustryInsights({ data, t }: { data: ReportData; t: ReturnType<typeof L> }) {
+  const ii = data.industryInsights
+  if (!ii) return null
+  return (
+    <View style={s.section} wrap={false}>
+      <SectionTitle>{t.insightsTitle}</SectionTitle>
+      {ii.avgVisibility != null && (
+        <View style={[s.table, { marginBottom: 8 }]}>
+          <View style={s.tHead}>
+            <Text style={[s.tHeadCell, { flex: 2 }]}>{t.insightsBench(ii.segmentLabel, ii.segmentN)}</Text>
+            <Text style={[s.tHeadCell, { flex: 1, textAlign: 'right' }]}>{t.insightsAvg}</Text>
+            <Text style={[s.tHeadCell, { flex: 1, textAlign: 'right' }]}>{t.insightsPctRec}</Text>
+          </View>
+          <View style={s.tRow}>
+            <Text style={[{ flex: 2, fontSize: 9.5, color: MUTED }]}>{t.insightsAvg} ({ii.segmentLabel})</Text>
+            <Text style={[{ flex: 1, fontSize: 9.5, color: INK, textAlign: 'right' }]}>{ii.avgVisibility}/100</Text>
+            <Text style={[{ flex: 1, fontSize: 9.5, color: INK, textAlign: 'right' }]}>{ii.pctMentioned}%</Text>
+          </View>
+          <View style={[s.tRow, { backgroundColor: PANEL }]}>
+            <Text style={[{ flex: 2, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK }]}>{t.insightsYou}</Text>
+            <Text style={[{ flex: 1, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK, textAlign: 'right' }]}>{ii.yourVisibility}/100</Text>
+            <Text style={[{ flex: 1, fontSize: 9.5, color: FAINT, textAlign: 'right' }]}>—</Text>
+          </View>
+        </View>
+      )}
+      {ii.patterns.map((p, i) => (
+        <View key={i} style={s.findingRow}><Text style={[s.findingMark, { color: GREEN }]}>+</Text><Text style={{ fontSize: 9.5, color: INK, flex: 1 }}>{p}</Text></View>
+      ))}
+      <Text style={s.caption}>{t.insightsCaption}</Text>
+    </View>
+  )
+}
+
 export function ReportDocument({ data, language, variant }: { data: ReportData; language: Language; variant: ReportVariant }) {
   const t = L(language)
   const rs = reportStrings(language)
@@ -572,6 +620,9 @@ export function ReportDocument({ data, language, variant }: { data: ReportData; 
 
             {/* Why competitors may be winning — signal comparison of crawled competitor sites */}
             <CompetitorComparison data={data} t={t} />
+
+            {/* Industry insights — proprietary benchmark + measured patterns */}
+            <IndustryInsights data={data} t={t} />
 
             {/* Website review */}
             <View style={s.section}>

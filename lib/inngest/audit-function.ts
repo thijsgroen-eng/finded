@@ -13,6 +13,7 @@ import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliability'
+import { recordObservation } from '@/lib/observations'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { asLanguage } from '@/lib/i18n'
 import { resolveAuditLanguage } from '@/lib/settings'
@@ -598,6 +599,45 @@ export const auditFunction = inngest.createFunction(
         model_consensus:    vs.model_consensus,
         total_mentions:     vs.total_mentions,
         snapshot_date:      new Date().toISOString(),
+      })
+    })
+
+    // ── Step 6d: Observation Engine ───────────────────────────
+    // Contribute one anonymized fact-record to the knowledge base that powers
+    // benchmarks, pattern lift and recommendation confidence over time.
+    await step.run(`record-observation-${audit_id}`, async () => {
+      const [{ data: vs }, { data: wa }, { data: ms }] = await Promise.all([
+        supabaseAdmin.from('visibility_scores').select('visibility_score, mention_frequency').eq('audit_id', audit_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabaseAdmin.from('website_audits').select('schema_present, schema_types, menu_format, faq_present, dietary, review_signals, review_count, opening_hours_present, location_present, contact_present').eq('audit_id', audit_id).single(),
+        supabaseAdmin.from('mentions').select('model, mentioned').eq('audit_id', audit_id),
+      ])
+      const mentions = ms ?? []
+      const mentionedBy = {
+        openai:     mentions.some((m: any) => m.model === 'openai' && m.mentioned),
+        anthropic:  mentions.some((m: any) => m.model === 'anthropic' && m.mentioned),
+        gemini:     mentions.some((m: any) => m.model === 'gemini' && m.mentioned),
+        perplexity: mentions.some((m: any) => m.model === 'perplexity' && m.mentioned),
+      }
+      const schemaTypes = (wa?.schema_types ?? []).map((t: string) => t.toLowerCase())
+      await recordObservation({
+        auditId: audit_id,
+        restaurantId: restaurant_id,
+        city: entity.city ?? null,
+        cuisine: entity.cuisine ?? null,
+        country: entity.country ?? null,
+        businessType: 'restaurant',
+        visibilityScore: vs?.visibility_score != null ? Number(vs.visibility_score) : null,
+        mentionFrequency: vs?.mention_frequency != null ? Number(vs.mention_frequency) : null,
+        mentionedAny: mentions.some((m: any) => m.mentioned),
+        menuFormat: wa?.menu_format ?? null,
+        schemaPresent: !!wa?.schema_present,
+        restaurantSchema: schemaTypes.some((t: string) => t.includes('restaurant') || t.includes('localbusiness')),
+        faqPresent: !!wa?.faq_present,
+        dietaryPresent: (wa?.dietary?.length ?? 0) > 0,
+        reviewsPresent: !!wa?.review_signals || (wa?.review_count ?? 0) > 0,
+        openingHoursPresent: !!wa?.opening_hours_present,
+        locationPresent: !!(wa?.location_present || wa?.contact_present),
+        mentionedBy,
       })
     })
 

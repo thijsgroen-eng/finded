@@ -11,6 +11,7 @@ import { buildDataQuality } from '@/lib/audit/data-quality'
 import { buildKeyFindings } from '@/lib/audit/findings'
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { reliabilityFromAccounting } from '@/lib/audit/reliability'
+import { loadObservations, computeBenchmark, computePatterns, patternEvidence } from '@/lib/observations'
 import { visibilityStatus, websiteSnapshot, categoryPerformance, actionPlanWeeks, roadmap90 } from '@/lib/audit/report-sections'
 import { ReportDocument, ReportData, ReportVariant, normalizeVariant } from '@/lib/report/report-document'
 
@@ -92,6 +93,23 @@ export async function buildReportPdf(
     language,
   )
 
+  // Industry insights from the Observation Engine — benchmark this restaurant's
+  // segment + measured patterns. Gated on sample size so we never show thin stats.
+  const obsRows = await loadObservations()
+  const segment = computeBenchmark(obsRows, { cuisine: restaurant.cuisine, city: restaurant.city })
+  const patternLines = computePatterns(obsRows).slice(0, 3).map((p) => patternEvidence(p, language))
+  const SEG_MIN = 8
+  const industryInsights = (segment.n >= SEG_MIN || patternLines.length > 0)
+    ? {
+        segmentLabel: [restaurant.cuisine, restaurant.city].filter(Boolean).join(' · ') || (language === 'nl' ? 'alle restaurants' : 'all restaurants'),
+        segmentN: segment.n,
+        avgVisibility: segment.n >= SEG_MIN && segment.avgVisibility != null ? Math.round(segment.avgVisibility) : null,
+        pctMentioned: segment.n >= SEG_MIN ? Math.round(segment.pctMentioned * 100) : null,
+        yourVisibility: Math.round(Number(vs.visibility_score ?? 0)),
+        patterns: patternLines,
+      }
+    : null
+
   const mentioned = metrics.total_mentions > 0
   const mentionFreqPct = Number(vs.mention_frequency ?? metrics.mention_frequency ?? 0) * 100
   const recs = (recommendations ?? []).map((r) => ({
@@ -153,6 +171,7 @@ export async function buildReportPdf(
     actionPlan: actionPlanWeeks(recs, language),
     roadmap: roadmap90(recs, language),
     generatedAssets,
+    industryInsights,
 
     formulaVersion: (vs.score_breakdown as { method_version?: string } | null)?.method_version ?? null,
   }

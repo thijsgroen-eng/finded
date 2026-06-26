@@ -14,6 +14,7 @@ import { ScoreTrend } from '@/components/admin/score-trend'
 import { CopyReportLink } from '@/components/admin/copy-report-link'
 import { AuditControls } from '@/components/admin/audit-controls'
 import { ReportSender } from '@/components/admin/report-sender'
+import { PlanControls } from '@/components/admin/plan-controls'
 import {
   ScoreBreakdownCard, RunAccountingCard, PromptEvidenceCard, MethodologyCard, WebsiteSignalsPanel, AuthorityPanel,
   CompetitorComparisonCard,
@@ -31,7 +32,7 @@ import { resolveAuditLanguage } from '@/lib/settings'
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
     .from('audits')
-    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, domain, preview_slug, country)')
+    .select('*, restaurant:restaurants(id, name, city, cuisine, business_type, website, domain, preview_slug, country, plan, report_paid)')
     .eq('id', id)
     .single()
 
@@ -47,6 +48,8 @@ async function getAuditData(id: string) {
     domain: string | null
     preview_slug: string | null
     country: string | null
+    plan: string | null
+    report_paid: boolean | null
   }
 
   const [
@@ -190,13 +193,27 @@ export default async function AuditDetailPage({
               </a>
             )}
             {entity.preview_slug && audit.status === 'completed' && (
-              <CopyReportLink slug={entity.preview_slug} />
+              <>
+                <a href={`/report/${entity.preview_slug}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-700 rounded-md px-2.5 py-1.5">
+                  <ExternalLink className="w-3 h-3" />
+                  View dashboard
+                </a>
+                <CopyReportLink slug={entity.preview_slug} />
+              </>
             )}
             <Badge variant={statusVariant(audit.status) as any}>{audit.status}</Badge>
             <AuditControls auditId={id} status={audit.status} />
           </div>
         </div>
       </div>
+
+      {/* ── Customer dashboard tier + open link ── */}
+      <PlanControls
+        restaurantId={entity.id}
+        previewSlug={entity.preview_slug}
+        current={entity.plan === 'implementation' ? 'implementation' : (entity.plan === 'audit' || entity.report_paid) ? 'audit' : 'free'}
+      />
 
       {/* ── Reliability gate banner ── */}
       {reliability.band === 'red' && (

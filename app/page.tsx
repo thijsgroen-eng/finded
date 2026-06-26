@@ -17,7 +17,7 @@ const LGREEN = '#edf8f3'
 const RED = '#c0392b'
 const LRED = '#fbecea'
 
-const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+const FONT = 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
 function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; sub?: string }) {
@@ -46,7 +46,14 @@ function AuditPreview() {
   )
   return (
     <div>
-      <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 30px 60px -34px rgba(17,17,16,0.30)', overflow: 'hidden' }}>
+      <div style={{ background: PANEL, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 40px 80px -40px rgba(17,17,16,0.38), 0 6px 16px -10px rgba(17,17,16,0.12)', overflow: 'hidden' }}>
+        {/* window chrome → reads as an app screenshot */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: '#f4f3f0', borderBottom: `1px solid ${BORDER}` }}>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
+          <span style={{ marginLeft: 10, fontSize: 10.5, color: FAINT, fontFamily: MONO }}>finded.app/report</span>
+        </div>
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: GREEN }} />
@@ -127,15 +134,15 @@ export default async function LandingPage() {
       <nav style={{ background: 'rgba(250,250,248,0.9)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <a href="/" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, color: INK, textDecoration: 'none' }}>Finded</a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <a href="#measure" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>What we measure</a>
-          <a href="#why" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Why Finded</a>
-          <a href="#pricing" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Pricing</a>
-          <a href="#check" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '9px 16px', borderRadius: 8, textDecoration: 'none' }}>Check my AI visibility</a>
+          <a href="#measure" className="lnk" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>What we measure</a>
+          <a href="#why" className="lnk" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Why Finded</a>
+          <a href="#pricing" className="lnk" style={{ fontSize: 13, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>Pricing</a>
+          <a href="#check" className="btn btn-primary" style={{ fontSize: 13, fontWeight: 700, background: INK, color: '#fff', padding: '9px 16px', borderRadius: 8, textDecoration: 'none' }}>Check my AI visibility</a>
         </div>
       </nav>
 
       {/* ── 1. Hero ── */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) 24px 56px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 'clamp(36px, 5vw, 60px)', alignItems: 'center' }}>
+      <section className="grid-bg" style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) 24px 56px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 'clamp(36px, 5vw, 60px)', alignItems: 'center' }}>
         <div>
           <div style={{ display: 'inline-block', background: LGREEN, color: DGREEN, fontSize: 11, fontWeight: 700, padding: '5px 13px', borderRadius: 20, letterSpacing: 0.3, marginBottom: 22 }}>
             The first AI Visibility Platform for restaurants
@@ -148,12 +155,12 @@ export default async function LandingPage() {
             tools recommend restaurants, compares you with your competitors, and shows exactly what to improve.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#check" style={{ background: INK, color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 10, textDecoration: 'none' }}>Check my AI visibility</a>
-            <a href="#sample" style={{ background: PANEL, color: INK, fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 10, textDecoration: 'none', border: `1px solid ${BORDER}` }}>View example audit</a>
+            <a href="#check" className="btn btn-primary" style={{ background: INK, color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 10, textDecoration: 'none' }}>Check my AI visibility</a>
+            <a href="#sample" className="btn" style={{ background: PANEL, color: INK, fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 10, textDecoration: 'none', border: `1px solid ${BORDER}` }}>View example audit</a>
           </div>
           <p style={{ fontSize: 13, color: FAINT, marginTop: 18 }}>Free check · no account, no card · results by email</p>
         </div>
-        <div id="sample"><AuditPreview /></div>
+        <div id="sample" className="rise"><AuditPreview /></div>
       </section>
 
       {/* ── Trust: platforms tested ── */}
@@ -196,7 +203,7 @@ export default async function LandingPage() {
             ['Evidence', 'Which prompts and sources generated each finding.'],
             ['Action plan', 'Exactly what to improve first, ranked by impact.'],
           ].map(([t, d], i) => (
-            <div key={t} style={card}>
+            <div key={t} className="card-fx" style={card}>
               <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, fontFamily: MONO, marginBottom: 12 }}>{String(i + 1).padStart(2, '0')}</div>
               <h3 style={{ fontSize: 16.5, fontWeight: 800, color: INK, marginBottom: 8 }}>{t}</h3>
               <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.55 }}>{d}</p>
@@ -282,7 +289,7 @@ export default async function LandingPage() {
               ['5', 'Recommendations', 'Prioritised, backed by data.'],
               ['6', 'Implementation', 'We help you make the changes.'],
             ].map(([n, t, d]) => (
-              <div key={n} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
+              <div key={n} className="card-fx" style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
                 <div style={{ width: 26, height: 26, borderRadius: '50%', background: INK, color: '#fff', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{n}</div>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: INK, marginBottom: 4 }}>{t}</div>
                 <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{d}</div>
@@ -312,7 +319,7 @@ export default async function LandingPage() {
               background: p.highlight ? INK : PANEL, color: p.highlight ? '#fff' : INK,
               border: `1px solid ${p.highlight ? INK : BORDER}`, borderRadius: 16, padding: 24,
               display: 'flex', flexDirection: 'column', boxShadow: p.highlight ? '0 28px 56px -30px rgba(17,17,16,0.45)' : 'none',
-            }}>
+            }} className="card-fx">
               {p.highlight && <span style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: INK, background: GREEN, padding: '3px 8px', borderRadius: 5, marginBottom: 12 }}>Most popular</span>}
               <div style={{ fontSize: 16, fontWeight: 800 }}>{p.name}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '8px 0 6px' }}>

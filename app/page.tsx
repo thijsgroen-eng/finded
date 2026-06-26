@@ -37,31 +37,8 @@ function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; 
   )
 }
 
-const MODELS = [
-  { name: 'ChatGPT', hit: false },
-  { name: 'Claude', hit: true },
-  { name: 'Gemini', hit: false },
-  { name: 'Perplexity', hit: false },
-]
-
-function MiniSpark({ points, color = EMERALD }: { points: number[]; color?: string }) {
-  const w = 120, h = 28, pad = 2
-  const max = Math.max(...points), min = Math.min(...points)
-  const x = (i: number) => pad + (i / (points.length - 1)) * (w - pad * 2)
-  const y = (v: number) => h - pad - ((v - min) / Math.max(1, max - min)) * (h - pad * 2)
-  const d = points.map((v, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: 120, height: 28 }} preserveAspectRatio="none">
-      <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// ── The product, as the hero: a premium app screenshot ───────────────────────
+// ── The product, as the hero: a real screenshot of the dashboard ─────────────
 function AuditPreview() {
-  const Label = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontSize: 10, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: MONO }}>{children}</div>
-  )
   return (
     <div>
       <div className="glass" style={{ border: `1px solid ${BORDER}`, borderRadius: 20, boxShadow: '0 50px 100px -50px rgba(11,40,36,0.45), 0 8px 24px -12px rgba(17,24,39,0.12)', overflow: 'hidden' }}>
@@ -72,74 +49,10 @@ function AuditPreview() {
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
           <span style={{ marginLeft: 10, fontSize: 10.5, color: FAINT, fontFamily: MONO }}>finded.app/dashboard</span>
         </div>
-
-        <div style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
-            <div>
-              <Label>Restaurant</Label>
-              <div style={{ fontSize: 21, fontWeight: 800, color: INK, marginTop: 3, letterSpacing: -0.4 }}>Restaurant Name</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 9, background: '#fbecea', border: '1px solid #f0cfc9', borderRadius: 8, padding: '5px 11px' }}>
-                <span style={{ color: RED, fontWeight: 800, fontSize: 12 }}>✕</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: RED }}>Not recommended</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', flexShrink: 0 }}>
-              <div style={{ width: 66, height: 66, borderRadius: '50%', border: `4px solid #f0e9e6`, borderTopColor: RED, borderRightColor: RED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 20, fontWeight: 800, color: INK }}>36</span>
-              </div>
-              <Label>Visibility</Label>
-            </div>
-          </div>
-
-          {/* gauge */}
-          <div style={{ height: 8, borderRadius: 6, background: '#eee9e6', overflow: 'hidden', marginBottom: 18 }}>
-            <div style={{ width: '36%', height: '100%', borderRadius: 6, background: `linear-gradient(90deg, ${EMERALD}, #d99a2b)` }} />
-          </div>
-
-          <Label>AI models tested</Label>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', margin: '9px 0 16px' }}>
-            {MODELS.map((m) => (
-              <span key={m.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: m.hit ? INK : MUTED, background: m.hit ? MINT : '#fff', border: `1px solid ${m.hit ? '#bfe9df' : BORDER}`, borderRadius: 20, padding: '4px 10px' }}>
-                <span style={{ color: m.hit ? EMERALD : FAINT, fontWeight: 800 }}>{m.hit ? '✓' : '✕'}</span>{m.name}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, marginBottom: 14 }}>
-            <Label>Visibility trend</Label>
-            <MiniSpark points={[18, 16, 22, 20, 28, 31, 36]} />
-          </div>
-
-          <Label>Competitors recommended instead</Label>
-          <div style={{ display: 'grid', gap: 6, margin: '10px 0 16px' }}>
-            {['Restaurant A', 'Restaurant B', 'Restaurant C'].map((c, i) => (
-              <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', background: SAND, border: `1px solid ${BORDER}`, fontSize: 10, fontWeight: 800, color: MUTED, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: INK }}>{c}</span>
-              </div>
-            ))}
-          </div>
-
-          <Label>Biggest opportunities</Label>
-          <div style={{ display: 'grid', gap: 7, margin: '10px 0 16px' }}>
-            {['Missing Restaurant schema', 'Menu only available as PDF', 'No FAQ content'].map((f) => (
-              <div key={f} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                <span style={{ color: RED, fontWeight: 800, fontSize: 13 }}>✕</span>
-                <span style={{ fontSize: 14, color: INK }}>{f}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background: MINT, border: `1px solid #bfe9df`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <div>
-              <Label>Recommendation</Label>
-              <div style={{ fontSize: 14, fontWeight: 700, color: DEMERALD, marginTop: 3 }}>Implement Restaurant schema</div>
-            </div>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: '#fff', background: EMERALD, borderRadius: 6, padding: '5px 9px', whiteSpace: 'nowrap' }}>Do first</span>
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/dashboard-hero.png" alt="Finded AI Visibility Dashboard" style={{ display: 'block', width: '100%', height: 'auto' }} />
       </div>
-      <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 12 }}>Illustrative example. Your dashboard uses your restaurant&rsquo;s real results.</p>
+      <p style={{ fontSize: 12, color: FAINT, textAlign: 'center', marginTop: 12 }}>A real Finded dashboard. Yours uses your restaurant&rsquo;s own results.</p>
     </div>
   )
 }

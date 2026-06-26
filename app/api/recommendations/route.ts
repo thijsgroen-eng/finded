@@ -8,6 +8,7 @@ import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { resolveAuditLanguage } from '@/lib/settings'
 import { LANGUAGE_NAME_EN } from '@/lib/i18n'
+import { loadObservations, computePatterns, patternEvidence } from '@/lib/observations'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -158,6 +159,13 @@ ${comparison.gaps.length ? comparison.gaps.map((g) => `- ${g}`).join('\n') : '- 
   const language = await resolveAuditLanguage((restaurant as { country?: string | null }).country)
   const langName = LANGUAGE_NAME_EN[language]
 
+  // Proprietary evidence from the Observation Engine: measured patterns the model
+  // may cite (so recommendations are evidence-backed, not generic SEO advice).
+  const patterns = computePatterns(await loadObservations()).slice(0, 6)
+  const measuredEvidence = patterns.length
+    ? `\n\nMEASURED PATTERNS FROM FINDED'S DATASET (cite as evidence + set confidence when a recommendation matches one; these are real measurements across many audits):\n${patterns.map((p) => `- ${patternEvidence(p, 'en')} [confidence ${p.lift >= 2 ? 'High' : p.lift >= 1.4 ? 'Medium' : 'Low'}]`).join('\n')}`
+    : '\n\nMEASURED PATTERNS: not enough audits in the dataset yet to cite measured lift — base confidence on the strength of the audit evidence instead.'
+
   const prompt = `You are an AI visibility consultant for restaurants. Analyse this restaurant's AI visibility audit and generate specific, actionable recommendations.
 
 IMPORTANT: Write EVERY text field (title, what, why, evidence, impact) entirely in ${langName}. Do not mix languages.
@@ -180,7 +188,7 @@ SENTIMENT: ${metrics.sentiment_breakdown.positive} positive, ${metrics.sentiment
 
 WEBSITE SIGNALS:
 ${websiteSignals}
-${cuisineAnalysis}${competitorGap}${competitorSignals}${scoreContext}
+${cuisineAnalysis}${competitorGap}${competitorSignals}${scoreContext}${measuredEvidence}
 
 Generate exactly 5 specific, prioritised recommendations to improve this restaurant's AI visibility.
 Base each recommendation on the evidence above: the weakest score components, missing website signals, the competitor gap, and the cuisine prompt misses.
@@ -194,8 +202,9 @@ Format your response as a JSON array with this exact structure:
     "title": "Short action title (max 8 words)",
     "what": "Exactly what to do (2-3 sentences, specific and actionable)",
     "why": "Why this will improve AI visibility (1-2 sentences)",
-    "evidence": "The specific data point from THIS audit that triggered it (e.g. 'Missing from 4/5 Italiaans queries' or 'Competitor De Kas named in 9 answers, you in 2')",
-    "impact": "Expected impact, plainly stated (e.g. 'Helps you appear for cuisine queries you currently miss')"
+    "evidence": "The specific data point that triggered it — prefer a MEASURED PATTERN above when one matches (e.g. 'Restaurants with an HTML menu were mentioned 2.1× more often'), else a real number from THIS audit (e.g. 'Competitor De Kas named in 9 answers, you in 2')",
+    "impact": "Expected impact, plainly stated (e.g. 'Helps you appear for cuisine queries you currently miss')",
+    "confidence": "high|medium|low — how strongly the evidence supports the expected impact (High only when a measured pattern backs it)"
   }
 ]
 
@@ -203,6 +212,7 @@ Fix type guide (choose the closest, or null if none of these implement the fix):
 ${FIX_TYPES.map(ty => `- ${ty}: ${FIX_TYPE_HINTS[ty]}`).join('\n')}
 
 Rules:
+- "confidence" MUST be high/medium/low. Use "high" ONLY when a MEASURED PATTERN above supports the recommendation; otherwise medium or low. Never overstate.
 - "type" MUST be exactly one of the listed values or null — do not invent types.
 - "impact_level" = how much this is likely to move AI visibility; "effort" = how hard it is for the owner.
 - "evidence" must quote a real number/signal from the audit data above, not a generality.
@@ -265,6 +275,7 @@ Rules:
             impact_level: impactLevel,
             effort,
             priority_rank: priorityRank,
+            confidence: asLevel(rec.confidence),  // evidence-backed confidence band (020)
           }
         })
       )
@@ -282,6 +293,7 @@ Rules:
         impact_level,
         effort,
         priority_rank: computePriorityRank(impact_level, effort),
+        confidence: asLevel(rec.confidence),
         what: rec.what,
         status: 'pending',
       }
@@ -330,6 +342,7 @@ export async function GET(request: NextRequest) {
       impact_level: r.impact_level ?? r.priority ?? 'medium',
       effort: r.effort ?? 'medium',
       priority_rank: r.priority_rank ?? 'do_next',
+      confidence: r.confidence ?? null,
       title: r.title,
       what: r.description,
       why: r.why ?? '',

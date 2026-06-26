@@ -161,19 +161,19 @@ export default async function LandingPage() {
           <div style={{ display: 'inline-block', background: LGREEN, color: DGREEN, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, letterSpacing: 0.4, marginBottom: 20 }}>
             AI visibility audits for restaurants
           </div>
-          <h1 style={{ fontSize: 'clamp(30px, 4.6vw, 46px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.3, marginBottom: 18 }}>
-            Is your restaurant showing up when guests ask AI where to eat?
+          <h1 style={{ fontSize: 'clamp(32px, 5vw, 50px)', fontWeight: 800, lineHeight: 1.05, letterSpacing: -1.4, marginBottom: 18 }}>
+            Is AI recommending your restaurant?
           </h1>
           <p style={{ fontSize: 'clamp(16px, 2vw, 18px)', color: MUTED, lineHeight: 1.6, marginBottom: 26, maxWidth: 540 }}>
-            We test ChatGPT, Claude, Gemini and Perplexity to see whether your restaurant gets recommended,
-            which competitors appear instead, and what you can do to improve visibility.
+            More guests are asking ChatGPT, Gemini, Claude and Perplexity where to eat. Finded measures how those
+            AI tools describe and recommend your restaurant, compares you with competitors, and shows exactly what to improve.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a href="#check" style={{ background: INK, color: '#fff', fontWeight: 700, fontSize: 15, padding: '13px 22px', borderRadius: 9, textDecoration: 'none' }}>
-              Get free AI visibility check
+              Check my AI visibility
             </a>
             <a href="#sample" style={{ background: PANEL, color: INK, fontWeight: 700, fontSize: 15, padding: '13px 22px', borderRadius: 9, textDecoration: 'none', border: `1px solid ${BORDER}` }}>
-              View sample audit
+              View example audit
             </a>
           </div>
           <p style={{ fontSize: 13, color: FAINT, marginTop: 16 }}>

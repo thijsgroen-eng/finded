@@ -18,6 +18,7 @@ interface Recommendation {
   impact_level?: 'high' | 'medium' | 'low'
   effort?: 'high' | 'medium' | 'low'
   priority_rank?: PriorityRank
+  confidence?: 'high' | 'medium' | 'low' | null
 }
 
 const RANK_STYLE: Record<PriorityRank, { bg: string; color: string }> = {
@@ -261,6 +262,9 @@ export function Recommendations({ auditId }: { auditId: string }) {
                       <p className="text-[10px] text-gray-400 mt-1 leading-tight">
                         Impact {(rec.impact_level ?? rec.priority)} · Effort {rec.effort ?? '—'}
                       </p>
+                      {rec.confidence && (
+                        <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">Confidence {rec.confidence}</p>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 mb-2">

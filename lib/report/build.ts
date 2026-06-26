@@ -54,7 +54,7 @@ export async function buildReportPdf(
     supabaseAdmin.from('visibility_scores').select('*').eq('audit_id', auditId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabaseAdmin.from('mentions').select('model, prompt_id, mentioned, mention_frequency, position, sentiment, sample_index').eq('audit_id', auditId),
     supabaseAdmin.from('competitors').select('name, mention_count, providers').eq('audit_id', auditId).order('mention_count', { ascending: false }).limit(8),
-    supabaseAdmin.from('recommendations').select('title, description, priority, suggested_fix, expected_impact, priority_rank, impact_level, effort').eq('audit_id', auditId).order('created_at', { ascending: true }),
+    supabaseAdmin.from('recommendations').select('title, description, priority, suggested_fix, expected_impact, priority_rank, impact_level, effort, confidence, evidence').eq('audit_id', auditId).order('created_at', { ascending: true }),
     supabaseAdmin.from('website_audits').select('*').eq('audit_id', auditId).single(),
     supabaseAdmin.from('model_runs').select('model, prompt_id, sample_index, grounded, model_version, locale, duration_ms, raw_response, status, sources').eq('audit_id', auditId),
     supabaseAdmin.from('prompt_runs').select('prompt_id, category, intent, prompt_text').eq('audit_id', auditId),
@@ -116,6 +116,7 @@ export async function buildReportPdf(
     title: r.title ?? '', description: r.description ?? '', priority: r.priority ?? 'medium',
     suggested_fix: r.suggested_fix ?? null, expected_impact: r.expected_impact ?? null,
     priority_rank: r.priority_rank ?? null, impact_level: r.impact_level ?? null, effort: r.effort ?? null,
+    confidence: r.confidence ?? null, evidence: r.evidence ?? null,
   }))
 
   const data: ReportData = {

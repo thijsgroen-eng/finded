@@ -46,7 +46,7 @@ export interface ReportData {
     whyWin: { name: string; reasons: string }[]
     gaps: string[]
   }
-  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null }[]
+  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null; confidence?: string | null; evidence?: string | null }[]
   actionPlan: { label: string; items: string[] }[]
   roadmap: { label: string; items: string[] }[]
   generatedAssets: { type: string; title: string; content: string; format: string }[]
@@ -110,6 +110,8 @@ const L = (lang: Language) => lang === 'nl' ? {
   insightsTitle: 'Branche-inzichten', insightsBench: (seg: string, n: number) => `Gemeten over ${n} ${seg}-audits`,
   insightsAvg: 'Gemiddelde zichtbaarheid', insightsYou: 'Jij', insightsPctRec: '% aanbevolen',
   insightsCaption: 'Op basis van Finded’s eigen metingen — geen algemeen advies.',
+  confidenceLabel: 'Betrouwbaarheid', evidenceLabel: 'Bewijs',
+  conf: { high: 'Hoog', medium: 'Gemiddeld', low: 'Laag' } as Record<string, string>,
 } : {
   planFree: 'FREE CHECK', planAudit: 'FULL AUDIT', planImpl: 'IMPLEMENTATION',
   status: 'AI visibility status', appeared: (x: number, y: number) => `Appeared in ${x} of ${y} successful AI responses tested.`,
@@ -145,6 +147,8 @@ const L = (lang: Language) => lang === 'nl' ? {
   insightsTitle: 'Industry insights', insightsBench: (seg: string, n: number) => `Measured across ${n} ${seg} audits`,
   insightsAvg: 'Average visibility', insightsYou: 'You', insightsPctRec: '% recommended',
   insightsCaption: 'Based on Finded’s own measurements — not generic advice.',
+  confidenceLabel: 'Confidence', evidenceLabel: 'Evidence',
+  conf: { high: 'High', medium: 'Medium', low: 'Low' } as Record<string, string>,
 }
 
 const s = StyleSheet.create({
@@ -335,7 +339,8 @@ function Recommendations({ data, t }: { data: ReportData; t: ReturnType<typeof L
           <View style={s.recBody}>
             <Text style={s.recTitle}>{r.title}  <Text style={[s.recMeta, { color: rankColor(r.priority_rank) }]}>{rankLabel(r.priority_rank)}</Text></Text>
             <Text style={s.recDesc}>{r.description}</Text>
-            {r.expected_impact && <Text style={[s.recDesc, { color: GREEN }]}>{t.impactLabel}: {r.expected_impact} · {t.effortLabel} {r.effort ?? '—'}</Text>}
+            {r.evidence && <Text style={[s.recDesc, { color: MUTED }]}>{t.evidenceLabel}: {r.evidence}</Text>}
+            {r.expected_impact && <Text style={[s.recDesc, { color: GREEN }]}>{t.impactLabel}: {r.expected_impact} · {t.effortLabel} {r.effort ?? '—'}{r.confidence ? ` · ${t.confidenceLabel}: ${t.conf[r.confidence] ?? r.confidence}` : ''}</Text>}
           </View>
         </View>
       ))}

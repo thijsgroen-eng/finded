@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
   if (typeof body.contactEmail === 'string') patch.contactEmail = body.contactEmail
   if (typeof body.founderName === 'string') patch.founderName = body.founderName
   if (body.providers && typeof body.providers === 'object') patch.providers = body.providers as AppSettings['providers']
+  if (typeof body.grounded === 'boolean') patch.grounded = body.grounded
+  if (typeof body.maxPrompts === 'number') patch.maxPrompts = body.maxPrompts
+  if (typeof body.samples === 'number') patch.samples = body.samples
   const settings = await updateSettings(patch)
   return NextResponse.json({ ok: true, settings })
 }

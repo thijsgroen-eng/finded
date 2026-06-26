@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui'
-import { Loader2, Check, Globe, User, Cpu } from 'lucide-react'
+import { Loader2, Check, Globe, User, Cpu, Coins } from 'lucide-react'
 
 type ProviderKey = 'openai' | 'anthropic' | 'gemini' | 'perplexity'
 interface Settings {
@@ -11,6 +11,9 @@ interface Settings {
   contactEmail: string
   founderName: string
   providers: Record<ProviderKey, boolean>
+  grounded: boolean
+  maxPrompts: number
+  samples: number
 }
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
@@ -109,6 +112,45 @@ export default function SettingsPage() {
                   </label>
                 )
               })}
+            </CardContent>
+          </Card>
+
+          {/* Audit & cost */}
+          <Card>
+            <CardHeader>
+              <CardTitle><span className="inline-flex items-center gap-2"><Coins className="w-4 h-4 text-gray-400" /> Audit &amp; cost</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={s.grounded} onChange={(e) => set('grounded', e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300" />
+                <span className="text-sm text-gray-700">
+                  Live web-search grounding
+                  <span className="block text-xs text-gray-400 mt-0.5">Each model call also searches the web (closer to how people really use AI), but search fees make audits ~10× more expensive. Turn off to measure the models&rsquo; base answers far more cheaply.</span>
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Prompts per audit</label>
+                  <input type="number" min={1} max={64} value={s.maxPrompts} onChange={(e) => set('maxPrompts', Math.max(1, Math.min(64, Number(e.target.value) || 1)))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Samples per prompt</label>
+                  <input type="number" min={1} max={5} value={s.samples} onChange={(e) => set('samples', Math.max(1, Math.min(5, Number(e.target.value) || 1)))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                </div>
+              </div>
+              {(() => {
+                const enabled = Object.values(s.providers).filter(Boolean).length || 1
+                const calls = enabled * s.maxPrompts * s.samples
+                const perAudit = calls * ((s.grounded ? 0.03 : 0.0015) + 0.002) + 0.02
+                return (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
+                    <div className="font-medium">≈ ${perAudit.toFixed(2)} per audit · ${(perAudit * 100).toFixed(0)} for 100</div>
+                    <div className="text-xs text-gray-400 mt-1">{enabled} provider{enabled === 1 ? '' : 's'} × {s.maxPrompts} prompts × {s.samples} sample{s.samples === 1 ? '' : 's'} = ~{calls} calls/audit, grounding {s.grounded ? 'on' : 'off'}. Rough estimate — verify with provider billing.</div>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
 

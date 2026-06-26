@@ -16,7 +16,7 @@ import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliab
 import { recordObservation } from '@/lib/observations'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { asLanguage } from '@/lib/i18n'
-import { resolveAuditLanguage } from '@/lib/settings'
+import { resolveAuditLanguage, getSettings } from '@/lib/settings'
 
 /** True if an operator has stopped this audit (status set to 'cancelled'). */
 async function isCancelled(auditId: string): Promise<boolean> {
@@ -24,14 +24,19 @@ async function isCancelled(auditId: string): Promise<boolean> {
   return data?.status === 'cancelled'
 }
 
-// We run the full 32-prompt core set across all providers. With 32 prompts × 4
-// models the data is already dense, so the default is 1 sample per (prompt,model)
-// — the mention-frequency confidence band is computed over all those cells.
-// Raise AUDIT_SAMPLES for extra robustness (multiplies cost + time); MAX_PROMPTS
-// and SAMPLES are env-tunable to stay within the serverless timeout.
-const SAMPLES = Math.min(5, Math.max(1, Number(process.env.AUDIT_SAMPLES ?? 1)))
-const MAX_PROMPTS = Math.max(1, Number(process.env.AUDIT_MAX_PROMPTS ?? 32))
-const AUDIT_GROUNDED = (process.env.AUDIT_GROUNDED ?? 'true') !== 'false'
+// Audit knobs (samples, prompt count, web-search grounding) are controlled from
+// Settings → Audit & cost. An env var, when set, still OVERRIDES the setting
+// (handy for one-off batch tuning). Resolved per-run inside the handler.
+function auditConfig(s: { grounded: boolean; maxPrompts: number; samples: number }) {
+  const envSamples = process.env.AUDIT_SAMPLES
+  const envMaxPrompts = process.env.AUDIT_MAX_PROMPTS
+  const envGrounded = process.env.AUDIT_GROUNDED
+  return {
+    SAMPLES: Math.min(5, Math.max(1, Number(envSamples ?? s.samples))),
+    MAX_PROMPTS: Math.max(1, Number(envMaxPrompts ?? s.maxPrompts)),
+    AUDIT_GROUNDED: envGrounded != null ? envGrounded !== 'false' : s.grounded,
+  }
+}
 // Pre-flight provider health check: one cheap call per provider before the full
 // matrix runs, so a dead provider (no credit / bad key) aborts the audit in
 // seconds instead of after dozens of failed calls. Set AUDIT_PREFLIGHT=false to
@@ -91,6 +96,10 @@ export const auditFunction = inngest.createFunction(
     const language = process.env.AUDIT_LANGUAGE
       ? asLanguage(process.env.AUDIT_LANGUAGE)
       : await resolveAuditLanguage(entity.country)
+
+    // Cost/quality knobs from Settings (env overrides). Drives prompt count,
+    // samples and whether each model call does a live web search.
+    const { SAMPLES, MAX_PROMPTS, AUDIT_GROUNDED } = auditConfig(await getSettings())
 
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {

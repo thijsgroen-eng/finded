@@ -21,6 +21,12 @@ export interface AppSettings {
   /** Which AI providers audits may use. A provider with no API key is excluded
    *  regardless; this lets the operator switch a configured provider off too. */
   providers: { openai: boolean; anthropic: boolean; gemini: boolean; perplexity: boolean }
+  /** Live web-search grounding during audits. Off ≈ ~10× cheaper (no search fees). */
+  grounded: boolean
+  /** Max prompts per audit (cost scales linearly). */
+  maxPrompts: number
+  /** Samples per (prompt, model). 1 is plenty; higher multiplies cost. */
+  samples: number
 }
 
 export type ProviderKey = keyof AppSettings['providers']
@@ -32,6 +38,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   contactEmail: 'Info@finded.com',
   founderName: 'Thijs',
   providers: { openai: true, anthropic: true, gemini: true, perplexity: true },
+  grounded: true,
+  maxPrompts: 32,
+  samples: 1,
 }
 
 /** Validate/normalize a raw stored object into a full AppSettings. */
@@ -49,6 +58,9 @@ function coerce(raw: unknown): AppSettings {
       gemini: (p.gemini ?? true) !== false,
       perplexity: (p.perplexity ?? true) !== false,
     },
+    grounded: typeof d.grounded === 'boolean' ? d.grounded : DEFAULT_SETTINGS.grounded,
+    maxPrompts: typeof d.maxPrompts === 'number' && d.maxPrompts >= 1 ? Math.min(64, Math.floor(d.maxPrompts)) : DEFAULT_SETTINGS.maxPrompts,
+    samples: typeof d.samples === 'number' && d.samples >= 1 ? Math.min(5, Math.floor(d.samples)) : DEFAULT_SETTINGS.samples,
   }
 }
 

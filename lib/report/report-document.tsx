@@ -46,7 +46,7 @@ export interface ReportData {
     whyWin: { name: string; reasons: string }[]
     gaps: string[]
   }
-  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null; confidence?: string | null; evidence?: string | null }[]
+  recommendations: { title: string; description: string; priority: string; suggested_fix?: string | null; expected_impact?: string | null; priority_rank?: string | null; impact_level?: string | null; effort?: string | null; confidence?: string | null; evidence?: string | null; data_source?: string | null; benchmark?: string | null }[]
   actionPlan: { label: string; items: string[] }[]
   roadmap: { label: string; items: string[] }[]
   generatedAssets: { type: string; title: string; content: string; format: string }[]
@@ -111,6 +111,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   insightsAvg: 'Gemiddelde zichtbaarheid', insightsYou: 'Jij', insightsPctRec: '% aanbevolen',
   insightsCaption: 'Op basis van Finded’s eigen metingen — geen algemeen advies.',
   confidenceLabel: 'Betrouwbaarheid', evidenceLabel: 'Bewijs',
+  benchmarkLabel: 'Benchmark', dataSourceLabel: 'Databron',
   conf: { high: 'Hoog', medium: 'Gemiddeld', low: 'Laag' } as Record<string, string>,
 } : {
   planFree: 'FREE CHECK', planAudit: 'FULL AUDIT', planImpl: 'IMPLEMENTATION',
@@ -148,6 +149,7 @@ const L = (lang: Language) => lang === 'nl' ? {
   insightsAvg: 'Average visibility', insightsYou: 'You', insightsPctRec: '% recommended',
   insightsCaption: 'Based on Finded’s own measurements — not generic advice.',
   confidenceLabel: 'Confidence', evidenceLabel: 'Evidence',
+  benchmarkLabel: 'Benchmark', dataSourceLabel: 'Data source',
   conf: { high: 'High', medium: 'Medium', low: 'Low' } as Record<string, string>,
 }
 
@@ -340,7 +342,9 @@ function Recommendations({ data, t }: { data: ReportData; t: ReturnType<typeof L
             <Text style={s.recTitle}>{r.title}  <Text style={[s.recMeta, { color: rankColor(r.priority_rank) }]}>{rankLabel(r.priority_rank)}</Text></Text>
             <Text style={s.recDesc}>{r.description}</Text>
             {r.evidence && <Text style={[s.recDesc, { color: MUTED }]}>{t.evidenceLabel}: {r.evidence}</Text>}
+            {r.benchmark && <Text style={[s.recDesc, { color: NAVY }]}>{t.benchmarkLabel}: {r.benchmark}</Text>}
             {r.expected_impact && <Text style={[s.recDesc, { color: GREEN }]}>{t.impactLabel}: {r.expected_impact} · {t.effortLabel} {r.effort ?? '—'}{r.confidence ? ` · ${t.confidenceLabel}: ${t.conf[r.confidence] ?? r.confidence}` : ''}</Text>}
+            {r.data_source && <Text style={[s.recDesc, { color: FAINT }]}>{t.dataSourceLabel}: {r.data_source}</Text>}
           </View>
         </View>
       ))}

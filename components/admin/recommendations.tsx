@@ -19,6 +19,8 @@ interface Recommendation {
   effort?: 'high' | 'medium' | 'low'
   priority_rank?: PriorityRank
   confidence?: 'high' | 'medium' | 'low' | null
+  data_source?: string | null
+  benchmark?: string | null
 }
 
 const RANK_STYLE: Record<PriorityRank, { bg: string; color: string }> = {
@@ -302,9 +304,19 @@ export function Recommendations({ auditId }: { auditId: string }) {
                           {rec.evidence}
                         </div>
                       )}
-                      <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-md">
-                        <span>📈</span>
-                        {rec.impact}
+                      {rec.benchmark && (
+                        <div className="text-sm text-gray-600 mb-2 leading-relaxed">
+                          <span className="font-semibold text-gray-500 text-xs uppercase tracking-wide">Benchmark: </span>
+                          {rec.benchmark}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-md">
+                          <span>📈</span>
+                          {rec.impact}
+                        </div>
+                        {rec.confidence && <span className="text-xs text-gray-500">Confidence: <strong className="text-gray-700 capitalize">{rec.confidence}</strong></span>}
+                        {rec.data_source && <span className="text-xs text-gray-400">· {rec.data_source}</span>}
                       </div>
 
                       {asset && (

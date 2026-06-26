@@ -8,7 +8,7 @@ import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { resolveAuditLanguage } from '@/lib/settings'
 import { LANGUAGE_NAME_EN } from '@/lib/i18n'
-import { loadObservations, computePatterns, patternEvidence } from '@/lib/observations'
+import { loadObservations, computePatterns, patternEvidence, factBenchmark, benchmarkSentence, FIXTYPE_FACT, ObsRow } from '@/lib/observations'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -161,7 +161,8 @@ ${comparison.gaps.length ? comparison.gaps.map((g) => `- ${g}`).join('\n') : '- 
 
   // Proprietary evidence from the Observation Engine: measured patterns the model
   // may cite (so recommendations are evidence-backed, not generic SEO advice).
-  const patterns = computePatterns(await loadObservations()).slice(0, 6)
+  const obsRows: ObsRow[] = await loadObservations()
+  const patterns = computePatterns(obsRows).slice(0, 6)
   const measuredEvidence = patterns.length
     ? `\n\nMEASURED PATTERNS FROM FINDED'S DATASET (cite as evidence + set confidence when a recommendation matches one; these are real measurements across many audits):\n${patterns.map((p) => `- ${patternEvidence(p, 'en')} [confidence ${p.lift >= 2 ? 'High' : p.lift >= 1.4 ? 'Medium' : 'Low'}]`).join('\n')}`
     : '\n\nMEASURED PATTERNS: not enough audits in the dataset yet to cite measured lift — base confidence on the strength of the audit evidence instead.'
@@ -256,6 +257,17 @@ Rules:
           const impactLevel = asLevel(rec.impact_level ?? rec.priority)
           const effort = asLevel(rec.effort)
           const priorityRank = computePriorityRank(impactLevel, effort)
+          // Deterministic, never-fabricated benchmark for this rec's signal.
+          const fact = fixType ? FIXTYPE_FACT[fixType] : undefined
+          const bm = fact ? factBenchmark(obsRows, fact, { cuisine: restaurant.cuisine }) : null
+          const benchmark = bm
+            ? benchmarkSentence(bm, language)
+            : (language === 'nl' ? 'Benchmarkgegevens komen beschikbaar zodra meer restaurants zijn geanalyseerd.' : 'Benchmark data will become available as more restaurants are analysed.')
+          const dataSource = bm
+            ? (language === 'nl' ? 'Directe audit + Finded-benchmark' : 'Direct audit + Finded benchmark')
+            : (language === 'nl' ? 'Alleen directe audit' : 'Direct audit only')
+          // Confidence is data-backed when a benchmark exists; otherwise trust the model's (capped at medium).
+          const confidence = bm ? (bm.pct >= 0.7 ? 'high' : 'medium') : (asLevel(rec.confidence) === 'high' ? 'medium' : asLevel(rec.confidence))
           return {
             audit_id,
             restaurant_id: restaurant.id,
@@ -275,29 +287,36 @@ Rules:
             impact_level: impactLevel,
             effort,
             priority_rank: priorityRank,
-            confidence: asLevel(rec.confidence),  // evidence-backed confidence band (020)
+            confidence,                 // data-backed confidence band (020)
+            data_source: dataSource,    // where the support came from (021)
+            benchmark,                  // measured benchmark sentence (021)
           }
         })
       )
       .select()
 
-    // Build response with IDs merged in
-    const recommendations = rawRecs.map((rec: any, i: number) => {
-      const impact_level = asLevel(rec.impact_level ?? rec.priority)
-      const effort = asLevel(rec.effort)
-      return {
-        ...rec,
-        id: insertedRecs?.[i]?.id ?? null,
-        type: asFixType(rec.type),
-        priority: impact_level,
-        impact_level,
-        effort,
-        priority_rank: computePriorityRank(impact_level, effort),
-        confidence: asLevel(rec.confidence),
-        what: rec.what,
-        status: 'pending',
-      }
-    })
+    // Build response from the stored rows so it carries the computed
+    // benchmark / data_source / confidence (falls back to the raw rec).
+    const recommendations = (insertedRecs ?? []).map((r: any, i: number) => ({
+      id: r.id,
+      type: r.type ?? null,
+      priority: r.priority ?? 'medium',
+      impact_level: r.impact_level ?? r.priority ?? 'medium',
+      effort: r.effort ?? 'medium',
+      priority_rank: r.priority_rank ?? 'do_next',
+      confidence: r.confidence ?? null,
+      data_source: r.data_source ?? null,
+      benchmark: r.benchmark ?? null,
+      title: r.title ?? rawRecs[i]?.title,
+      what: r.description ?? rawRecs[i]?.what,
+      why: r.why ?? '',
+      evidence: r.evidence ?? null,
+      impact: r.impact ?? '',
+      suggested_fix: r.suggested_fix ?? null,
+      expected_impact: r.expected_impact ?? null,
+      asset_type: r.asset_type ?? r.type ?? null,
+      status: r.status ?? 'pending',
+    }))
 
     // Also store as JSON blob for backward compat
     await supabaseAdmin
@@ -343,6 +362,8 @@ export async function GET(request: NextRequest) {
       effort: r.effort ?? 'medium',
       priority_rank: r.priority_rank ?? 'do_next',
       confidence: r.confidence ?? null,
+      data_source: r.data_source ?? null,
+      benchmark: r.benchmark ?? null,
       title: r.title,
       what: r.description,
       why: r.why ?? '',

@@ -132,6 +132,47 @@ export function liftConfidence(lift: number): Confidence {
   return 'Low'
 }
 
+/** Which tracked fact a recommendation fix-type maps to (for benchmarking). */
+export const FIXTYPE_FACT: Record<string, FactKey> = {
+  schema_jsonld: 'restaurant_schema',
+  menu_structure: 'html_menu',
+  faq_page: 'faq_present',
+  location_page: 'location_present',
+  opening_hours: 'opening_hours_present',
+  authority_content: 'reviews_present',
+}
+
+export interface FactBenchmark { n: number; pct: number; fact: FactKey }
+
+/**
+ * Among comparable restaurants that WERE recommended by AI, what share have this
+ * fact? Tries the cuisine segment first, falls back to all rows, and returns null
+ * when there aren't enough recommended restaurants to say anything honest.
+ */
+export function factBenchmark(rows: ObsRow[], fact: FactKey, filter: { cuisine?: string | null } = {}, minRecommended = 10): FactBenchmark | null {
+  const fc = norm(filter.cuisine)
+  const consider = (subset: ObsRow[]): FactBenchmark | null => {
+    const rec = subset.filter((r) => r.mentionedAny)
+    if (rec.length < minRecommended) return null
+    return { n: rec.length, pct: rec.filter((r) => r.facts[fact]).length / rec.length, fact }
+  }
+  if (fc) {
+    const seg = consider(rows.filter((r) => norm(r.cuisine) === fc))
+    if (seg) return seg
+  }
+  return consider(rows)
+}
+
+/** Bilingual benchmark sentence for a recommendation. */
+export function benchmarkSentence(b: FactBenchmark, lang: Language): string {
+  const f = FACTS.find((x) => x.key === b.fact)!
+  const label = lang === 'nl' ? f.nl : f.en
+  const p = Math.round(b.pct * 100)
+  return lang === 'nl'
+    ? `${p}% van de vergelijkbare restaurants die door AI worden aanbevolen, hebben ${label} (gemeten over ${b.n} audits).`
+    : `${p}% of comparable restaurants recommended by AI have ${label} (across ${b.n} completed audits).`
+}
+
 // ── Build + record (server) ───────────────────────────────────────────────────
 
 export interface ObservationInput {

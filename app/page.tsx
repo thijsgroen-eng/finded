@@ -159,7 +159,7 @@ export default async function LandingPage() {
       <section style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(40px, 5vw, 68px) 24px 52px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'clamp(32px, 5vw, 56px)', alignItems: 'center' }}>
         <div>
           <div style={{ display: 'inline-block', background: LGREEN, color: DGREEN, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, letterSpacing: 0.4, marginBottom: 20 }}>
-            AI visibility audits for restaurants
+            The first AI Visibility Platform for restaurants
           </div>
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 50px)', fontWeight: 800, lineHeight: 1.05, letterSpacing: -1.4, marginBottom: 18 }}>
             Is AI recommending your restaurant?
@@ -285,6 +285,37 @@ export default async function LandingPage() {
               <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.45 }}>{d}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Built from real restaurant data ── */}
+      <section style={{ background: INK }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '64px 24px', color: '#fff' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Built from real restaurant data</div>
+          <h2 style={{ fontSize: 'clamp(23px, 3.4vw, 31px)', fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2, marginBottom: 16 }}>
+            We compare your restaurant with hundreds of others — and measure how AI actually recommends them.
+          </h2>
+          <p style={{ fontSize: 16, color: '#b9c2cc', lineHeight: 1.7, marginBottom: 18, maxWidth: 680 }}>
+            Every completed audit anonymously improves Finded&rsquo;s understanding of what makes restaurants
+            discoverable in AI search. Recommendations get smarter over time because they&rsquo;re based on
+            patterns observed across completed restaurant audits — not only general SEO advice.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginTop: 24 }}>
+            {[
+              ['Evidence, not opinion', 'Each recommendation cites the audit signal and a benchmark from comparable restaurants.'],
+              ['Benchmarks by cuisine & city', 'See how your visibility and signals compare to similar restaurants — anonymously.'],
+              ['Smarter every audit', 'The dataset grows with every restaurant analysed, so confidence and patterns sharpen over time.'],
+            ].map(([t, d]) => (
+              <div key={t as string} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 18 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t}</div>
+                <div style={{ fontSize: 13.5, color: '#9fb0bf', lineHeight: 1.55 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: '#6f8298', marginTop: 22, lineHeight: 1.6 }}>
+            We never expose individual restaurant data — only aggregate, anonymous statistics. We measure how AI
+            recommends restaurants today and help you improve; we don&rsquo;t promise rankings.
+          </p>
         </div>
       </section>
 

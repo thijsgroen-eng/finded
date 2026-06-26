@@ -404,31 +404,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── 9. Founder ── */}
-      <section style={{ borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: 760, margin: '0 auto', padding: '88px 24px', display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div style={{ width: 108, height: 108, borderRadius: '50%', background: MINT, border: `1px solid #bfe9df`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 36, fontWeight: 800, color: EMERALD }}>{founder.charAt(0)}</span>
-          </div>
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: EMERALD, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>From the founder</div>
-            <p style={{ fontSize: 19, color: INK, lineHeight: 1.6, marginBottom: 12, fontWeight: 700, letterSpacing: -0.3 }}>Hi, I&rsquo;m {founder}.</p>
-            <p style={{ fontSize: 17, color: INK, lineHeight: 1.65, marginBottom: 12 }}>
-              I work with restaurants every day. When people started asking AI where to eat instead of Google, I realised
-              owners had no way of knowing whether AI was recommending them — or their competitors. So I built Finded.
-            </p>
-            <p style={{ fontSize: 15.5, color: MUTED, lineHeight: 1.6, marginBottom: 18 }}>
-              Every completed audit improves our understanding of how AI discovers restaurants. If you have questions,
-              email me directly — I read every one.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{founder}</span>
-              <span style={{ color: FAINT }}>·</span>
-              <a href={`mailto:${contactEmail}`} className="lnk" style={{ fontSize: 14, color: EMERALD, fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ── Lead capture ── */}
       <section id="check" style={{ background: GRAPHITE, position: 'relative', overflow: 'hidden', scrollMarginTop: 58 }}>

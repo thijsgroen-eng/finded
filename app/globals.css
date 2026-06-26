@@ -40,23 +40,30 @@ body {
 .lnk { transition: color .15s ease; }
 .lnk:hover { color: #0f766e; }
 
-/* Layered hero backdrop: faint emerald + mint radial wash over a dot grid */
+/* Layered hero backdrop: faint emerald + sage radial wash over a dot grid */
 .hero-bg {
   background:
-    radial-gradient(900px 440px at 82% -12%, rgba(15,118,110,0.10), transparent 60%),
-    radial-gradient(680px 360px at -5% 4%, rgba(223,248,242,0.6), transparent 55%),
-    radial-gradient(rgba(17,24,39,0.04) 1px, transparent 1px);
-  background-size: auto, auto, 24px 24px;
-  background-position: center, center, -12px -12px;
+    radial-gradient(920px 460px at 84% -14%, rgba(11,93,86,0.12), transparent 60%),
+    radial-gradient(700px 380px at -6% 2%, rgba(221,244,235,0.7), transparent 55%),
+    radial-gradient(520px 320px at 50% 120%, rgba(228,161,106,0.10), transparent 60%),
+    radial-gradient(rgba(22,22,22,0.035) 1px, transparent 1px);
+  background-size: auto, auto, auto, 24px 24px;
+  background-position: center, center, center, -12px -12px;
 }
-.sand { background: #F8F7F4; }
-.mint-tint { background: linear-gradient(180deg, #ffffff 0%, #f1faf7 100%); }
+.sand { background: #F4F0E9; }
+.mint-tint { background: linear-gradient(180deg, #ffffff 0%, #eef9f3 100%); }
 
 /* Glass surface for the product preview */
 .glass { background: rgba(255,255,255,0.74); backdrop-filter: blur(16px) saturate(1.1); -webkit-backdrop-filter: blur(16px) saturate(1.1); }
 
 /* Emerald glow for the featured/“Finded” surfaces */
-.glow { box-shadow: 0 0 0 1px rgba(15,118,110,0.16), 0 36px 70px -34px rgba(15,118,110,0.38); }
+.glow { box-shadow: 0 0 0 1px rgba(11,93,86,0.16), 0 36px 70px -34px rgba(11,93,86,0.40); }
+
+/* Barely-there grain over the whole page for premium depth. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* Reveal-on-scroll-ish (on load), staggered, reduced-motion safe */
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -65,4 +72,4 @@ body {
 .rise-3 { animation-delay: .16s; }
 @media (prefers-reduced-motion: reduce) { .rise, .card-fx, .btn, .fx { animation: none !important; transition: none !important; } }
 
-::selection { background: #0f766e; color: #fff; }
+::selection { background: #0B5D56; color: #fff; }

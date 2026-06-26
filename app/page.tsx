@@ -4,25 +4,27 @@ import { getSettings } from '@/lib/settings'
 import { platformStats } from '@/lib/observations'
 import {
   Building2, Search, ClipboardCheck, MapPin, UtensilsCrossed, Cpu,
-  Bot, Users, Globe, FileSearch, ListChecks, Check,
+  Bot, Users, Globe, FileSearch, ListChecks, Check, Database,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-// ── Premium palette (emerald / graphite / mint / sand) — branding evolved, not replaced
-const BG = '#fafaf8'
+// ── Finded identity: warm ivory · deep emerald · soft sage · muted terracotta ──
+const IVORY = '#FCFBF8'
 const PANEL = '#ffffff'
-const INK = '#111110'
-const MUTED = '#6b6a66'
-const FAINT = '#a8a7a1'
-const BORDER = '#e7e5e0'
-const GREEN = '#16a37a'
-const EMERALD = '#0f766e'
-const DEMERALD = '#0b5c55'
-const GRAPHITE = '#111827'
-const MINT = '#dff8f2'
-const SAND = '#f8f7f4'
+const INK = '#161616'
+const MUTED = '#5f5e59'
+const FAINT = '#a39f97'
+const BORDER = '#ECE8E2'
+const GREEN = '#0B5D56'
+const EMERALD = '#0B5D56'
+const DEMERALD = '#174E4A'
+const GRAPHITE = '#0c1f1c'   // deep forest near-black for dark sections
+const MINT = '#DDF4EB'       // soft sage
+const SAND = '#F4F0E9'       // warm tint for section rhythm
+const TERRA = '#E4A16A'      // warm terracotta accent
 const RED = '#c0392b'
+const BG = IVORY
 
 const FONT = 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -88,7 +90,7 @@ export default async function LandingPage() {
   ]
 
   return (
-    <div id="top" style={{ fontFamily: FONT, background: PANEL, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK }}>
+    <div id="top" style={{ fontFamily: FONT, background: BG, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK, position: 'relative', zIndex: 1 }}>
 
       {/* ── Nav ── */}
       <nav style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
@@ -105,20 +107,19 @@ export default async function LandingPage() {
       <section className="hero-bg" style={{ borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: 'clamp(56px, 6.5vw, 104px) 24px 72px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'clamp(40px, 5vw, 72px)', alignItems: 'center' }}>
           <div className="rise">
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#fff', border: `1px solid ${BORDER}`, color: EMERALD, fontSize: 11.5, fontWeight: 700, padding: '6px 14px', borderRadius: 20, letterSpacing: 0.2, marginBottom: 26, boxShadow: '0 2px 8px -4px rgba(17,24,39,0.1)' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: EMERALD }} /> The first AI Visibility Platform for restaurants
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#fff', border: `1px solid ${BORDER}`, color: EMERALD, fontSize: 11.5, fontWeight: 700, padding: '6px 14px', borderRadius: 20, letterSpacing: 0.2, marginBottom: 26, boxShadow: '0 2px 8px -4px rgba(12,31,28,0.12)' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: TERRA }} /> The first AI Visibility Platform for restaurants
             </div>
             <h1 style={{ fontSize: 'clamp(38px, 5.6vw, 62px)', fontWeight: 800, lineHeight: 1.02, letterSpacing: -2, marginBottom: 24 }}>
-              Find out why AI recommends your competitors.
+              Every day AI recommends restaurants.<br /><span style={{ color: EMERALD }}>Is yours one of them?</span>
             </h1>
             <p style={{ fontSize: 'clamp(16px, 2vw, 19px)', color: MUTED, lineHeight: 1.62, marginBottom: 32, maxWidth: 560 }}>
-              More guests ask ChatGPT, Claude, Gemini and Perplexity where to eat. Finded measures how those AI tools
-              recommend restaurants, compares you with competitors, and identifies the website signals influencing
-              those recommendations.
+              Guests increasingly ask ChatGPT, Claude, Gemini and Perplexity where they should eat. Finded measures
+              exactly how those AI systems recommend restaurants, compares you with competitors, and shows what to improve.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <a href="#check" className="btn btn-primary" style={{ background: GRAPHITE, color: '#fff', fontWeight: 700, fontSize: 15.5, padding: '15px 28px', borderRadius: 12, textDecoration: 'none' }}>Check my AI visibility</a>
-              <a href="#sample" className="btn" style={{ background: '#fff', color: INK, fontWeight: 700, fontSize: 15.5, padding: '15px 28px', borderRadius: 12, textDecoration: 'none', border: `1px solid ${BORDER}` }}>View example audit</a>
+              <a href="#check" className="btn btn-primary" style={{ background: EMERALD, color: '#fff', fontWeight: 700, fontSize: 15.5, padding: '15px 28px', borderRadius: 12, textDecoration: 'none' }}>Check my AI visibility</a>
+              <a href="#sample" className="btn" style={{ background: '#fff', color: INK, fontWeight: 700, fontSize: 15.5, padding: '15px 28px', borderRadius: 12, textDecoration: 'none', border: `1px solid ${BORDER}` }}>See a real audit</a>
             </div>
             <p style={{ fontSize: 13, color: FAINT, marginTop: 20 }}>Free check · no account, no card · results by email</p>
           </div>
@@ -273,6 +274,42 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── 7b. The data advantage ── */}
+      <section style={{ maxWidth: 1000, margin: '0 auto', padding: '96px 24px' }}>
+        <SectionTitle kicker="The data advantage" title="Powered by one of the largest restaurant website datasets available"
+          sub="Finded doesn’t simply ask ChatGPT. We compare recommendations against thousands of restaurant websites and continuously build benchmark data from every completed audit — a moat that compounds with each one." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+          {[
+            { icon: Globe, t: 'Read the way AI reads', d: 'We analyse restaurant websites — schema, menus, crawlability — exactly as AI systems interpret them.' },
+            { icon: Search, t: 'Real AI searches, repeated', d: 'Dozens of realistic diner prompts across four models, measured over and over — not a one-off question.' },
+            { icon: Database, t: 'Benchmarks that compound', d: 'Every completed audit adds anonymous signals, so our recommendations get sharper over time.' },
+          ].map(({ icon: Icon, t, d }) => (
+            <div key={t} className="card-fx" style={card}>
+              <span style={{ display: 'inline-flex', width: 42, height: 42, borderRadius: 12, background: MINT, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <Icon style={{ width: 20, height: 20, color: EMERALD }} />
+              </span>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 8 }}>{t}</h3>
+              <p style={{ fontSize: 14.5, color: MUTED, lineHeight: 1.55 }}>{d}</p>
+            </div>
+          ))}
+        </div>
+        {haveBench && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginTop: 22 }}>
+            {[
+              [`${100 - rate('restaurant_schema')}%`, 'are missing Restaurant schema'],
+              [`${100 - rate('html_menu')}%`, 'still rely on a non-crawlable menu'],
+              [`${100 - rate('faq_present')}%`, 'have no FAQ content'],
+            ].map(([v, l]) => (
+              <div key={l as string} style={{ ...card, textAlign: 'center' }}>
+                <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1, color: EMERALD }}>{v}</div>
+                <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ textAlign: 'center', fontSize: 12.5, color: FAINT, marginTop: 18 }}>Benchmarks are aggregate &amp; anonymous, and grow with every completed audit.</p>
+      </section>
+
       {/* ── 8. Pricing — premium tiers ── */}
       <section id="pricing" className="sand" style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, scrollMarginTop: 58 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '96px 24px' }}>
@@ -317,6 +354,33 @@ export default async function LandingPage() {
         </div>
       </section>
 
+
+      {/* ── Founder — personal, human ── */}
+      <section style={{ background: PANEL, borderTop: `1px solid ${BORDER}` }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '92px 24px', display: 'flex', gap: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 150, height: 150, borderRadius: 24, background: `linear-gradient(160deg, ${MINT}, #ffffff)`, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 48px -30px rgba(11,93,86,0.35)' }}>
+              <span style={{ fontSize: 52, fontWeight: 800, color: EMERALD }}>{founder.charAt(0)}</span>
+            </div>
+            <span style={{ position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: FAINT, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>Photo soon</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: EMERALD, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14 }}>From the founder</div>
+            <p style={{ fontSize: 'clamp(20px, 2.4vw, 26px)', color: INK, lineHeight: 1.35, marginBottom: 14, fontWeight: 700, letterSpacing: -0.6 }}>
+              “Hi, I&rsquo;m {founder}. I work with restaurants every day — and I built Finded because owners had no way of knowing whether AI recommends them, or their competitors.”
+            </p>
+            <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, marginBottom: 18 }}>
+              Every completed audit improves how well we understand the way AI discovers restaurants. It&rsquo;s a small,
+              independent platform built in the Netherlands. If you have a question, email me — I read every one.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{founder}</span>
+              <span style={{ color: FAINT }}>·</span>
+              <a href={`mailto:${contactEmail}`} className="lnk" style={{ fontSize: 14, color: EMERALD, fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── Lead capture ── */}
       <section id="check" style={{ background: GRAPHITE, position: 'relative', overflow: 'hidden', scrollMarginTop: 58 }}>

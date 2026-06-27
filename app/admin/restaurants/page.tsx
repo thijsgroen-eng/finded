@@ -321,11 +321,7 @@ export default function RestaurantDatabasePage() {
                           <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} className="rounded border-gray-300" />
                         </td>
                         <td className="px-4 py-3">
-                          {r.last_audit_id ? (
-                            <Link href={`/admin/audits/${r.last_audit_id}`} className="font-medium text-gray-900 hover:text-emerald-700">{r.name}</Link>
-                          ) : (
-                            <span className="font-medium text-gray-900">{r.name}</span>
-                          )}
+                          <Link href={`/admin/restaurants/${r.id}`} className="font-medium text-gray-900 hover:text-emerald-700">{r.name}</Link>
                           {r.website && (
                             <a href={r.website.startsWith('http') ? r.website : `https://${r.website}`} target="_blank" rel="noreferrer"
                               className="block text-xs text-gray-400 hover:text-blue-600 mt-0.5">

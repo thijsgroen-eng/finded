@@ -16,7 +16,7 @@ async function logout() {
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/admin/restaurants', label: 'Entities',    icon: Building2 },
+  { href: '/admin/restaurants', label: 'Restaurants', icon: Building2 },
   { href: '/admin/audits',      label: 'Audits',      icon: ClipboardList },
   { href: '/admin/requests',    label: 'Requests',    icon: Inbox },
   { href: '/admin/prompts',     label: 'Prompts',     icon: MessageSquareText },

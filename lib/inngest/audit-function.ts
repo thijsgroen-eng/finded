@@ -661,6 +661,13 @@ export const auditFunction = inngest.createFunction(
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', audit_id)
       await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+      // Advance the prospecting pipeline: a completed audit makes this restaurant
+      // a workable prospect. Don't override a hand-set later status (contacted, customer…).
+      await supabaseAdmin
+        .from('restaurants')
+        .update({ prospect_status: 'audit_complete' })
+        .eq('id', restaurant_id)
+        .in('prospect_status', ['not_audited', 'audit_queued'])
       return ensureDashboardSlug(restaurant_id, entity.name)
     })
 

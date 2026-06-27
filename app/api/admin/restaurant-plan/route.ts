@@ -16,9 +16,12 @@ export async function POST(request: NextRequest) {
   if (!restaurantId || (plan !== 'free' && plan !== 'audit' && plan !== 'implementation')) {
     return NextResponse.json({ error: 'restaurant_id and plan (free|audit|implementation) required' }, { status: 400 })
   }
+  // A paid plan also advances the prospecting pipeline to "customer".
+  const patch: Record<string, unknown> = { plan, report_paid: plan !== 'free' }
+  if (plan !== 'free') patch.prospect_status = 'customer'
   const { error } = await supabaseAdmin
     .from('restaurants')
-    .update({ plan, report_paid: plan !== 'free' })
+    .update(patch)
     .eq('id', restaurantId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, plan })

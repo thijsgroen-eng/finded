@@ -3,16 +3,18 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, Spinner, EmptyState } from '@/components/ui'
-import { Users, Search, HeartPulse, BadgeEuro, AlertTriangle } from 'lucide-react'
+import { Users, Search, HeartPulse, BadgeEuro, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface Client {
   id: string; name: string; city: string | null; cuisine: string | null; email: string | null
   plan: 'free' | 'audit' | 'implementation'; prospect_status: string
-  added_at: string; signed_up_at: string | null; last_active_at: string | null
+  added_at: string; signed_up_at: string | null; onboarded_at: string | null; revenue_cents: number; last_active_at: string | null
   audit_count: number; visibility_score: number | null; last_audit_at: string | null
   health_score: number; health_band: 'healthy' | 'steady' | 'at_risk'; health_reasons: string[]
 }
-interface Summary { total: number; paying: number; atRisk: number; avgHealth: number }
+interface Summary { total: number; paying: number; atRisk: number; avgHealth: number; revenueCents: number }
+
+type SortKey = 'name' | 'plan' | 'signed_up_at' | 'onboarded_at' | 'last_active_at' | 'audit_count' | 'visibility_score' | 'revenue_cents' | 'health_score'
 
 const PLAN_BADGE: Record<string, string> = {
   free: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -25,7 +27,20 @@ const HEALTH: Record<string, { label: string; chip: string; dot: string }> = {
   steady: { label: 'Steady', chip: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
   at_risk: { label: 'At risk', chip: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
 }
+function SortTh({ k, sort, dir, onClick, className = '', children }: { k: SortKey; sort: SortKey; dir: 'asc' | 'desc'; onClick: (k: SortKey) => void; className?: string; children: React.ReactNode }) {
+  const active = sort === k
+  return (
+    <th className={`py-3 ${className.includes('px-') ? '' : 'px-4'} ${className}`}>
+      <button onClick={() => onClick(k)} className={`inline-flex items-center gap-1 hover:text-gray-700 ${active ? 'text-gray-700' : ''} ${className.includes('text-right') ? 'flex-row-reverse' : ''}`}>
+        {children}
+        {active && (dir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+      </button>
+    </th>
+  )
+}
+
 const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString() : '—'
+const eur = (cents: number) => cents ? `€${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'
 const scoreColor = (n: number | null) => n == null ? 'text-gray-300' : n >= 60 ? 'text-emerald-600' : n >= 30 ? 'text-amber-600' : 'text-red-600'
 
 export default function ClientsPage() {
@@ -35,17 +50,37 @@ export default function ClientsPage() {
   const [q, setQ] = useState('')
   const [plan, setPlan] = useState('')
   const [band, setBand] = useState('')
+  const [sort, setSort] = useState<SortKey>('health_score')
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     fetch('/api/admin/clients').then((r) => r.json()).then((j) => { setClients(j.clients ?? []); setSummary(j.summary ?? null) }).finally(() => setLoading(false))
   }, [])
 
-  const filtered = useMemo(() => (clients ?? []).filter((c) => {
-    if (plan && c.plan !== plan) return false
-    if (band && c.health_band !== band) return false
-    if (q) { const s = q.toLowerCase(); if (!(`${c.name} ${c.email ?? ''} ${c.city ?? ''}`.toLowerCase().includes(s))) return false }
-    return true
-  }), [clients, q, plan, band])
+  function toggleSort(k: SortKey) {
+    if (sort === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc') }
+  }
+
+  const filtered = useMemo(() => {
+    const rows = (clients ?? []).filter((c) => {
+      if (plan && c.plan !== plan) return false
+      if (band && c.health_band !== band) return false
+      if (q) { const s = q.toLowerCase(); if (!(`${c.name} ${c.email ?? ''} ${c.city ?? ''}`.toLowerCase().includes(s))) return false }
+      return true
+    })
+    const val = (c: Client): string | number => {
+      const v = c[sort] as unknown
+      if (v == null) return sort === 'name' ? '' : -1
+      if (typeof v === 'string' && /_at$/.test(sort)) return new Date(v).getTime()
+      return typeof v === 'number' ? v : String(v).toLowerCase()
+    }
+    return rows.sort((a, b) => {
+      const av = val(a), bv = val(b)
+      const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv))
+      return dir === 'asc' ? cmp : -cmp
+    })
+  }, [clients, q, plan, band, sort, dir])
 
   const stat = (icon: React.ReactNode, label: string, value: string | number, tone = 'text-gray-900') => (
     <Card><CardContent className="flex items-center gap-3 py-4">
@@ -62,9 +97,10 @@ export default function ClientsPage() {
       </div>
 
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           {stat(<Users className="w-4 h-4" />, 'Clients', summary.total)}
           {stat(<BadgeEuro className="w-4 h-4" />, 'Paying', summary.paying)}
+          {stat(<BadgeEuro className="w-4 h-4" />, 'Total revenue', eur(summary.revenueCents), 'text-emerald-600')}
           {stat(<HeartPulse className="w-4 h-4" />, 'Avg. health', summary.avgHealth)}
           {stat(<AlertTriangle className="w-4 h-4" />, 'At risk', summary.atRisk, summary.atRisk ? 'text-red-600' : 'text-gray-900')}
         </div>
@@ -94,14 +130,16 @@ export default function ClientsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  <th className="px-5 py-3">Client</th>
-                  <th className="px-4 py-3">Plan</th>
-                  <th className="px-4 py-3">Signed up</th>
-                  <th className="px-4 py-3">Last active</th>
-                  <th className="px-4 py-3 text-right">Audits</th>
-                  <th className="px-4 py-3 text-right">Score</th>
-                  <th className="px-4 py-3">Health</th>
+                <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <SortTh k="name" sort={sort} dir={dir} onClick={toggleSort} className="px-5 text-left">Client</SortTh>
+                  <SortTh k="plan" sort={sort} dir={dir} onClick={toggleSort} className="text-left">Plan</SortTh>
+                  <SortTh k="onboarded_at" sort={sort} dir={dir} onClick={toggleSort} className="text-left">Onboarded</SortTh>
+                  <SortTh k="signed_up_at" sort={sort} dir={dir} onClick={toggleSort} className="text-left">Signed up</SortTh>
+                  <SortTh k="last_active_at" sort={sort} dir={dir} onClick={toggleSort} className="text-left">Last active</SortTh>
+                  <SortTh k="audit_count" sort={sort} dir={dir} onClick={toggleSort} className="text-right">Audits</SortTh>
+                  <SortTh k="visibility_score" sort={sort} dir={dir} onClick={toggleSort} className="text-right">Score</SortTh>
+                  <SortTh k="revenue_cents" sort={sort} dir={dir} onClick={toggleSort} className="text-right">Revenue</SortTh>
+                  <SortTh k="health_score" sort={sort} dir={dir} onClick={toggleSort} className="text-left">Health</SortTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -114,10 +152,12 @@ export default function ClientsPage() {
                         <div className="text-xs text-gray-400">{c.email ?? '—'}{c.city ? ` · ${c.city}` : ''}</div>
                       </td>
                       <td className="px-4 py-3"><span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${PLAN_BADGE[c.plan]}`}>{PLAN_LABEL[c.plan]}</span></td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{fmt(c.onboarded_at)}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{c.signed_up_at ? fmt(c.signed_up_at) : <span className="text-gray-300">not signed in</span>}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{fmt(c.last_active_at)}</td>
                       <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{c.audit_count}</td>
                       <td className={`px-4 py-3 text-right font-semibold tabular-nums ${scoreColor(c.visibility_score)}`}>{c.visibility_score ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-700 tabular-nums">{eur(c.revenue_cents)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${h.chip}`} title={c.health_reasons.join(' · ')}>
                           <span className={`w-1.5 h-1.5 rounded-full ${h.dot}`} />{h.label} {c.health_score}

@@ -1,6 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { notFound } from 'next/navigation'
+import { getViewerLang } from '@/lib/i18n-viewer'
+import { LangToggle } from '@/components/lang-toggle'
 
 // ── Localization — one dictionary, Dutch default ────────────────────────────
 type Lang = 'nl' | 'en'
@@ -238,23 +240,23 @@ function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
   const r = (size / 2) - 6
   const circ = 2 * Math.PI * r
   const offset = circ - (Math.max(0, Math.min(100, score)) / 100) * circ
-  const color = score >= 60 ? '#0B5D56' : score >= 35 ? '#c47d14' : '#d94f4f'
+  const color = score >= 60 ? '#34d399' : score >= 35 ? '#fbbf24' : '#fb7185'
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e8e7e3" strokeWidth="5"/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5"/>
         <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
           strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
           transform={`rotate(-90 ${size/2} ${size/2})`}/>
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 20, fontWeight: 800, color: '#161616', lineHeight: 1 }}>{Math.round(score)}</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: '#f4f5fa', lineHeight: 1 }}>{Math.round(score)}</span>
       </div>
     </div>
   )
 }
 
-const SEV_COLOR: Record<string, string> = { critical: '#d94f4f', high: '#c47d14', medium: '#1f6feb', low: '#7a7874' }
+const SEV_COLOR: Record<string, string> = { critical: '#fb7185', high: '#fbbf24', medium: '#5b8cff', low: '#9a9fb6' }
 
 function Sparkline({ points }: { points: number[] }) {
   const w = 600, h = 60, pad = 4
@@ -264,8 +266,8 @@ function Sparkline({ points }: { points: number[] }) {
   const d = points.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 60, marginBottom: 12 }}>
-      <path d={d} fill="none" stroke="#0B5D56" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={2.5} fill="#0B5D56" />)}
+      <path d={d} fill="none" stroke="#34d399" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={2.5} fill="#34d399" />)}
     </svg>
   )
 }
@@ -278,7 +280,8 @@ export default async function PreviewReportPage({
 }) {
   const { slug } = await params
   const { lang: langParam } = await searchParams
-  const lang: Lang = langParam === 'en' ? 'en' : 'nl' // default nl
+  // Viewer's chosen language (cookie) wins; else the ?lang= param; else Dutch.
+  const lang: Lang = await getViewerLang(langParam === 'en' ? 'en' : 'nl')
   const t = STR[lang]
 
   const data = await getReportData(slug)
@@ -316,51 +319,52 @@ export default async function PreviewReportPage({
     { label: t.sigSocial, ok: websiteAudit.social_links_present },
   ] : []
 
-  const card = { background: '#fff', border: '1px solid #ECE8E2', borderRadius: 16, padding: '22px', marginBottom: 20, boxShadow: '0 1px 2px rgba(17,24,39,0.04), 0 18px 40px -32px rgba(16,40,34,0.22)' } as const
-  const cardTitle = { fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 16 } as const
+  const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 16, padding: '22px', marginBottom: 20, boxShadow: '0 1px 2px rgba(17,24,39,0.04), 0 18px 40px -32px rgba(16,40,34,0.22)' } as const
+  const cardTitle = { fontSize: 11, fontWeight: 700, color: '#646a85', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 16 } as const
 
   return (
-    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#FCFBF8', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#070711', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' }}>
       {/* Nav */}
-      <nav style={{ background: '#fff', borderBottom: '1px solid #ECE8E2', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
+      <nav style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.09)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: '#161616', letterSpacing: -0.5 }}>Finded</span>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: '#7a7874', background: '#f2f1ee', border: '1px solid #ECE8E2', borderRadius: 5, padding: '2px 7px' }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: '#f4f5fa', letterSpacing: -0.5 }}>Finded</span>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: '#9a9fb6', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 5, padding: '2px 7px' }}>
             {plan === 'implementation' ? 'Implementation' : plan === 'audit' ? 'Full audit' : 'Free'} dashboard
           </span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          {paid && <a href={pdfHref} target="_blank" rel="noreferrer" style={{ color: '#161616', border: '1px solid #ECE8E2', background: '#fff', padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.downloadPdf}</a>}
-          {!impl && <a href="#unlock" style={{ background: '#161616', color: '#fff', padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{paid ? t.unlockImplNav : t.unlockNav}</a>}
+          <LangToggle current={lang} tone="dark" />
+          {paid && <a href={pdfHref} target="_blank" rel="noreferrer" style={{ color: '#f4f5fa', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', padding: '7px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.downloadPdf}</a>}
+          {!impl && <a href="#unlock" style={{ background: '#7c5cff', color: '#fff', padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{paid ? t.unlockImplNav : t.unlockNav}</a>}
         </span>
       </nav>
 
       {/* Hero / header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #ECE8E2', padding: '40px 24px 36px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', background: '#DDF4EB', color: '#174E4A', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 16 }}>{t.badge}</div>
-        <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800, color: '#161616', letterSpacing: -1, marginBottom: 8, lineHeight: 1.1 }}>{restaurant.name}</h1>
-        <p style={{ fontSize: 15, color: '#7a7874', marginBottom: 24 }}>
+      <div style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.09)', padding: '40px 24px 36px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-block', background: 'rgba(124,92,255,0.16)', color: '#a78bfa', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 16 }}>{t.badge}</div>
+        <h1 style={{ fontSize: 'clamp(26px, 5vw, 40px)', fontWeight: 800, color: '#f4f5fa', letterSpacing: -1, marginBottom: 8, lineHeight: 1.1 }}>{restaurant.name}</h1>
+        <p style={{ fontSize: 15, color: '#9a9fb6', marginBottom: 24 }}>
           {restaurant.city}{restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''} · {t.auditedOn(new Date(audit.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}
         </p>
 
         {headline && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap', maxWidth: 680, margin: '0 auto', alignItems: 'stretch' }}>
-            <div style={{ background: '#fafaf8', border: '1px solid #ECE8E2', borderRadius: 10, padding: '18px 24px', minWidth: 150, textAlign: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '18px 24px', minWidth: 150, textAlign: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><ScoreRing score={headline.visibilityScore} /></div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.visibility}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#646a85', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.visibility}</div>
             </div>
-            <div style={{ background: '#fafaf8', border: '1px solid #ECE8E2', borderRadius: 10, padding: '18px 24px', minWidth: 220, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#161616', lineHeight: 1.4 }}>{t.appearsIn(freqPct ?? 0)}</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '18px 24px', minWidth: 220, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#f4f5fa', lineHeight: 1.4 }}>{t.appearsIn(freqPct ?? 0)}</div>
               {showBand && (
-                <div style={{ fontSize: 12, color: '#7a7874', marginTop: 6, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, color: '#9a9fb6', marginTop: 6, lineHeight: 1.5 }}>
                   {t.band(freqPct ?? 0, Math.round((headline.confidenceLo ?? 0) * 100), Math.round((headline.confidenceHi ?? 0) * 100), headline.sampleCount ?? 0)}
                 </div>
               )}
             </div>
-            <div style={{ background: '#fafaf8', border: '1px solid #ECE8E2', borderRadius: 10, padding: '18px 24px', minWidth: 150, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: 30, fontWeight: 800, color: '#161616', letterSpacing: -1 }}>{headline.modelConsensus}<span style={{ fontSize: 16, color: '#b0aea8' }}>/4</span></div>
-              <div style={{ fontSize: 12, color: '#7a7874', marginTop: 4 }}>{t.modelsMention(headline.modelConsensus)}</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>{t.consensus}</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '18px 24px', minWidth: 150, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#f4f5fa', letterSpacing: -1 }}>{headline.modelConsensus}<span style={{ fontSize: 16, color: '#646a85' }}>/4</span></div>
+              <div style={{ fontSize: 12, color: '#9a9fb6', marginTop: 4 }}>{t.modelsMention(headline.modelConsensus)}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#646a85', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>{t.consensus}</div>
             </div>
           </div>
         )}
@@ -370,11 +374,11 @@ export default async function PreviewReportPage({
 
         {/* Key finding */}
         {headline && headline.modelConsensus < 4 && (
-          <div style={{ background: '#fdeaea', border: '1px solid #f5c6c6', borderRadius: 10, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ background: 'rgba(217,79,79,0.14)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 10, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#9b2c2c', marginBottom: 4 }}>{t.findingTitle(4 - headline.modelConsensus)}</div>
-              <div style={{ fontSize: 13, color: '#c53030', lineHeight: 1.5 }}>{t.findingBody(restaurant.city, restaurant.name)}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fb7185', marginBottom: 4 }}>{t.findingTitle(4 - headline.modelConsensus)}</div>
+              <div style={{ fontSize: 13, color: '#fb7185', lineHeight: 1.5 }}>{t.findingBody(restaurant.city, restaurant.name)}</div>
             </div>
           </div>
         )}
@@ -384,15 +388,15 @@ export default async function PreviewReportPage({
           <div style={{ ...card, marginBottom: 20 }}>
             <div style={cardTitle}>{t.competitorsTitle}</div>
             {competitors.map((c, i) => (
-              <div key={`${c.name}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f2f1ee' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#161616' }}>{i + 1}. {c.name}</span>
-                <span style={{ fontSize: 13, color: '#7a7874' }}>
+              <div key={`${c.name}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#f4f5fa' }}>{i + 1}. {c.name}</span>
+                <span style={{ fontSize: 13, color: '#9a9fb6' }}>
                   {c.mention_count} {t.mentions.toLowerCase()}
                   {paid && c.share_of_voice != null ? ` · ${Math.round(Number(c.share_of_voice) * 100)}% ${t.shareOfVoice.toLowerCase()}` : ''}
                 </span>
               </div>
             ))}
-            {!paid && <p style={{ fontSize: 12, color: '#b0aea8', marginTop: 12 }}>🔒 {t.competitorsLockBody} — {t.lockedTitle.toLowerCase()}.</p>}
+            {!paid && <p style={{ fontSize: 12, color: '#646a85', marginTop: 12 }}>🔒 {t.competitorsLockBody} — {t.lockedTitle.toLowerCase()}.</p>}
           </div>
         )}
 
@@ -400,10 +404,10 @@ export default async function PreviewReportPage({
         {!paid && (
           <div style={{ ...card, marginBottom: 20 }}>
             <div style={cardTitle}>{t.lockedTitle}</div>
-            <p style={{ fontSize: 13, color: '#7a7874', marginTop: -6, marginBottom: 12 }}>{t.lockedSub}</p>
+            <p style={{ fontSize: 13, color: '#9a9fb6', marginTop: -6, marginBottom: 12 }}>{t.lockedSub}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
               {t.lockedItems.map((it) => (
-                <div key={it} style={{ display: 'flex', gap: 9, alignItems: 'center', fontSize: 13.5, color: '#161616' }}>
+                <div key={it} style={{ display: 'flex', gap: 9, alignItems: 'center', fontSize: 13.5, color: '#f4f5fa' }}>
                   <span style={{ opacity: 0.55 }}>🔒</span>{it}
                 </div>
               ))}
@@ -418,22 +422,22 @@ export default async function PreviewReportPage({
             {perModel.map(({ model, frequency }) => {
               const freq = Math.round(frequency * 100)
               const isBlurred = !paid && !FREE_MODELS.includes(model)
-              const barColor = freq >= 50 ? '#0B5D56' : freq >= 25 ? '#c47d14' : '#d94f4f'
+              const barColor = freq >= 50 ? '#34d399' : freq >= 25 ? '#fbbf24' : '#fb7185'
               return (
                 <div key={model} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, position: 'relative' }}>
-                  <div style={{ width: 90, flexShrink: 0, fontSize: 13, fontWeight: 600, color: '#161616' }}>{MODEL_LABELS[model] ?? model}</div>
-                  <div style={{ flex: 1, height: 7, background: '#f2f1ee', borderRadius: 4, overflow: 'hidden', filter: isBlurred ? 'blur(4px)' : 'none' }}>
+                  <div style={{ width: 90, flexShrink: 0, fontSize: 13, fontWeight: 600, color: '#f4f5fa' }}>{MODEL_LABELS[model] ?? model}</div>
+                  <div style={{ flex: 1, height: 7, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden', filter: isBlurred ? 'blur(4px)' : 'none' }}>
                     <div style={{ height: '100%', width: `${freq}%`, background: barColor, borderRadius: 4 }} />
                   </div>
-                  <div style={{ width: 40, textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#161616', filter: isBlurred ? 'blur(6px)' : 'none' }}>{isBlurred ? '??%' : `${freq}%`}</div>
+                  <div style={{ width: 40, textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#f4f5fa', filter: isBlurred ? 'blur(6px)' : 'none' }}>{isBlurred ? '??%' : `${freq}%`}</div>
                   {isBlurred && (
-                    <div style={{ position: 'absolute', right: 48, top: '50%', transform: 'translateY(-50%)', background: '#f2f1ee', border: '1px solid #ECE8E2', borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 700, color: '#7a7874', textTransform: 'uppercase', letterSpacing: 0.3 }}>{t.unlock}</div>
+                    <div style={{ position: 'absolute', right: 48, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 700, color: '#9a9fb6', textTransform: 'uppercase', letterSpacing: 0.3 }}>{t.unlock}</div>
                   )}
                 </div>
               )
             })}
             {!paid && perModel.some(p => !FREE_MODELS.includes(p.model)) && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#b0aea8', display: 'flex', alignItems: 'center', gap: 6 }}><span>🔒</span> {t.perModelLock}</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#646a85', display: 'flex', alignItems: 'center', gap: 6 }}><span>🔒</span> {t.perModelLock}</div>
             )}
           </div>
         )}
@@ -443,22 +447,22 @@ export default async function PreviewReportPage({
           <div style={card}>
             <div style={cardTitle}>{t.scoreMethodTitle}</div>
             {scoreBreakdown.components.map((c) => (
-              <div key={c.key} style={{ padding: '8px 0', borderBottom: '1px solid #f2f1ee' }}>
+              <div key={c.key} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#161616' }}>{c.label}</span>
-                  <span style={{ fontSize: 13, color: '#7a7874' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#f4f5fa' }}>{c.label}</span>
+                  <span style={{ fontSize: 13, color: '#9a9fb6' }}>
                     {Math.round(c.score)}/100 · {Math.round(c.weight * 100)}% {t.scoreWeight}
                   </span>
                 </div>
-                {c.detail ? <div style={{ fontSize: 12, color: '#b0aea8', marginTop: 2 }}>{c.detail}</div> : null}
+                {c.detail ? <div style={{ fontSize: 12, color: '#646a85', marginTop: 2 }}>{c.detail}</div> : null}
               </div>
             ))}
             {confidenceScore != null && (
-              <div style={{ marginTop: 12, fontSize: 12, color: '#7a7874' }}>
-                {t.scoreConfidence}: <strong style={{ color: '#161616' }}>{Math.round(confidenceScore * 100)}%</strong>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9a9fb6' }}>
+                {t.scoreConfidence}: <strong style={{ color: '#f4f5fa' }}>{Math.round(confidenceScore * 100)}%</strong>
               </div>
             )}
-            <div style={{ marginTop: 8, fontSize: 11, color: '#b0aea8', lineHeight: 1.5 }}>{t.scoreVariability}</div>
+            <div style={{ marginTop: 8, fontSize: 11, color: '#646a85', lineHeight: 1.5 }}>{t.scoreVariability}</div>
           </div>
         )}
 
@@ -468,9 +472,9 @@ export default async function PreviewReportPage({
             <div style={cardTitle}>{t.sentimentTitle}</div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {[
-                { label: t.positive, value: sentiment.positive, color: '#0B5D56', bg: '#DDF4EB' },
-                { label: t.neutral, value: sentiment.neutral, color: '#7a7874', bg: '#f2f1ee' },
-                { label: t.negative, value: sentiment.negative, color: '#d94f4f', bg: '#fdeaea' },
+                { label: t.positive, value: sentiment.positive, color: '#34d399', bg: 'rgba(124,92,255,0.16)' },
+                { label: t.neutral, value: sentiment.neutral, color: '#9a9fb6', bg: 'rgba(255,255,255,0.06)' },
+                { label: t.negative, value: sentiment.negative, color: '#fb7185', bg: 'rgba(217,79,79,0.14)' },
               ].map(p => (
                 <div key={p.label} style={{ display: 'flex', alignItems: 'center', gap: 7, background: p.bg, borderRadius: 16, padding: '6px 14px' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 4, background: p.color, display: 'inline-block' }} />
@@ -486,9 +490,9 @@ export default async function PreviewReportPage({
           <div style={card}>
             <div style={cardTitle}>{t.websiteTitle}</div>
             {websiteSignals.map(({ label, ok }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f2f1ee' }}>
-                <span style={{ fontSize: 13, color: '#161616' }}>{label}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: ok ? '#0B5D56' : '#d94f4f' }}>{ok ? t.present : t.missing}</span>
+              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: 13, color: '#f4f5fa' }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: ok ? '#34d399' : '#fb7185' }}>{ok ? t.present : t.missing}</span>
               </div>
             ))}
           </div>
@@ -499,14 +503,14 @@ export default async function PreviewReportPage({
           <div style={card}>
             <div style={cardTitle}>{t.recommendationsTitle}</div>
             {recs.map((g, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < recs.length - 1 ? '1px solid #f2f1ee' : 'none' }}>
-                <span style={{ width: 22, height: 22, borderRadius: 11, background: '#161616', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < recs.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <span style={{ width: 22, height: 22, borderRadius: 11, background: '#7c5cff', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#161616' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#f4f5fa' }}>
                     {g.title}
-                    <span style={{ fontSize: 10, fontWeight: 700, color: SEV_COLOR[g.severity] ?? '#7a7874', textTransform: 'uppercase', letterSpacing: 0.4, marginLeft: 8 }}>{t.sev[g.severity] ?? g.severity}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: SEV_COLOR[g.severity] ?? '#9a9fb6', textTransform: 'uppercase', letterSpacing: 0.4, marginLeft: 8 }}>{t.sev[g.severity] ?? g.severity}</span>
                   </div>
-                  {g.explanation ? <div style={{ fontSize: 12.5, color: '#7a7874', lineHeight: 1.5, marginTop: 2 }}>{g.explanation}</div> : null}
+                  {g.explanation ? <div style={{ fontSize: 12.5, color: '#9a9fb6', lineHeight: 1.5, marginTop: 2 }}>{g.explanation}</div> : null}
                 </div>
               </div>
             ))}
@@ -517,42 +521,42 @@ export default async function PreviewReportPage({
         {impl ? (
           <div style={{ ...card }}>
             <div style={cardTitle}>{t.implTitle}</div>
-            <p style={{ fontSize: 13, color: '#7a7874', marginTop: -6, marginBottom: 14 }}>{t.implSub}</p>
+            <p style={{ fontSize: 13, color: '#9a9fb6', marginTop: -6, marginBottom: 14 }}>{t.implSub}</p>
             {recommendations.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#7a7874' }}>—</p>
+              <p style={{ fontSize: 13, color: '#9a9fb6' }}>—</p>
             ) : (
               recommendations.map((r: any, i: number) => {
                 const asset = assets.find((a: any) => a.type && (a.type === r.asset_type || a.type === r.type))
                 const ext = asset?.format === 'json' ? 'json' : asset?.format === 'html' ? 'html' : 'txt'
                 return (
-                  <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid #f2f1ee' }}>
-                    <span style={{ width: 22, height: 22, borderRadius: 11, background: asset ? '#DDF4EB' : '#f2f1ee', color: asset ? '#174E4A' : '#b0aea8', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{asset ? '✓' : i + 1}</span>
+                  <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <span style={{ width: 22, height: 22, borderRadius: 11, background: asset ? 'rgba(124,92,255,0.16)' : 'rgba(255,255,255,0.06)', color: asset ? '#a78bfa' : '#646a85', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{asset ? '✓' : i + 1}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#161616' }}>{r.title}</div>
-                      {r.why && <div style={{ fontSize: 12.5, color: '#7a7874', marginTop: 2, lineHeight: 1.5 }}>{r.why}</div>}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#f4f5fa' }}>{r.title}</div>
+                      {r.why && <div style={{ fontSize: 12.5, color: '#9a9fb6', marginTop: 2, lineHeight: 1.5 }}>{r.why}</div>}
                       {asset ? (
                         <div style={{ marginTop: 8 }}>
-                          <a download={`${asset.type || 'asset'}.${ext}`} href={`data:text/plain;charset=utf-8,${encodeURIComponent(asset.content || '')}`} style={{ display: 'inline-block', background: '#161616', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 6, textDecoration: 'none' }}>{t.download}</a>
+                          <a download={`${asset.type || 'asset'}.${ext}`} href={`data:text/plain;charset=utf-8,${encodeURIComponent(asset.content || '')}`} style={{ display: 'inline-block', background: '#7c5cff', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 6, textDecoration: 'none' }}>{t.download}</a>
                           <details style={{ marginTop: 8 }}>
-                            <summary style={{ fontSize: 12, color: '#174E4A', cursor: 'pointer' }}>Preview</summary>
-                            <pre style={{ fontSize: 11, background: '#f7f6f3', border: '1px solid #ECE8E2', borderRadius: 8, padding: 12, overflowX: 'auto', marginTop: 6, whiteSpace: 'pre-wrap' }}>{(asset.content || '').slice(0, 1200)}{(asset.content || '').length > 1200 ? '\n…' : ''}</pre>
+                            <summary style={{ fontSize: 12, color: '#a78bfa', cursor: 'pointer' }}>Preview</summary>
+                            <pre style={{ fontSize: 11, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: 12, overflowX: 'auto', marginTop: 6, whiteSpace: 'pre-wrap' }}>{(asset.content || '').slice(0, 1200)}{(asset.content || '').length > 1200 ? '\n…' : ''}</pre>
                           </details>
                         </div>
-                      ) : r.suggested_fix ? <div style={{ fontSize: 12.5, color: '#161616', marginTop: 6 }}>{r.suggested_fix}</div> : null}
+                      ) : r.suggested_fix ? <div style={{ fontSize: 12.5, color: '#f4f5fa', marginTop: 6 }}>{r.suggested_fix}</div> : null}
                     </div>
-                    {asset && <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#174E4A', flexShrink: 0 }}>{t.implReady}</span>}
+                    {asset && <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#a78bfa', flexShrink: 0 }}>{t.implReady}</span>}
                   </div>
                 )
               })
             )}
-            <p style={{ fontSize: 12.5, color: '#7a7874', marginTop: 14 }}>{t.implFollowUp}</p>
+            <p style={{ fontSize: 12.5, color: '#9a9fb6', marginTop: 14 }}>{t.implFollowUp}</p>
           </div>
         ) : (
-          <div id="unlock" style={{ background: '#161616', borderRadius: 12, padding: '30px 28px', textAlign: 'center', marginBottom: 20 }}>
+          <div id="unlock" style={{ background: '#7c5cff', borderRadius: 12, padding: '30px 28px', textAlign: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t.unlockKicker}</div>
             <div style={{ fontSize: 25, fontWeight: 800, color: '#fff', letterSpacing: -0.5, marginBottom: 8, lineHeight: 1.2 }}>{paid ? t.implUnlockTitle : t.auditUnlockTitle}</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 22, lineHeight: 1.6, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>{paid ? t.implUnlockSub : t.auditUnlockSub}</div>
-            <a href={`/checkout?slug=${restaurant.preview_slug}${paid ? '&plan=implementation' : ''}`} style={{ display: 'inline-block', background: '#fff', color: '#161616', padding: '14px 32px', borderRadius: 8, fontSize: 15, fontWeight: 800, textDecoration: 'none', letterSpacing: -0.3 }}>{paid ? t.implUnlockCta : t.auditUnlockCta}</a>
+            <a href={`/checkout?slug=${restaurant.preview_slug}${paid ? '&plan=implementation' : ''}`} style={{ display: 'inline-block', background: 'rgba(255,255,255,0.04)', color: '#f4f5fa', padding: '14px 32px', borderRadius: 8, fontSize: 15, fontWeight: 800, textDecoration: 'none', letterSpacing: -0.3 }}>{paid ? t.implUnlockCta : t.auditUnlockCta}</a>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 12 }}>{t.unlockFine}</div>
           </div>
         )}
@@ -561,20 +565,20 @@ export default async function PreviewReportPage({
         <div style={{ ...card, marginTop: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
             <div style={cardTitle}>{t.monitorSoonTitle}</div>
-            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6, color: '#174E4A', background: '#DDF4EB', border: '1px solid #cce9dd', borderRadius: 20, padding: '3px 9px' }}>{t.monitorSoonBadge}</span>
+            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6, color: '#a78bfa', background: 'rgba(124,92,255,0.16)', border: '1px solid rgba(124,92,255,0.3)', borderRadius: 20, padding: '3px 9px' }}>{t.monitorSoonBadge}</span>
           </div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#b0aea8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{t.historyTitle}</div>
-          {history.length >= 2 ? <Sparkline points={history.map((h: any) => Number(h.visibility_score ?? 0))} /> : <p style={{ fontSize: 13, color: '#b0aea8', marginBottom: 12 }}>{t.historyEmpty}</p>}
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#646a85', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{t.historyTitle}</div>
+          {history.length >= 2 ? <Sparkline points={history.map((h: any) => Number(h.visibility_score ?? 0))} /> : <p style={{ fontSize: 13, color: '#646a85', marginBottom: 12 }}>{t.historyEmpty}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 8 }}>
             {t.monitorFeatures.map((f) => (
-              <div key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#7a7874' }}><span style={{ color: '#b0aea8' }}>○</span>{f}</div>
+              <div key={f} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#9a9fb6' }}><span style={{ color: '#646a85' }}>○</span>{f}</div>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #ECE8E2', padding: '20px 24px', textAlign: 'center', fontSize: 12, color: '#b0aea8' }}>
-        {t.footer} <a href="/" style={{ color: '#b0aea8' }}>finded.vercel.app</a>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.09)', padding: '20px 24px', textAlign: 'center', fontSize: 12, color: '#646a85' }}>
+        {t.footer} <a href="/" style={{ color: '#646a85' }}>finded.vercel.app</a>
       </div>
     </div>
   )

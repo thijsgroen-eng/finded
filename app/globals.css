@@ -72,4 +72,18 @@ body::before {
 .rise-3 { animation-delay: .16s; }
 @media (prefers-reduced-motion: reduce) { .rise, .card-fx, .btn, .fx { animation: none !important; transition: none !important; } }
 
+/* Scroll reveal for the marketing product shot (toggled by <Reveal>) */
+.reveal-shot { opacity: 0; transform: translateY(22px); }
+.reveal-shot.in-view { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.21,.6,.35,1); }
+.reveal-shot .ring-draw { stroke-dashoffset: var(--ring-c); }
+.reveal-shot.in-view .ring-draw { stroke-dashoffset: var(--ring-off); transition: stroke-dashoffset 1.1s cubic-bezier(.21,.6,.35,1) .15s; }
+.reveal-shot .comp-row { opacity: 0; transform: translateX(-7px); }
+.reveal-shot.in-view .comp-row { opacity: 1; transform: none; transition: opacity .5s ease var(--d, 0s), transform .5s cubic-bezier(.21,.6,.35,1) var(--d, 0s); }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-shot, .reveal-shot .comp-row { opacity: 1 !important; transform: none !important; }
+  .reveal-shot .ring-draw { stroke-dashoffset: var(--ring-off) !important; }
+}
+
+@media (max-width: 720px) { .insights-grid { grid-template-columns: 1fr !important; } }
+
 ::selection { background: #0B5D56; color: #fff; }

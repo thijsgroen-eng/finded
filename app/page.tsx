@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react'
 import { LeadForm } from '@/components/landing/lead-form'
 import { CountUp } from '@/components/landing/count-up'
+import { Reveal } from '@/components/landing/reveal'
 import { LangToggle } from '@/components/lang-toggle'
 import { getSettings } from '@/lib/settings'
 import { getViewerLang } from '@/lib/i18n-viewer'
@@ -37,8 +39,11 @@ const T = {
     cta2: 'View a sample report', cta2sub: "See what you'll get",
     trust: [['100% evidence-backed', 'No guesswork. Ever.'], ['Your data is private', 'We never share or sell data.'], ['Audit in ~24 hours', 'Full report delivered by email.']],
     providersEyebrow: 'Audits across all major AI assistants',
+    sampleCaption: 'Sample dashboard · representative data',
     trustedPre: 'Trusted by restaurant owners in', trustedCities: 'Amsterdam · Rotterdam · Utrecht', trustedPost: 'and across the Netherlands',
     insightsEyebrow: 'Finded Insights · measured continuously',
+    insightsFrame: 'Deterministic and reproducible from our observation warehouse — measured, never AI-generated guesses.',
+    insightsAnchorLabel: 'AI searches performed',
     statLabels: ['Restaurants analysed', 'AI searches performed', 'Audits completed', 'Cities covered', 'Cuisine types', 'AI models tested'],
     insightsEmpty: 'Our dataset grows with every completed audit. Live platform statistics — restaurants analysed, AI searches performed, cities and cuisines covered — appear here as the knowledge base fills.',
     whyTitle: 'Guests no longer only search Google.',
@@ -106,8 +111,11 @@ const T = {
     cta2: 'Bekijk een voorbeeldrapport', cta2sub: 'Zie wat je krijgt',
     trust: [['100% op bewijs gebaseerd', 'Nooit giswerk.'], ['Je gegevens zijn privé', 'We delen of verkopen nooit data.'], ['Audit in ~24 uur', 'Volledig rapport per e-mail.']],
     providersEyebrow: 'Audits op alle grote AI-assistenten',
+    sampleCaption: 'Voorbeelddashboard · representatieve data',
     trustedPre: 'Vertrouwd door restauranthouders in', trustedCities: 'Amsterdam · Rotterdam · Utrecht', trustedPost: 'en in heel Nederland',
     insightsEyebrow: 'Finded Insights · continu gemeten',
+    insightsFrame: 'Deterministisch en reproduceerbaar uit onze observation warehouse — gemeten, nooit door AI gegenereerd giswerk.',
+    insightsAnchorLabel: 'AI-zoekopdrachten uitgevoerd',
     statLabels: ['Restaurants geanalyseerd', 'AI-zoekopdrachten uitgevoerd', 'Audits voltooid', 'Steden gedekt', 'Keukentypes', 'AI-modellen getest'],
     insightsEmpty: 'Onze dataset groeit met elke voltooide audit. Live platformstatistieken — geanalyseerde restaurants, uitgevoerde AI-zoekopdrachten, gedekte steden en keukens — verschijnen hier naarmate de kennisbank zich vult.',
     whyTitle: 'Gasten zoeken niet meer alleen op Google.',
@@ -191,14 +199,19 @@ function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; 
   )
 }
 
-function Ring({ pct, size, stroke, label, sub }: { pct: number; size: number; stroke: number; label: string; sub?: string }) {
+function Ring({ pct, size, stroke, label, sub, animate }: { pct: number; size: number; stroke: number; label: string; sub?: string; animate?: boolean }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, dash = (pct / 100) * c
   const id = `g${Math.round(pct)}${size}`
+  // When `animate`, the progress arc draws in via CSS (stroke-dashoffset) once the
+  // product shot scrolls into view — see .ring-draw in globals.css.
+  const arc = animate
+    ? { strokeDasharray: c, className: 'ring-draw', style: { ['--ring-c']: c, ['--ring-off']: c - dash } as CSSProperties }
+    : { strokeDasharray: `${dash} ${c - dash}` }
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
       <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7c5cff" /><stop offset="100%" stopColor="#4f8cff" /></linearGradient></defs>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${dash} ${c - dash}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round" {...arc} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       <text x="50%" y="49%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.26, fontWeight: 800, fill: '#fff' }}>{label}</text>
       {sub && <text x="50%" y="65%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.11, fill: MUTED }}>{sub}</text>}
     </svg>
@@ -235,7 +248,7 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
           <div style={cardBox}>
             <div style={eyebrow}>{t.score}</div>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 10 }}>
-              <Ring pct={72} size={104} stroke={11} label="72" sub="/100" />
+              <Ring pct={72} size={104} stroke={11} label="72" sub="/100" animate />
               <div>
                 <span style={{ fontSize: 11, fontWeight: 800, color: GREEN, background: 'rgba(52,211,153,0.14)', border: '1px solid rgba(52,211,153,0.3)', padding: '3px 9px', borderRadius: 6 }}>{t.good}</span>
                 <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: '10px 0 0' }}>{t.scoreBody}</p>
@@ -253,8 +266,8 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
           <div style={cardBox}>
             <div style={eyebrow}>{t.competitors}</div>
             <div style={{ marginTop: 10, display: 'grid', gap: 2 }}>
-              {competitors.map(([rank, name, score, hot]) => (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 7, background: hot ? 'rgba(124,92,255,0.12)' : 'transparent' }}>
+              {competitors.map(([rank, name, score, hot], ci) => (
+                <div key={name} className="comp-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 7, background: hot ? 'rgba(124,92,255,0.12)' : 'transparent', ['--d']: `${0.25 + ci * 0.08}s` } as CSSProperties}>
                   <span style={{ fontSize: 11, color: FAINT, width: 10 }}>{rank}</span>
                   <span style={{ fontSize: 12.5, color: INK, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: hot ? '#a78bfa' : MUTED }}>{score}</span>
@@ -367,9 +380,15 @@ export default async function LandingPage() {
               )
             })}
           </div>
-          <div style={{ marginTop: 46 }}>
+          <Reveal className="reveal-shot" style={{ marginTop: 40 }}>
+            <div id="sample" style={{ scrollMarginTop: 80 }}>
+              <DashboardMock t={t.mock} />
+              <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{t.sampleCaption}</p>
+            </div>
+          </Reveal>
+          <div style={{ marginTop: 44 }}>
             <div style={{ fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1.6, marginBottom: 18 }}>{t.providersEyebrow}</div>
-            <div style={{ display: 'flex', gap: 'clamp(20px,4vw,46px)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 'clamp(20px,4vw,46px)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center', paddingBottom: 8 }}>
               {PROVIDERS.map((p) => (
                 <span key={p.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 700, color: '#cfd2e0' }}>
                   <span style={{ width: 22, height: 22, borderRadius: '50%', background: p.color, display: 'inline-block', boxShadow: `0 0 16px -2px ${p.color}` }} />{p.name}
@@ -377,40 +396,49 @@ export default async function LandingPage() {
               ))}
             </div>
           </div>
-          <div id="sample" className="rise rise-3" style={{ marginTop: 46, scrollMarginTop: 80 }}>
-            <DashboardMock t={t.mock} />
-            <p style={{ fontSize: 13, color: FAINT, marginTop: 24 }}>{t.trustedPre} <span style={{ color: MUTED }}>{t.trustedCities}</span> {t.trustedPost}</p>
-          </div>
         </div>
       </section>
 
-      {/* Insights */}
+      {/* Insights — rigor-led: anchor metric + supporting counts */}
       <section style={{ borderBottom: `1px solid ${BORDER2}`, background: BG_SOFT }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '56px 24px' }}>
-          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 28 }}>{t.insightsEyebrow}</div>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '60px 24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 10 }}>{t.insightsEyebrow}</div>
+          <p style={{ fontSize: 14.5, color: '#cfd2e0', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 30 }}>{t.insightsFrame}</p>
           {haveData ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
-              {statValues.map((value, i) => {
-                const Icon = STAT_ICONS[i]
-                return (
-                  <div key={i} className="card-fx" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 18px', textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', width: 34, height: 34, borderRadius: 9, background: 'rgba(124,92,255,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}><Icon style={{ width: 17, height: 17, color: '#a78bfa' }} /></span>
-                    <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, color: INK }}><CountUp value={value} /></div>
-                    <div style={{ fontSize: 12.5, color: MUTED, marginTop: 4 }}>{t.statLabels[i]}</div>
-                  </div>
-                )
-              })}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) minmax(0, 1.8fr)', gap: 18, alignItems: 'stretch' }} className="insights-grid">
+              {/* Anchor: AI searches performed (the strongest figure) */}
+              <div style={{ background: 'linear-gradient(160deg, rgba(124,92,255,0.16), rgba(79,124,255,0.05))', border: '1px solid rgba(124,92,255,0.3)', borderRadius: 18, padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ display: 'inline-flex', width: 40, height: 40, borderRadius: 11, background: 'rgba(124,92,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}><Search style={{ width: 20, height: 20, color: '#a78bfa' }} /></span>
+                <div style={{ fontSize: 'clamp(46px, 6vw, 64px)', fontWeight: 800, letterSpacing: -2.5, color: '#fff', lineHeight: 1 }}><CountUp value={statValues[1]} /></div>
+                <div style={{ fontSize: 14, color: MUTED, marginTop: 8, fontWeight: 600 }}>{t.insightsAnchorLabel}</div>
+              </div>
+              {/* Supporting counts, demoted */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                {[0, 2, 3, 4, 5].map((i) => {
+                  const Icon = STAT_ICONS[i]
+                  return (
+                    <div key={i} className="card-fx" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 16px' }}>
+                      <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 8, background: 'rgba(124,92,255,0.13)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}><Icon style={{ width: 15, height: 15, color: '#a78bfa' }} /></span>
+                      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.8, color: INK }}><CountUp value={statValues[i]} /></div>
+                      <div style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{t.statLabels[i]}</div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           ) : (
-            <p style={{ textAlign: 'center', fontSize: 15.5, color: MUTED, maxWidth: 640, margin: '0 auto', lineHeight: 1.6 }}>{t.insightsEmpty}</p>
+            <p style={{ fontSize: 15.5, color: '#cfd2e0', maxWidth: '62ch', lineHeight: 1.6 }}>{t.insightsEmpty}</p>
           )}
         </div>
       </section>
 
-      {/* Why */}
-      <section style={{ maxWidth: 760, margin: '0 auto', padding: '92px 24px 20px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 18, lineHeight: 1.12 }}>{t.whyTitle}</h2>
-        <p style={{ fontSize: 18, color: MUTED, lineHeight: 1.65, maxWidth: 620, margin: '0 auto' }}>{t.whyBody}</p>
+      {/* Why — editorial, left-aligned on a lifted panel */}
+      <section style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 28px' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 22, padding: 'clamp(28px, 4vw, 46px)', maxWidth: 880 }}>
+          <span style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: GRAD }} />
+          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 16, lineHeight: 1.12, maxWidth: '18ch' }}>{t.whyTitle}</h2>
+          <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.65, maxWidth: '60ch', margin: 0 }}>{t.whyBody}</p>
+        </div>
       </section>
 
       {/* Measure */}
@@ -449,10 +477,10 @@ export default async function LandingPage() {
       {/* Data */}
       <section id="data" style={{ background: BG_SOFT, borderTop: `1px solid ${BORDER2}`, borderBottom: `1px solid ${BORDER2}`, position: 'relative', overflow: 'hidden', scrollMarginTop: 60 }}>
         <div style={{ position: 'absolute', top: -120, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,92,255,0.22), transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 940, margin: '0 auto', padding: '100px 24px', position: 'relative' }}>
+        <div style={{ maxWidth: 940, margin: '0 auto', padding: '76px 24px', position: 'relative' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 18 }}>{t.dataEyebrow}</div>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.3, lineHeight: 1.1, marginBottom: 20 }}>{t.dataTitle}</h2>
-          <p style={{ fontSize: 18, color: MUTED, lineHeight: 1.7, marginBottom: 32, maxWidth: 720 }}>{t.dataBody}</p>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.3, lineHeight: 1.1, marginBottom: 20, maxWidth: '20ch' }}>{t.dataTitle}</h2>
+          <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.7, marginBottom: 32, maxWidth: '62ch' }}>{t.dataBody}</p>
           <div style={{ fontSize: 12, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>{t.dataLearn}</div>
           {haveBench ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16 }}>

@@ -293,3 +293,170 @@ need `pgvector` and are explicitly **future**.
 Once you approve the grain, partitioning, migration approach and the Phase 1
 slice, I'll implement incrementally — additive migrations first, dual-write,
 backfill, MVs, then repoint reads — with golden parity tests at each step.
+
+---
+
+## 10. Approved refinements (V2.1) — warehouse hardening
+
+Direction approved. The following refinements are folded in. Each lists *why it
+improves long-term maintainability* and *its trade-off*. Migrations stay additive;
+audits never break; parity with the current engine is maintained until V2 is
+validated.
+
+### Warehouse naming (fact_* / dim_*)
+The schema separates **immutable facts** (grain-level measurements) from
+**dimensions** (reusable descriptive entities). Final names:
+
+```
+dim_date              calendar (day/week/month/quarter/year/season)
+dim_provider          provider + model + VERSION (one row per release)        [#1]
+dim_provider_event    provider release/behaviour-change timeline               [#8]
+dim_prompt            distinct prompt (hash, category, intent, language)
+dim_restaurant        anonymized restaurant attributes (cuisine/city/country/type/price/chain/neighborhood)
+dim_feature_snapshot  reusable website-state snapshot (dedup by website_hash)  [#4]
+dim_experiment        experiment registry (control/treatment)                  [#9]
+
+fact_audit            1/audit   — rollup: scores, outcome, snapshot ref, quality, versions
+fact_provider_response 1/(audit,provider,prompt,sample) — THE AI interaction   [#1,#2,#7,#9]
+fact_response_evidence 1/response — immutable raw evidence (hash + compressed)  [#5]
+fact_citation         1/(response,url) — citation graph edge                    [#6]
+fact_entity           1/(response,entity) — extracted mentions + competitors
+fact_recommendation   1/recommendation — + impact tracking
+```
+*Why:* unambiguous fact/dimension separation is the convention every BI tool,
+analyst and future API expects; it keeps facts narrow (fast) and descriptive data
+in one reusable place. *Trade-off:* the snapshot is reusable state, so it's a
+`dim_` (referenced by facts) rather than the `fact_signal` name floated earlier —
+a reasoned deviation; documented here so it's not a surprise.
+
+### 1 — Provider versioning (mandatory)
+`dim_provider(provider, model, version)` with `unique(provider,model,version)`;
+every `fact_provider_response.provider_id` points at an exact release. *Why:*
+"did GPT-5.1 change recommendations?" becomes a clean group-by on a stable key —
+the core of provider drift analysis. *Trade-off:* the pipeline must resolve the
+exact version string per call (we already capture `model_version` on `model_runs`,
+so this is wiring, not new capture); unknown versions get an explicit
+`version='unknown'` release rather than null.
+
+### 2 — Partitioning from day one
+`fact_*` tables `PARTITION BY RANGE (observed_at)`, monthly, with a `default`
+partition catch-all + a helper to pre-create months. *Why:* retrofitting
+partitions onto a 600M-row table later is a painful migration; doing it now is
+free. *Trade-off:* slightly more DDL and a monthly "create next partition" cron;
+composite PKs `(id, observed_at)` (partition key must be in the PK) and **no
+cross-fact foreign keys** (warehouse style — facts reference by id without FK
+enforcement, which is also faster at scale).
+
+### 3 — Immutable, append-only
+Facts are INSERT-only; never UPDATE/DELETE in normal operation. Algorithm
+improvements create **new rows with new version stamps** (`scoring_version`,
+`parser_version`, `recommendation_version`, `benchmark_version`,
+`extraction_version`) — history is never rewritten. *Why:* reproducibility —
+any past report can be recomputed exactly, and cross-version comparisons are
+explicit. *Trade-off:* re-parsing history means inserting a *new generation* of
+rows (more storage) instead of mutating — acceptable, and exactly why #5 stores
+raw evidence. The one sanctioned mutation is `fact_recommendation` impact
+back-annotation, isolated to that table.
+
+### 4 — Feature snapshot layer
+`dim_feature_snapshot` keyed by `(restaurant_id, website_hash, crawl_version)`
+holds the typed website signals once; `fact_audit`/`fact_provider_response`
+reference `feature_snapshot_id`. *Why:* a restaurant's site state is identical
+across its ~128 calls per audit and stable across audits — storing it once (not
+millions of times) shrinks the warehouse and lets correlations join a small table.
+*Trade-off:* a hash/dedup step at write time; signals that change require a new
+snapshot row (intended).
+
+### 5 — Raw evidence (immutable)
+`fact_response_evidence(response_id, response_hash, compressed_raw_response bytea,
+structured_response jsonb, citations jsonb, parsed_entities jsonb)`, 1:1 with the
+response fact but stored separately so analytics scans never touch the blobs.
+*Why:* "storage is cheaper than repeating AI calls" — future parser/extraction
+improvements replay over stored evidence without new provider spend.
+*Trade-off:* largest storage component; mitigated by compression + keeping it off
+the hot analytic path (separate table, never in MVs).
+
+### 6 — Citation graph
+`fact_citation` is an edge table carrying the full chain on each row:
+`response_id, prompt_id, provider_id, restaurant_id, entity_name, domain, url,
+citation_type, is_own_site, observed_at`. *Why:* one denormalized edge table
+answers "which domains are gaining influence", "which URLs vanish", "which
+providers cite official sites most" with pure group-by + time windows — no
+recursive graph engine needed. *Trade-off:* denormalization duplicates ids per
+edge (storage) in exchange for join-free, partition-pruned queries at scale.
+
+### 7 — Observation quality score
+Deterministic `quality_score` (0–1) on `fact_audit`/`fact_provider_response` from
+crawl completeness, provider success rate, parser confidence, extraction quality,
+response validity. MVs include only rows above a threshold. *Why:* keeps
+benchmarks/correlations clean — a half-failed audit can't skew the index.
+*Trade-off:* the threshold is a tunable that must be versioned (it affects
+published numbers), so it's part of `benchmark_version`.
+
+### 8 — Provider events
+`dim_provider_event(provider, model, version, event_type, event_date, note)`.
+Trend MVs left-join events by date so charts auto-annotate ("GPT-5.1 shipped
+here"). *Why:* turns "visibility dropped in March" into "visibility dropped when
+Gemini changed its search model" — causal context, deterministically. *Trade-off:*
+events are curated input (operator-entered), not auto-detected; auto change-point
+detection can later *propose* events but a human confirms.
+
+### 9 — Experiment framework
+`dim_experiment` + `experiment_id` & `arm` (control/treatment) on facts. *Why:*
+enables controlled before/after measurement of website changes, prompts and
+recommendation effectiveness — the rigorous basis for "measured impact".
+*Trade-off:* none structurally (nullable columns); the discipline of assigning
+arms is operational, added when experiments begin.
+
+### 10 — Correlation engine (statistical only)
+Deterministic SQL producing, per signal/segment: direction (+/−), effect size
+(Cohen's h / mean diff), 95% CI (Wilson / Welch), `n_with`/`n_without`, and a
+min-sample gate; only relationships passing significance + min-n are published.
+*Why:* a defensible, never-invented differentiator. *Trade-off:* conservative —
+real-but-underpowered relationships stay hidden until enough data; correct
+behaviour for a trust-first product.
+
+### 11 — Research layer
+Versioned, anonymized aggregate views (`research_ai_visibility_index`,
+`research_*_report`, benchmark API shapes) defined over the MVs, each stamping
+`benchmark_version`. *Why:* a published index must be reproducible and stable;
+building reports on versioned MVs (not ad-hoc queries) guarantees that.
+*Trade-off:* none now — architecture only; no implementation this phase.
+
+### 12–13 — Scale (10⁵ restaurants / 5×10⁶ audits / 6×10⁸ responses / 10⁹ entities)
+Monthly partitions + BRIN on `observed_at` + narrow typed facts + MV query layer +
+no live cross-fact joins. *Why:* the warehouse scales by adding partitions, not by
+redesign. *Trade-off:* MVs add refresh latency (minutes-stale analytics) —
+acceptable for benchmarks/research; the few real-time needs read facts directly
+with partition pruning.
+
+### Trade-offs summary
+- More tables + DDL up front (partitions, dims) — paid once, saves a 5-year retrofit.
+- More storage (raw evidence, denormalized citations) — deliberately traded for
+  never re-calling providers and join-free analytics.
+- No FK enforcement on facts — standard warehouse practice; integrity enforced at
+  write time in code + parity tests.
+- MV staleness — analytics are minutes-old, not live; correct for this workload.
+
+---
+
+## 11. Phase 1 implementation plan (incremental, additive)
+
+1. **029 — warehouse schema (this step).** Create `dim_*` + partitioned `fact_*`
+   (empty) + initial monthly partitions + indexes. No pipeline/read change →
+   nothing can break; parity is automatic (nothing reads it yet).
+2. **030 — dual-write.** Pipeline writes `dim_provider`/`dim_prompt`/
+   `dim_feature_snapshot` + `fact_provider_response` + `fact_citation` +
+   `fact_response_evidence` alongside today's `recordObservation` (best-effort).
+3. **031 — backfill.** Idempotent replay of existing operational tables into the
+   facts.
+4. **032 — materialized views** (`mv_provider_month`, `mv_benchmark`,
+   `mv_citation_influence`) + refresh cron; golden parity vs the current JS
+   aggregators.
+5. **033 — repoint** Insights (Provider/Citation/Benchmark tabs) + recommendation
+   confidence to the MVs; keep `lib/observations` as shims.
+6. **Deprecate** the 5,000-row JS path once parity holds.
+
+The legacy `observations`/`observation_changes` tables and `lib/observations`
+keep working untouched throughout, so every existing audit, the current Insights
+page and recommendations continue functioning until V2 is fully validated.

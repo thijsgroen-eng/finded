@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Building2, ClipboardList,
   Upload, Users, BarChart2, Plus, MessageSquareText,
-  Menu, X, LogOut, Inbox, Settings, Lightbulb, ShieldCheck
+  Menu, X, LogOut, Inbox, Settings, Lightbulb, ShieldCheck, HeartHandshake
 } from 'lucide-react'
 
 async function logout() {
@@ -17,6 +17,7 @@ async function logout() {
 const NAV_ITEMS = [
   { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/restaurants', label: 'Restaurants', icon: Building2 },
+  { href: '/admin/clients',     label: 'Clients',     icon: HeartHandshake },
   { href: '/admin/audits',      label: 'Audits',      icon: ClipboardList },
   { href: '/admin/requests',    label: 'Requests',    icon: Inbox },
   { href: '/admin/prompts',     label: 'Prompts',     icon: MessageSquareText },

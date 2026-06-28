@@ -116,15 +116,22 @@ export async function writeWarehouseForAudit(auditId: string): Promise<{ respons
     supabaseAdmin.from('fact_provider_response').delete().eq('audit_id', auditId),
     supabaseAdmin.from('fact_citation').delete().eq('audit_id', auditId),
     supabaseAdmin.from('fact_response_evidence').delete().eq('audit_id', auditId),
+    supabaseAdmin.from('fact_entity').delete().eq('audit_id', auditId),
+    supabaseAdmin.from('fact_recommendation').delete().eq('audit_id', auditId),
     supabaseAdmin.from('fact_audit').delete().eq('audit_id', auditId),
   ])
 
   const responseRows: Record<string, unknown>[] = []
   const evidenceRows: Record<string, unknown>[] = []
   const citationRows: Record<string, unknown>[] = []
+  const responseIdByKey = new Map<string, string>()   // model|prompt|sample → response_id
+  const providerIdByModel = new Map<string, string>() // model → any provider_id (for entities)
 
   for (const r of runs ?? []) {
     const responseId = randomUUID()
+    responseIdByKey.set(mentionKey(r.model, r.prompt_id, r.sample_index ?? 0), responseId)
+    const pid = providerId.get(providerKey(r.model, r.model_version))
+    if (pid && !providerIdByModel.has(r.model)) providerIdByModel.set(r.model, pid)
     const mn = mentionMap.get(mentionKey(r.model, r.prompt_id, r.sample_index ?? 0))
     const failed = r.status === 'failed' || !r.raw_response || r.raw_response.startsWith('ERROR:')
     const sources: string[] = Array.isArray(r.sources) ? r.sources : []
@@ -170,6 +177,31 @@ export async function writeWarehouseForAudit(auditId: string): Promise<{ respons
   await chunk('fact_provider_response', responseRows)
   await chunk('fact_response_evidence', evidenceRows)
   await chunk('fact_citation', citationRows)
+
+  // ── fact_entity (competitors + co-occurrence) ──
+  const { data: entities } = await supabaseAdmin
+    .from('entities').select('model, prompt_id, sample_index, name, normalized_name, is_target, position, sentiment').eq('audit_id', auditId)
+  const entityRows = (entities ?? []).map((e) => ({
+    response_id: responseIdByKey.get(mentionKey(e.model, e.prompt_id, e.sample_index ?? 0)) ?? null,
+    audit_id: auditId, restaurant_id: restaurantId,
+    provider_id: providerIdByModel.get(e.model) ?? null, prompt_id: promptId.get(e.prompt_id) ?? null,
+    name: e.name, normalized_name: e.normalized_name, is_target: !!e.is_target,
+    position: e.position, sentiment: sentimentNum(e.sentiment), observed_at: observedAt,
+  }))
+  await chunk('fact_entity', entityRows)
+
+  // ── fact_recommendation (impact columns back-annotated later) ──
+  const { data: recs } = await supabaseAdmin
+    .from('recommendations').select('type, priority, impact_level, effort, difficulty, confidence, expected_impact').eq('audit_id', auditId)
+  const recRows = (recs ?? []).map((r) => ({
+    audit_id: auditId, restaurant_id: restaurantId,
+    type: r.type ?? null, category: r.type ?? null, priority: r.priority ?? r.impact_level ?? null,
+    difficulty: r.difficulty ?? r.effort ?? null, confidence: r.confidence ?? null, expected_impact: r.expected_impact ?? null,
+    visibility_before: vs?.visibility_score ?? null,
+    scoring_version: ver.scoring, recommendation_version: ver.recommendation, benchmark_version: ver.benchmark,
+    observed_at: observedAt,
+  }))
+  await chunk('fact_recommendation', recRows)
 
   // ── fact_audit rollup ──
   if (vs) {

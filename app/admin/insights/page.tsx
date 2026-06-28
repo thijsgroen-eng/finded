@@ -213,6 +213,9 @@ interface WarehouseData {
   providers?: { provider: string; model: string; version: string; month: string; responses: number; mention_rate: number; avg_position: number | null }[]
   citations?: { provider: string; domain: string; citation_type: string; citations: number; audits: number }[]
   correlations?: { signal: string; n_with: number; n_without: number; mention_lift: number | null; visibility_delta: number | null; direction: string; significant: boolean }[]
+  cooccurrence?: { name_a: string; name_b: string; audits_together: number }[]
+  competitors?: { normalized_name: string; audits: number; mentions: number }[]
+  recommendationImpact?: { type: string; recommended: number; implemented: number; verified_n: number; avg_visibility_change: number | null }[]
 }
 
 function WarehousePanel() {
@@ -322,6 +325,72 @@ function WarehousePanel() {
               </CardContent>
             </Card>
           </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Most-named competitors */}
+            <Card>
+              <CardHeader><CardTitle>Most-named competitors</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                {(w.competitors ?? []).length === 0 ? <p className="text-sm text-gray-400">No competitor data yet.</p> : (
+                  <div className="space-y-1.5">
+                    {(w.competitors ?? []).slice(0, 10).map((c) => (
+                      <div key={c.normalized_name} className="flex items-center gap-3 text-sm">
+                        <span className="text-gray-700 flex-1 truncate capitalize">{c.normalized_name}</span>
+                        <span className="text-xs text-gray-400">{c.audits} audits</span>
+                        <span className="font-semibold text-gray-900 w-10 text-right tabular-nums">{c.mentions}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            {/* Co-occurrence */}
+            <Card>
+              <CardHeader><CardTitle>Competitors that appear together</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                {(w.cooccurrence ?? []).length === 0 ? <p className="text-sm text-gray-400">No pairs reach the threshold yet (≥3 shared audits).</p> : (
+                  <div className="space-y-1.5">
+                    {(w.cooccurrence ?? []).slice(0, 10).map((p, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="text-gray-700 flex-1 truncate capitalize">{p.name_a} <span className="text-gray-300">+</span> {p.name_b}</span>
+                        <span className="font-semibold text-gray-900 w-8 text-right tabular-nums">{p.audits_together}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recommendation impact */}
+          {(w.recommendationImpact ?? []).length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Recommendation impact</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-400">
+                      <th className="py-2 pr-4 font-medium">Type</th><th className="py-2 pr-4 font-medium">Recommended</th>
+                      <th className="py-2 pr-4 font-medium">Implemented</th><th className="py-2 pr-4 font-medium">Verified</th>
+                      <th className="py-2 pr-4 font-medium">Avg. visibility change</th>
+                    </tr></thead>
+                    <tbody>
+                      {(w.recommendationImpact ?? []).map((r) => (
+                        <tr key={r.type} className="border-b border-gray-50 last:border-0">
+                          <td className="py-2 pr-4 text-gray-800">{r.type}</td>
+                          <td className="py-2 pr-4 text-gray-600">{r.recommended}</td>
+                          <td className="py-2 pr-4 text-gray-600">{r.implemented}</td>
+                          <td className="py-2 pr-4 text-gray-600">{r.verified_n}</td>
+                          <td className="py-2 pr-4 font-medium text-gray-900">{r.avg_visibility_change == null ? '—' : `${r.avg_visibility_change > 0 ? '+' : ''}${Math.round(r.avg_visibility_change)}`}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Measured change appears once recommendations are marked implemented and a follow-up audit verifies them.</p>
+              </CardContent>
+            </Card>
+          )}
+
           <p className="text-xs text-gray-400">Deterministic, version-aware analytics from the append-only warehouse. Correlations are only shown when statistically gated (min sample + meaningful lift).</p>
         </div>
       )}

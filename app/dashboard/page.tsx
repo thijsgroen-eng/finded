@@ -54,7 +54,7 @@ export default async function CustomerDashboard() {
         ) : (
           <div style={{ display: 'grid', gap: 14 }}>
             {restaurants.map((r) => (
-              <a key={r.id} href={r.preview_slug ? `/report/${r.preview_slug}` : '#'}
+              <a key={r.id} href={`/dashboard/${r.id}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 18, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px', textDecoration: 'none', color: INK }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 14, background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.25)', flexShrink: 0 }}>
                   <span style={{ fontSize: 22, fontWeight: 800, color: scoreColor(r.visibility_score), lineHeight: 1 }}>{r.visibility_score ?? '—'}</span>

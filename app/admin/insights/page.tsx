@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui'
-import { Loader2, TrendingUp, Lightbulb, RefreshCw, X } from 'lucide-react'
+import { Loader2, TrendingUp, Lightbulb, RefreshCw, X, Database } from 'lucide-react'
 
 interface Benchmark { n: number; avgVisibility: number | null; avgMentionFrequency: number | null; pctMentioned: number; factRates: Record<string, number> }
 interface SegBenchmark extends Benchmark { key: string }
@@ -199,6 +199,130 @@ export default function InsightsPage() {
           {data.byCity.length > 0 && <Segments title="By city" rows={data.byCity} active={city} onPick={(k) => { setCity(k === city ? '' : k); setCuisine('') }} />}
 
           <p className="text-xs text-gray-400">Only aggregate statistics are shown — never individual restaurant data. Segments appear once at least 5 audits exist for them.</p>
+        </div>
+      )}
+
+      <WarehousePanel />
+    </div>
+  )
+}
+
+// ── Observation Engine V2 (warehouse) — deterministic MV-backed analytics ──────
+interface WarehouseData {
+  ready: boolean; reason?: string
+  providers?: { provider: string; model: string; version: string; month: string; responses: number; mention_rate: number; avg_position: number | null }[]
+  citations?: { provider: string; domain: string; citation_type: string; citations: number; audits: number }[]
+  correlations?: { signal: string; n_with: number; n_without: number; mention_lift: number | null; visibility_delta: number | null; direction: string; significant: boolean }[]
+}
+
+function WarehousePanel() {
+  const [w, setW] = useState<WarehouseData | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const loadW = useCallback(async () => {
+    const r = await fetch('/api/admin/warehouse/insights'); setW(await r.json())
+  }, [])
+  useEffect(() => { loadW() }, [loadW])
+
+  async function backfill() {
+    setBusy('backfill'); setMsg(null)
+    let offset = 0, total = 0
+    try {
+      for (;;) {
+        const r = await fetch('/api/admin/warehouse/backfill', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit: 200, offset }) })
+        const j = await r.json(); if (!r.ok) throw new Error(j.error)
+        total += j.written ?? 0; offset = j.nextOffset
+        if (j.done) break
+      }
+      setMsg(`Backfilled ${total} audits into the warehouse.`)
+      await refresh(); await loadW()
+    } catch (e) { setMsg(e instanceof Error ? e.message : 'Backfill failed') }
+    setBusy(null)
+  }
+  async function refresh() {
+    setBusy('refresh')
+    try { await fetch('/api/admin/warehouse/refresh', { method: 'POST' }); await loadW() } finally { setBusy(null) }
+  }
+
+  const pct = (x: number | null | undefined) => x == null ? '—' : `${Math.round(x * 100)}%`
+  // Latest month per provider+version for the drift table.
+  type PRow = NonNullable<WarehouseData['providers']>[number]
+  const latest = (() => {
+    const map = new Map<string, PRow>()
+    for (const p of w?.providers ?? []) { const k = `${p.provider}|${p.version}`; const cur = map.get(k); if (!cur || p.month > cur.month) map.set(k, p) }
+    return [...map.values()].sort((a, b) => a.provider.localeCompare(b.provider))
+  })()
+
+  return (
+    <div className="mt-8 pt-6 border-t border-gray-100">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <h2 className="text-lg font-bold text-gray-900 inline-flex items-center gap-2"><Database className="w-4.5 h-4.5 text-gray-400" /> Observation warehouse (V2)</h2>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={refresh} disabled={busy !== null}>{busy === 'refresh' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Refresh views</Button>
+          <Button size="sm" onClick={backfill} disabled={busy !== null}>{busy === 'backfill' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />} Backfill warehouse</Button>
+        </div>
+      </div>
+      {msg && <div className="mb-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">{msg}</div>}
+
+      {!w ? <div className="text-sm text-gray-400"><Loader2 className="w-4 h-4 animate-spin inline" /> Loading…</div>
+      : !w.ready ? (
+        <Card><CardContent className="pt-6 text-sm text-gray-500">{w.reason ?? 'Warehouse not ready.'} Apply migrations 029 + 030, then <strong>Backfill</strong>.</CardContent></Card>
+      ) : (
+        <div className="space-y-5">
+          {/* Measured correlations (significant only) */}
+          <Card>
+            <CardHeader><CardTitle><span className="inline-flex items-center gap-2"><TrendingUp className="w-4 h-4 text-gray-400" /> Measured correlations (statistically gated)</span></CardTitle></CardHeader>
+            <CardContent className="pt-0">
+              {(w.correlations ?? []).filter((c) => c.significant).length === 0 ? (
+                <p className="text-sm text-gray-400">No correlation clears the significance + minimum-sample gate yet. They appear as the warehouse fills.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {(w.correlations ?? []).filter((c) => c.significant).map((c) => (
+                    <li key={c.signal} className="flex items-center gap-3 text-sm">
+                      <span className={`font-bold w-14 shrink-0 ${c.direction === 'positive' ? 'text-emerald-700' : 'text-red-600'}`}>{c.mention_lift!.toFixed(2)}×</span>
+                      <span className="text-gray-700 flex-1">{c.signal.replace(/_/g, ' ')} {c.direction === 'positive' ? 'lifts' : 'lowers'} AI mentions</span>
+                      <span className="text-xs text-gray-400">n={c.n_with}/{c.n_without}{c.visibility_delta != null ? ` · ${c.visibility_delta > 0 ? '+' : ''}${Math.round(c.visibility_delta)} vis` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Provider drift */}
+            <Card>
+              <CardHeader><CardTitle>Provider mention rate (latest month, by version)</CardTitle></CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                {latest.length === 0 ? <p className="text-sm text-gray-400">No provider data yet.</p> : latest.map((p) => (
+                  <div key={`${p.provider}-${p.version}`} className="flex items-center gap-3 text-sm">
+                    <span className="text-gray-700 w-40 shrink-0 truncate" title={`${p.provider} ${p.version}`}>{p.provider} <span className="text-gray-400">{p.version}</span></span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: pct(p.mention_rate) }} /></div>
+                    <span className="font-semibold text-gray-900 w-10 text-right">{pct(p.mention_rate)}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            {/* Citation influence */}
+            <Card>
+              <CardHeader><CardTitle>Top citation sources</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                {(w.citations ?? []).length === 0 ? <p className="text-sm text-gray-400">No citations captured yet.</p> : (
+                  <div className="space-y-1.5">
+                    {(w.citations ?? []).slice(0, 12).map((c, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="text-gray-700 flex-1 truncate">{c.domain} <span className="text-xs text-gray-400">({c.citation_type})</span></span>
+                        <span className="text-xs text-gray-400">{c.provider}</span>
+                        <span className="font-semibold text-gray-900 w-10 text-right tabular-nums">{c.citations}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <p className="text-xs text-gray-400">Deterministic, version-aware analytics from the append-only warehouse. Correlations are only shown when statistically gated (min sample + meaningful lift).</p>
         </div>
       )}
     </div>

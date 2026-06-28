@@ -44,6 +44,6 @@ export const config = {
     // All API routes except the public ones. The cron endpoints (queue,
     // monitoring) carry their own CRON_SECRET auth; report/checkout/stripe/
     // inngest and the public audit-request funnel are intentionally public.
-    '/api/((?!report|checkout|stripe|inngest|queue|monitoring|audit-request|portal).*)',
+    '/api/((?!report|checkout|stripe|inngest|queue|monitoring|cron|audit-request|portal).*)',
   ],
 }

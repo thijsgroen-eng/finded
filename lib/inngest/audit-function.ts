@@ -790,6 +790,20 @@ export const auditFunction = inngest.createFunction(
       await emitEvent(audit_id, 'observation.recorded', change ? { data: { visibilityDelta: change.visibilityDelta } } : undefined)
     })
 
+    // ── Step 6e: Warehouse V2 dual-write ──────────────────────
+    // Replay this audit into the analytical warehouse (dims + facts). Best-effort
+    // and fully isolated — a warehouse failure never affects the audit. Legacy
+    // observations above remain the source of truth until V2 is validated.
+    await step.run(`warehouse-${audit_id}`, async () => {
+      try {
+        const { writeWarehouseForAudit } = await import('@/lib/warehouse/write')
+        const r = await writeWarehouseForAudit(audit_id)
+        return r ?? { skipped: true }
+      } catch (e) {
+        return { error: e instanceof Error ? e.message.slice(0, 200) : 'warehouse write failed' }
+      }
+    })
+
     // ── Step 7: Complete + create the permanent dashboard ─────
     // Every audit yields a dashboard — a secure, hard-to-guess slug the customer
     // returns to. Created here (not gated on checkout), so the magic-link email

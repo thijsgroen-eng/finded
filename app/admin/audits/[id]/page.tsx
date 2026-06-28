@@ -196,12 +196,19 @@ export default async function AuditDetailPage({
                 Website
               </a>
             )}
+            {audit.status === 'completed' && (
+              <a href={`/dashboard/${entity.id}`} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-700 rounded-md px-2.5 py-1.5">
+                <ExternalLink className="w-3 h-3" />
+                Client view
+              </a>
+            )}
             {entity.preview_slug && audit.status === 'completed' && (
               <>
                 <a href={`/report/${entity.preview_slug}`} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-700 rounded-md px-2.5 py-1.5">
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-md px-2.5 py-1.5">
                   <ExternalLink className="w-3 h-3" />
-                  View dashboard
+                  Full report
                 </a>
                 <CopyReportLink slug={entity.preview_slug} />
               </>

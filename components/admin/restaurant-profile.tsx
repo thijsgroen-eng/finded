@@ -149,10 +149,14 @@ export function RestaurantProfile({ restaurant, audits }: { restaurant: ProfileR
                 <ExternalLink className="w-3 h-3" />Website
               </a>
             )}
+            <a href={`/dashboard/${restaurant.id}`} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-700 rounded-md px-2.5 py-1.5">
+              <ExternalLink className="w-3 h-3" />Client view
+            </a>
             {restaurant.preview_slug && (
               <a href={`/report/${restaurant.preview_slug}`} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-700 rounded-md px-2.5 py-1.5">
-                <ExternalLink className="w-3 h-3" />Dashboard
+                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-md px-2.5 py-1.5">
+                <ExternalLink className="w-3 h-3" />Full report
               </a>
             )}
             <Button size="sm" onClick={runAudit} disabled={busy}>

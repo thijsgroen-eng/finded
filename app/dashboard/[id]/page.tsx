@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { readCustomerSession, CUSTOMER_COOKIE } from '@/lib/auth/customer'
+import { isValidSession, ADMIN_COOKIE } from '@/lib/auth/admin'
 import { computeModelBreakdown } from '@/lib/engine/metrics-core'
 import { loadObservations, computePatterns, patternEvidence } from '@/lib/observations'
 import { LogoutButton } from '@/components/portal/logout-button'
@@ -12,9 +13,11 @@ export const dynamic = 'force-dynamic'
 
 const BG = '#070711', BORDER = 'rgba(255,255,255,0.09)', MUTED = '#9a9fb6', FAINT = '#646a85'
 
-async function getData(id: string, cid: string): Promise<DashboardData | null> {
-  const { data: link } = await supabaseAdmin.from('customer_restaurants').select('id').eq('customer_user_id', cid).eq('restaurant_id', id).maybeSingle()
-  if (!link) return null
+async function getData(id: string, cid: string | null, bypassOwnership: boolean): Promise<DashboardData | null> {
+  if (!bypassOwnership) {
+    const { data: link } = await supabaseAdmin.from('customer_restaurants').select('id').eq('customer_user_id', cid).eq('restaurant_id', id).maybeSingle()
+    if (!link) return null
+  }
   const { data: restaurant } = await supabaseAdmin.from('restaurants').select('id, name, city, cuisine, preview_slug, plan').eq('id', id).single()
   if (!restaurant) return null
 
@@ -85,20 +88,34 @@ async function getData(id: string, cid: string): Promise<DashboardData | null> {
 
 export default async function CustomerRestaurantDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const session = await readCustomerSession((await cookies()).get(CUSTOMER_COOKIE)?.value)
-  if (!session) redirect('/portal/login')
-  const data = await getData(id, session.cid)
+  const jar = await cookies()
+  const customer = await readCustomerSession(jar.get(CUSTOMER_COOKIE)?.value)
+
+  // An operator (admin session) can PREVIEW any client's dashboard from the
+  // backoffice; a customer sees only the restaurants they own.
+  let adminPreview = false
+  if (!customer) {
+    if (await isValidSession(jar.get(ADMIN_COOKIE)?.value)) adminPreview = true
+    else redirect('/portal/login')
+  }
+
+  const data = await getData(id, customer?.cid ?? null, adminPreview)
   if (!data) notFound()
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: '#f4f5fa', fontFamily: 'var(--font-inter), sans-serif' }}>
+      {adminPreview && (
+        <div style={{ background: 'rgba(124,92,255,0.15)', borderBottom: '1px solid rgba(124,92,255,0.3)', padding: '8px 24px', fontSize: 12.5, color: '#c4b5fd', textAlign: 'center' }}>
+          Admin preview — this is exactly what the client sees. <a href={`/admin/restaurants/${id}`} style={{ color: '#fff', fontWeight: 600 }}>Back to backoffice</a>
+        </div>
+      )}
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <a href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: MUTED, textDecoration: 'none', fontSize: 13.5, fontWeight: 600 }}>
-          <ArrowLeft style={{ width: 15, height: 15 }} /> All restaurants
+        <a href={adminPreview ? `/admin/restaurants/${id}` : '/dashboard'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: MUTED, textDecoration: 'none', fontSize: 13.5, fontWeight: 600 }}>
+          <ArrowLeft style={{ width: 15, height: 15 }} /> {adminPreview ? 'Back to backoffice' : 'All restaurants'}
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 13, color: FAINT }}>{session.email}</span>
-          <LogoutButton />
+          <span style={{ fontSize: 13, color: FAINT }}>{adminPreview ? 'Admin preview' : customer!.email}</span>
+          {!adminPreview && <LogoutButton />}
         </div>
       </nav>
       <RestaurantDashboard data={data} />

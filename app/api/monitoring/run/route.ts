@@ -44,17 +44,19 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Trigger new audit
-      const auditId = await createAudit(schedule.restaurant_id)
+      // Trigger new audit, tagged as a monitoring rerun (#12).
+      const auditId = await createAudit(schedule.restaurant_id, { source: 'monitoring' })
 
-      // Calculate next run date
+      // Calculate next run date from the cadence.
       const nextRun = new Date()
-      if (schedule.frequency === 'weekly') {
-        nextRun.setDate(nextRun.getDate() + 7)
-      } else if (schedule.frequency === 'daily') {
+      if (schedule.frequency === 'daily') {
         nextRun.setDate(nextRun.getDate() + 1)
+      } else if (schedule.frequency === 'weekly') {
+        nextRun.setDate(nextRun.getDate() + 7)
+      } else if (schedule.frequency === 'biweekly') {
+        nextRun.setDate(nextRun.getDate() + 14)
       } else {
-        nextRun.setMonth(nextRun.getMonth() + 1)
+        nextRun.setMonth(nextRun.getMonth() + 1)  // monthly (default)
       }
 
       // Update schedule

@@ -447,4 +447,28 @@ Phase 3 complete (#8, #7, #13). Optional remainders flagged but not done:
 splitting the monolithic PDF document and migrating the deprecated Gemini SDK —
 both larger and better as their own change.
 
-Phases 4–5 (observation expansion #11 + monitoring #12; security #9) unchanged.
+## Implemented — Phase 4 (migration 026)
+
+**#11 Observation Engine expansion.** Each observation now carries a methodology
+stamp (`algo_versions`, `scoring_version`, `benchmark_version`) so benchmarks and
+trends can be segmented by algorithm version (benchmark/confidence evolution).
+A new append-only `observation_changes` table logs, per audit, exactly what
+changed since the restaurant's previous audit — visibility delta, which website
+signals flipped, which providers started/stopped mentioning it — so longitudinal
+questions are answerable without re-running audits. Recorded in the pipeline via
+`recordObservationChange` (best-effort, after `recordObservation`).
+
+**#12 Monitoring plumbing (architecture only, no UI redesign).**
+- `audits.source` ('manual' | 'monitoring'); `createAudit(id, { source })`; the
+  `/api/monitoring/run` cron now tags reruns `monitoring` and handles
+  daily/weekly/biweekly/monthly cadences.
+- Deterministic `monitoringSummaryEmail` builder (bilingual, pure) turns the
+  change log into a "what changed" digest. The pipeline's notify step branches on
+  source: monitoring reruns email the digest to the restaurant's contact using
+  `observation_changes`; first-time audits keep the original report-ready email
+  exactly. Unit-tested in `tests/monitoring.test.ts`.
+
+Behaviour-safe: new columns default to prior behaviour; the digest path only
+triggers for `source='monitoring'` audits (a new path). 165 tests pass.
+
+Phase 5 (security #9) unchanged. Deferred: #5 adaptive execution.

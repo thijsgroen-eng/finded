@@ -195,7 +195,12 @@ export interface ObservationInput {
   locationPresent?: boolean
   /** which providers mentioned the target (for cross-model stats later) */
   mentionedBy?: Partial<Record<'openai' | 'anthropic' | 'gemini' | 'perplexity', boolean>>
+  /** Methodology stamp (#11): the algorithm versions that produced this row, so
+   *  benchmarks/trends can be segmented by version. */
+  algoVersions?: { scoring: string; parser: string; extraction: string; recommendation: string; benchmark: string }
 }
+
+const PROVIDERS = ['openai', 'anthropic', 'gemini', 'perplexity'] as const
 
 /** Pure: the facts object stored on the observation. */
 export function buildObservationFacts(i: ObservationInput): Record<string, boolean | string> {
@@ -250,7 +255,78 @@ export async function recordObservation(i: ObservationInput): Promise<void> {
     mention_frequency: i.mentionFrequency,
     mentioned_any: i.mentionedAny,
     facts: buildObservationFacts(i),
+    algo_versions: i.algoVersions ?? null,
+    scoring_version: i.algoVersions?.scoring ?? null,
+    benchmark_version: i.algoVersions?.benchmark ?? null,
   }, { onConflict: 'audit_id' })
+}
+
+export interface ObservationChange {
+  visibilityDelta: number | null
+  mentionFrequencyDelta: number | null
+  factsChanged: Record<string, { from: boolean; to: boolean }>
+  providersChanged: Record<string, { from: boolean; to: boolean }>
+  prevAuditId: string | null
+}
+
+/**
+ * Record what CHANGED since the restaurant's previous audit (#11) — visibility
+ * delta, which signals flipped, which providers started/stopped mentioning it.
+ * Append-only (idempotent per audit). This is the data foundation for monitoring
+ * trends without re-running audits. No-op on a restaurant's first audit.
+ *
+ * Must be called AFTER recordObservation for this audit (it looks up the prior
+ * observation, excluding the current one).
+ */
+export async function recordObservationChange(i: ObservationInput): Promise<ObservationChange | null> {
+  if (!i.restaurantId) return null
+  const { supabaseAdmin } = await import('@/lib/supabase/client')
+  const { data: prev } = await supabaseAdmin
+    .from('observations')
+    .select('audit_id, visibility_score, mention_frequency, facts')
+    .eq('restaurant_id', i.restaurantId)
+    .neq('audit_id', i.auditId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!prev) return null
+
+  const curFacts = buildObservationFacts(i)
+  const prevFacts = (prev.facts ?? {}) as Record<string, unknown>
+  const bool = (v: unknown) => v === true
+
+  const factsChanged: Record<string, { from: boolean; to: boolean }> = {}
+  for (const f of FACTS) {
+    const to = bool(curFacts[f.key]), from = bool(prevFacts[f.key])
+    if (to !== from) factsChanged[f.key] = { from, to }
+  }
+  const providersChanged: Record<string, { from: boolean; to: boolean }> = {}
+  for (const p of PROVIDERS) {
+    const k = `mentioned_${p}`
+    const to = bool(curFacts[k]), from = bool(prevFacts[k])
+    if (to !== from) providersChanged[p] = { from, to }
+  }
+
+  const num = (v: unknown) => (v != null ? Number(v) : null)
+  const curVis = i.visibilityScore, prevVis = num(prev.visibility_score)
+  const curMf = i.mentionFrequency, prevMf = num(prev.mention_frequency)
+  const change: ObservationChange = {
+    visibilityDelta: curVis != null && prevVis != null ? curVis - prevVis : null,
+    mentionFrequencyDelta: curMf != null && prevMf != null ? curMf - prevMf : null,
+    factsChanged, providersChanged, prevAuditId: prev.audit_id,
+  }
+
+  await supabaseAdmin.from('observation_changes').upsert({
+    audit_id: i.auditId,
+    restaurant_id: i.restaurantId,
+    prev_audit_id: change.prevAuditId,
+    visibility_delta: change.visibilityDelta,
+    mention_frequency_delta: change.mentionFrequencyDelta,
+    facts_changed: factsChanged,
+    providers_changed: providersChanged,
+  }, { onConflict: 'audit_id' })
+
+  return change
 }
 
 /**

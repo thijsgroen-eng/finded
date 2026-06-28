@@ -13,9 +13,9 @@ import { computeFullMetrics } from '@/lib/engine/metrics-v2'
 import { computeScoreBreakdown } from '@/lib/engine/scoring'
 import { buildRunAccounting } from '@/lib/engine/audit-evidence'
 import { reliabilityFromAccounting, assessReliability } from '@/lib/audit/reliability'
-import { recordObservation } from '@/lib/observations'
+import { recordObservation, recordObservationChange } from '@/lib/observations'
 import { ensureDashboardSlug, dashboardUrl } from '@/lib/dashboard'
-import { sendEmail, reportReadyEmail } from '@/lib/email/send'
+import { sendEmail, reportReadyEmail, monitoringSummaryEmail } from '@/lib/email/send'
 import { asLanguage } from '@/lib/i18n'
 import { resolveAuditLanguage, getSettings } from '@/lib/settings'
 import { currentAlgoVersions } from '@/lib/versions'
@@ -744,7 +744,7 @@ export const auditFunction = inngest.createFunction(
         perplexity: mentions.some((m: any) => m.model === 'perplexity' && m.mentioned),
       }
       const schemaTypes = (wa?.schema_types ?? []).map((t: string) => t.toLowerCase())
-      await recordObservation({
+      const obsInput = {
         auditId: audit_id,
         restaurantId: restaurant_id,
         city: entity.city ?? null,
@@ -763,8 +763,12 @@ export const auditFunction = inngest.createFunction(
         openingHoursPresent: !!wa?.opening_hours_present,
         locationPresent: !!(wa?.location_present || wa?.contact_present),
         mentionedBy,
-      })
-      await emitEvent(audit_id, 'observation.recorded')
+        algoVersions: currentAlgoVersions(),
+      }
+      await recordObservation(obsInput)
+      // Append-only signal-change log vs the previous audit (#11). Best-effort.
+      const change = await recordObservationChange(obsInput).catch(() => null)
+      await emitEvent(audit_id, 'observation.recorded', change ? { data: { visibilityDelta: change.visibilityDelta } } : undefined)
     })
 
     // ── Step 7: Complete + create the permanent dashboard ─────
@@ -794,10 +798,36 @@ export const auditFunction = inngest.createFunction(
     // product; the PDF is just an export from it). Best-effort — never fails the
     // audit. Only when the audit came from a public request and email is set up.
     await step.run(`notify-requester-${audit_id}`, async () => {
+      const reportUrl = dashboardSlug ? dashboardUrl(dashboardSlug) : null
+      const { data: auditRow } = await supabaseAdmin
+        .from('audits').select('source').eq('id', audit_id).maybeSingle()
+
+      // Monitoring rerun → send the "what changed" digest to the restaurant's
+      // contact, using the Observation Engine change log (#12). First-time audits
+      // keep the original behaviour exactly.
+      if (auditRow?.source === 'monitoring') {
+        if (!entity.email) return { skipped: true }
+        const [{ data: chg }, { data: vs }] = await Promise.all([
+          supabaseAdmin.from('observation_changes').select('visibility_delta, facts_changed, providers_changed').eq('audit_id', audit_id).maybeSingle(),
+          supabaseAdmin.from('visibility_scores').select('visibility_score').eq('audit_id', audit_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        ])
+        const mail = monitoringSummaryEmail({
+          restaurantName: entity.name,
+          visibilityScore: vs?.visibility_score != null ? Number(vs.visibility_score) : null,
+          visibilityDelta: chg?.visibility_delta != null ? Number(chg.visibility_delta) : null,
+          factsChanged: (chg?.facts_changed ?? {}) as Record<string, { from: boolean; to: boolean }>,
+          providersChanged: (chg?.providers_changed ?? {}) as Record<string, { from: boolean; to: boolean }>,
+          reportUrl,
+          lang: language === 'nl' ? 'nl' : 'en',
+        })
+        const res = await sendEmail({ to: entity.email, subject: mail.subject, html: mail.html, text: mail.text })
+        await emitEvent(audit_id, 'email.sent', { data: { to: entity.email, kind: 'monitoring', sent: !!res?.sent } })
+        return res
+      }
+
       const { data: req } = await supabaseAdmin
         .from('audit_requests').select('email').eq('audit_id', audit_id).maybeSingle()
       if (!req?.email) return { skipped: true }
-      const reportUrl = dashboardSlug ? dashboardUrl(dashboardSlug) : null
       const mail = reportReadyEmail({ restaurantName: entity.name, reportUrl })
       const res = await sendEmail({ to: req.email, subject: mail.subject, html: mail.html, text: mail.text })
       await emitEvent(audit_id, 'email.sent', { data: { to: req.email, sent: !!res?.sent } })

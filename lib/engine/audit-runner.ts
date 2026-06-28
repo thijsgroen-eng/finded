@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 export interface AuditOptions {
   reliabilityGroup?: string
   runIndex?: number
+  /** Provenance: 'manual' (default) or 'monitoring' for scheduled re-audits (#12). */
+  source?: 'manual' | 'monitoring'
 }
 
 /**
@@ -20,6 +22,7 @@ export interface AuditOptions {
  */
 export async function createAudit(restaurantId: string, options: AuditOptions = {}): Promise<string> {
   const insertData: Record<string, unknown> = { restaurant_id: restaurantId, status: 'queued' }
+  if (options.source) insertData.source = options.source
   if (options.reliabilityGroup) {
     insertData.reliability_group = options.reliabilityGroup
     insertData.reliability_run_index = options.runIndex ?? null

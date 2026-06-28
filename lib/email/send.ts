@@ -80,3 +80,60 @@ export function reportReadyEmail(opts: { restaurantName?: string | null; reportU
       : `Your AI Visibility Dashboard for ${name} is ready — reply and we'll send your link over.`,
   }
 }
+
+export interface MonitoringSummaryInput {
+  restaurantName?: string | null
+  visibilityScore: number | null
+  visibilityDelta: number | null
+  factsChanged?: Record<string, { from: boolean; to: boolean }>
+  providersChanged?: Record<string, { from: boolean; to: boolean }>
+  reportUrl?: string | null
+  lang?: 'nl' | 'en'
+}
+
+const PROVIDER_LABEL: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
+
+/**
+ * Monthly monitoring digest (#12) — a deterministic summary of what changed since
+ * the last audit. Pure string builder; numbers come from the Observation Engine's
+ * change log, never from an LLM.
+ */
+export function monitoringSummaryEmail(i: MonitoringSummaryInput): { subject: string; html: string; text: string } {
+  const nl = i.lang === 'nl'
+  const name = i.restaurantName?.trim() || (nl ? 'je restaurant' : 'your restaurant')
+  const d = i.visibilityDelta
+  const dir = d == null || d === 0
+    ? (nl ? 'ongewijzigd' : 'unchanged')
+    : d > 0 ? (nl ? `+${Math.round(d)} gestegen` : `up +${Math.round(d)}`)
+            : (nl ? `${Math.round(d)} gedaald` : `down ${Math.round(d)}`)
+  const score = i.visibilityScore != null ? Math.round(i.visibilityScore) : '—'
+
+  const providerLines = Object.entries(i.providersChanged ?? {}).map(([p, c]) =>
+    nl ? `${PROVIDER_LABEL[p] ?? p} ${c.to ? 'noemt je nu wél' : 'noemt je niet meer'}`
+       : `${PROVIDER_LABEL[p] ?? p} ${c.to ? 'now mentions you' : 'no longer mentions you'}`)
+  const factCount = Object.keys(i.factsChanged ?? {}).length
+
+  const changeBits: string[] = []
+  if (providerLines.length) changeBits.push(...providerLines)
+  if (factCount) changeBits.push(nl ? `${factCount} websitesignaal(en) gewijzigd` : `${factCount} website signal(s) changed`)
+  const changeList = changeBits.length
+    ? `<ul style="margin:8px 0 0;padding-left:18px">${changeBits.map((b) => `<li>${b}</li>`).join('')}</ul>`
+    : `<p style="color:#7a7874">${nl ? 'Geen noemenswaardige veranderingen deze periode.' : 'No notable changes this period.'}</p>`
+
+  const cta = i.reportUrl
+    ? `<p style="margin:22px 0"><a href="${i.reportUrl}" style="background:#0f766e;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;display:inline-block">${nl ? 'Bekijk je dashboard' : 'View your dashboard'}</a></p>`
+    : ''
+
+  return {
+    subject: nl
+      ? `AI-zichtbaarheid van ${name}: ${score}/100 (${dir})`
+      : `${name}'s AI visibility: ${score}/100 (${dir})`,
+    html: wrap(
+      `<h2 style="font-size:20px;margin:0 0 12px">${nl ? 'Je maandelijkse AI-zichtbaarheidsupdate' : 'Your monthly AI visibility update'}</h2>
+       <p>${nl ? 'We hebben opnieuw gemeten hoe AI-assistenten' : 'We re-measured how AI assistants recommend'} ${name} ${nl ? 'aanbevelen.' : '.'}</p>
+       <p style="font-size:15px"><strong>${nl ? 'Zichtbaarheidsscore' : 'Visibility score'}: ${score}/100</strong> · ${dir}</p>
+       <p style="margin:14px 0 0;font-weight:600">${nl ? 'Wat is er veranderd' : 'What changed'}</p>${changeList}${cta}`,
+    ),
+    text: `${name} — ${nl ? 'AI-zichtbaarheid' : 'AI visibility'}: ${score}/100 (${dir}). ${changeBits.join('; ') || (nl ? 'Geen grote veranderingen.' : 'No major changes.')}${i.reportUrl ? ` ${i.reportUrl}` : ''}`,
+  }
+}

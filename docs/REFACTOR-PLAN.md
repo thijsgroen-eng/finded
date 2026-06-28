@@ -500,6 +500,31 @@ slug-scoped RLS policy on the customer read path) and is best done as its own
 change with focused testing. RLS stays enabled meanwhile; access control is
 application-level as before.
 
-Deferred: #5 adaptive execution (opt-in/default-off).
-
 All planned phases (1–5) are now implemented.
+
+## Implemented — #5 Adaptive execution (opt-in, default OFF)
+
+No migration (settings-only). When enabled in Settings → Adaptive execution,
+the matrix runs providers sequentially per (prompt, sample) and stops early once
+`adaptiveStopOnMentions` providers have mentioned the target — cheaper/faster.
+**Default OFF** → the full parallel matrix runs exactly as before (the default
+code path is byte-identical). Documented trade-off in the UI: fewer models =
+thinner consensus + Observation Engine data, so it's meant for cheap re-checks,
+not billed audits. The per-provider work was extracted into a single `runProvider`
+helper shared by both the parallel (default) and sequential (adaptive) paths.
+
+## Held deferred — with reasons (not done blind)
+
+- **Service-role / RLS reduction on the public dashboard.** Genuinely needs a
+  live database to test: a wrong RLS/RPC policy either breaks the customer
+  dashboard (deny) or leaks data (allow). High blast radius on the customer
+  product. Recommended as its own change: a `SECURITY DEFINER get_dashboard(slug)`
+  RPC + anon client behind a default-off flag, applied and verified against the
+  live DB before flipping. Not shipped untested.
+- **Gemini SDK migration** (`@google/generative-ai` → `@google/genai`). Needs a
+  live Gemini key to confirm grounding still works; a blind swap risks silently
+  breaking Gemini audits. Best done when a key is available to verify.
+- **PDF document split.** At ~705 lines it isn't the monolith it was thought to
+  be; the only output-safe change is shuffling styles/strings between files (low
+  value), while splitting the JSX risks rendering regressions that can't be
+  visually verified here. Not worth the risk/value trade right now.

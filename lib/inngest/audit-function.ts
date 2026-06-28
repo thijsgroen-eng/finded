@@ -146,6 +146,9 @@ export const auditFunction = inngest.createFunction(
     const settings = await getSettings()
     const { SAMPLES, MAX_PROMPTS, AUDIT_GROUNDED } = auditConfig(settings)
     const PROVIDER_TIMEOUT_MS = settings.providerTimeoutMs
+    // Adaptive execution (#5): OFF by default → full parallel matrix (unchanged).
+    const ADAPTIVE = settings.adaptiveExecution
+    const ADAPTIVE_STOP = settings.adaptiveStopOnMentions
 
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {
@@ -337,10 +340,10 @@ export const auditFunction = inngest.createFunction(
       }
       for (let sample = 0; sample < SAMPLES; sample++) {
         const { ok } = await step.run(`sample-${audit_id}-${promptObj.id}-s${sample}`, async () => {
-          let ok = 0
-
-          await Promise.all(
-            providers.map(async (provider: any) => {
+          // One provider's full run for this (prompt, sample): record → call →
+          // parse → store entities + mention. Returns whether it succeeded and
+          // whether the target was mentioned (drives adaptive early-stop).
+          const runProvider = async (provider: any): Promise<{ ok: boolean; mentioned: boolean }> => {
               // ── Run lifecycle: create the audit_run BEFORE the call ──────────
               // so a crash still leaves a record, and failures/retries are
               // first-class (status + retry_of_run_id) rather than an ERROR: prefix.
@@ -406,8 +409,7 @@ export const auditFunction = inngest.createFunction(
                 duration_ms:   result.duration_ms ?? null,
               }).eq('id', runId)
 
-              if (failed) return
-              ok++
+              if (failed) return { ok: false, mentioned: false }
 
               // Parse THIS sample independently (no cross-sample caching).
               const extraction = await extractEntities(result.response, promptObj.prompt, provider.name)
@@ -479,8 +481,25 @@ export const auditFunction = inngest.createFunction(
                 position,
                 sentiment,
               })
-            })
-          )
+
+              return { ok: true, mentioned }
+          }
+
+          let ok = 0
+          if (ADAPTIVE) {
+            // Sequential with early stop once enough providers mention the target.
+            let mentionedCount = 0
+            for (const provider of providers) {
+              const r = await runProvider(provider)
+              if (r.ok) ok++
+              if (r.mentioned) mentionedCount++
+              if (mentionedCount >= ADAPTIVE_STOP) break
+            }
+          } else {
+            // Default: every provider, in parallel (full matrix — unchanged).
+            const results = await Promise.all(providers.map(runProvider))
+            ok = results.filter((r) => r.ok).length
+          }
 
           return { ok }
         })

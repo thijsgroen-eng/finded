@@ -18,6 +18,8 @@ interface Settings {
   ungroundedCallCents: number
   dailyBudgetCents: number
   providerTimeoutMs: number
+  adaptiveExecution: boolean
+  adaptiveStopOnMentions: number
 }
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
@@ -193,6 +195,30 @@ export default function SettingsPage() {
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Adaptive execution (#5) */}
+          <Card>
+            <CardHeader>
+              <CardTitle><span className="inline-flex items-center gap-2"><Cpu className="w-4 h-4 text-gray-400" /> Adaptive execution</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={s.adaptiveExecution} onChange={(e) => set('adaptiveExecution', e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300" />
+                <span className="text-sm text-gray-700">
+                  Stop a prompt early once enough models mention you
+                  <span className="block text-xs text-gray-400 mt-0.5">Runs providers one by one and stops a prompt as soon as the target is mentioned by the threshold below — cheaper and faster. <strong>Trade-off:</strong> fewer models run, so model-consensus and the Observation Engine see less data. Leave OFF for billed audits; use it for cheap re-checks.</span>
+                </span>
+              </label>
+              {s.adaptiveExecution && (
+                <div className="max-w-[220px]">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Stop after N models mention you</label>
+                  <input type="number" min={1} max={4} value={s.adaptiveStopOnMentions}
+                    onChange={(e) => set('adaptiveStopOnMentions', Math.max(1, Math.min(4, Number(e.target.value) || 2)))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                </div>
+              )}
             </CardContent>
           </Card>
 

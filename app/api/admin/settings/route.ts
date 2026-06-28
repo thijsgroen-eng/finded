@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
   if (typeof body.ungroundedCallCents === 'number') patch.ungroundedCallCents = body.ungroundedCallCents
   if (typeof body.dailyBudgetCents === 'number') patch.dailyBudgetCents = body.dailyBudgetCents
   if (typeof body.providerTimeoutMs === 'number') patch.providerTimeoutMs = body.providerTimeoutMs
+  if (typeof body.adaptiveExecution === 'boolean') patch.adaptiveExecution = body.adaptiveExecution
+  if (typeof body.adaptiveStopOnMentions === 'number') patch.adaptiveStopOnMentions = body.adaptiveStopOnMentions
   const settings = await updateSettings(patch)
   await logAdminAction(await sessionFromRequest(request), 'settings.update', null, { fields: Object.keys(patch) })
   return NextResponse.json({ ok: true, settings })

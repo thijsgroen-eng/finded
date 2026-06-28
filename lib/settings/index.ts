@@ -35,6 +35,13 @@ export interface AppSettings {
   dailyBudgetCents: number
   /** Per-provider-call timeout in ms (a hung provider no longer blocks its cohort). */
   providerTimeoutMs: number
+  /** Adaptive execution (#5): when ON, providers run sequentially per prompt and
+   *  stop early once the target is mentioned by enough of them — cheaper, but it
+   *  changes outputs (fewer models = thinner consensus + observations), so it is
+   *  OFF by default and meant for cheap re-checks, not billed audits. */
+  adaptiveExecution: boolean
+  /** Stop a prompt's providers early once this many have mentioned the target. */
+  adaptiveStopOnMentions: number
 }
 
 export type ProviderKey = keyof AppSettings['providers']
@@ -55,6 +62,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ungroundedCallCents: 1,
   dailyBudgetCents: 0,
   providerTimeoutMs: 90000,
+  adaptiveExecution: false,   // full matrix by default — preserves behaviour + the moat
+  adaptiveStopOnMentions: 2,
 }
 
 /** Validate/normalize a raw stored object into a full AppSettings. */
@@ -79,6 +88,8 @@ function coerce(raw: unknown): AppSettings {
     ungroundedCallCents: typeof d.ungroundedCallCents === 'number' && d.ungroundedCallCents >= 0 ? d.ungroundedCallCents : DEFAULT_SETTINGS.ungroundedCallCents,
     dailyBudgetCents: typeof d.dailyBudgetCents === 'number' && d.dailyBudgetCents >= 0 ? Math.floor(d.dailyBudgetCents) : DEFAULT_SETTINGS.dailyBudgetCents,
     providerTimeoutMs: typeof d.providerTimeoutMs === 'number' && d.providerTimeoutMs >= 5000 ? Math.floor(d.providerTimeoutMs) : DEFAULT_SETTINGS.providerTimeoutMs,
+    adaptiveExecution: typeof d.adaptiveExecution === 'boolean' ? d.adaptiveExecution : DEFAULT_SETTINGS.adaptiveExecution,
+    adaptiveStopOnMentions: typeof d.adaptiveStopOnMentions === 'number' && d.adaptiveStopOnMentions >= 1 ? Math.min(4, Math.floor(d.adaptiveStopOnMentions)) : DEFAULT_SETTINGS.adaptiveStopOnMentions,
   }
 }
 

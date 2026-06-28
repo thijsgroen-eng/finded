@@ -142,6 +142,15 @@ export function Recommendations({ auditId }: { auditId: string }) {
     })
   }, [recs])
 
+  async function markImplemented(rec: Recommendation) {
+    if (!rec.id) return
+    const res = await fetch('/api/admin/recommendation-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: rec.id, status: 'implemented' }),
+    })
+    if (res.ok) setRecs((prev) => prev ? prev.map((r) => r.id === rec.id ? { ...r, status: 'implemented' } : r) : prev)
+  }
+
   async function generate() {
     setLoading(true)
     setError(null)
@@ -271,6 +280,20 @@ export function Recommendations({ auditId }: { auditId: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="text-sm font-semibold text-gray-900">{rec.title}</div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                        {rec.id && (
+                          <button
+                            onClick={() => markImplemented(rec)}
+                            disabled={rec.status === 'implemented'}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                              rec.status === 'implemented'
+                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-default'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {rec.status === 'implemented' ? <><Check className="w-3 h-3" /> Implemented</> : 'Mark implemented'}
+                          </button>
+                        )}
                         {fixType && rec.id && (
                           <button
                             onClick={() => generateFix(rec)}
@@ -289,6 +312,7 @@ export function Recommendations({ auditId }: { auditId: string }) {
                             }
                           </button>
                         )}
+                        </div>
                       </div>
                       <div className="text-sm text-gray-700 mb-2 leading-relaxed">
                         <span className="font-semibold text-gray-500 text-xs uppercase tracking-wide">What: </span>

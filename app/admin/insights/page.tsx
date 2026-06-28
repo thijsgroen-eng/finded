@@ -247,6 +247,16 @@ function WarehousePanel() {
     setBusy('refresh')
     try { await fetch('/api/admin/warehouse/refresh', { method: 'POST' }); await loadW() } finally { setBusy(null) }
   }
+  async function recomputeImpact() {
+    setBusy('impact'); setMsg(null)
+    try {
+      const r = await fetch('/api/admin/warehouse/impact', { method: 'POST' })
+      const j = await r.json(); if (!r.ok) throw new Error(j.error)
+      setMsg(`Recommendation impact updated for ${j.updated} of ${j.scanned} implemented recommendations.`)
+      await loadW()
+    } catch (e) { setMsg(e instanceof Error ? e.message : 'Impact computation failed') }
+    setBusy(null)
+  }
 
   const pct = (x: number | null | undefined) => x == null ? '—' : `${Math.round(x * 100)}%`
   // Latest month per provider+version for the drift table.
@@ -262,6 +272,7 @@ function WarehousePanel() {
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <h2 className="text-lg font-bold text-gray-900 inline-flex items-center gap-2"><Database className="w-4.5 h-4.5 text-gray-400" /> Observation warehouse (V2)</h2>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={recomputeImpact} disabled={busy !== null}>{busy === 'impact' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />} Recompute impact</Button>
           <Button variant="secondary" size="sm" onClick={refresh} disabled={busy !== null}>{busy === 'refresh' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Refresh views</Button>
           <Button size="sm" onClick={backfill} disabled={busy !== null}>{busy === 'backfill' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />} Backfill warehouse</Button>
         </div>

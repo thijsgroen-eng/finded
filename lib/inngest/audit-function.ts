@@ -18,6 +18,45 @@ import { ensureDashboardSlug, dashboardUrl } from '@/lib/dashboard'
 import { sendEmail, reportReadyEmail } from '@/lib/email/send'
 import { asLanguage } from '@/lib/i18n'
 import { resolveAuditLanguage, getSettings } from '@/lib/settings'
+import { currentAlgoVersions } from '@/lib/versions'
+import { emitEvent } from '@/lib/audit/events'
+import { estimateAuditCostCents, checkDailyBudget, recordSpendCents } from '@/lib/cost'
+
+/** Run a provider call with a hard timeout so a hung provider can't block its
+ *  parallel cohort up to the function's finish ceiling. A timeout reads as a
+ *  failed call (same handling as any other error). */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ])
+}
+
+type Health = { model: string; ok: boolean; error: string | null }
+const HEALTH_TTL_MS = 5 * 60 * 1000
+
+/** Cached provider health (#10), if every given provider has a fresh OK entry.
+ *  Lets a batch of audits skip the per-audit live preflight. null = must check. */
+async function freshHealthCache(models: string[]): Promise<Health[] | null> {
+  try {
+    const { data } = await supabaseAdmin.from('provider_health').select('model, ok, error, checked_at').in('model', models)
+    if (!data || data.length < models.length) return null
+    const cutoff = Date.now() - HEALTH_TTL_MS
+    const fresh = data.every((r: any) => r.ok && new Date(r.checked_at).getTime() >= cutoff)
+    return fresh ? data.map((r: any) => ({ model: r.model, ok: r.ok, error: r.error ?? null })) : null
+  } catch {
+    return null
+  }
+}
+
+async function writeHealthCache(health: Health[]): Promise<void> {
+  try {
+    await supabaseAdmin.from('provider_health').upsert(
+      health.map((h) => ({ model: h.model, ok: h.ok, error: h.error, checked_at: new Date().toISOString() })),
+      { onConflict: 'model' },
+    )
+  } catch { /* cache only */ }
+}
 
 /** True if an operator has stopped this audit (status set to 'cancelled'). */
 async function isCancelled(auditId: string): Promise<boolean> {
@@ -76,9 +115,11 @@ export const auditFunction = inngest.createFunction(
 
     // ── Step 1: Load entity + mark running ───────────────────
     const { entity } = await step.run(`load-entity-${audit_id}`, async () => {
+      // Stamp the algorithm versions that will produce this audit (#1), so it stays
+      // reproducible/explainable forever even if the algorithms change later.
       await supabaseAdmin
         .from('audits')
-        .update({ status: 'running' })
+        .update({ status: 'running', algo_versions: currentAlgoVersions() })
         .eq('id', audit_id)
 
       const { data } = await supabaseAdmin
@@ -88,6 +129,7 @@ export const auditFunction = inngest.createFunction(
         .single()
 
       if (!data) throw new Error(`Entity ${restaurant_id} not found`)
+      await emitEvent(audit_id, 'audit.running', { data: { restaurant_id } })
       return { entity: data }
     })
 
@@ -99,8 +141,11 @@ export const auditFunction = inngest.createFunction(
       : await resolveAuditLanguage(entity.country)
 
     // Cost/quality knobs from Settings (env overrides). Drives prompt count,
-    // samples and whether each model call does a live web search.
-    const { SAMPLES, MAX_PROMPTS, AUDIT_GROUNDED } = auditConfig(await getSettings())
+    // samples and whether each model call does a live web search. The full
+    // settings object is also used for cost controls (#10) below.
+    const settings = await getSettings()
+    const { SAMPLES, MAX_PROMPTS, AUDIT_GROUNDED } = auditConfig(settings)
+    const PROVIDER_TIMEOUT_MS = settings.providerTimeoutMs
 
     // ── Step 2: Website audit ─────────────────────────────────
     await step.run(`website-audit-${audit_id}`, async () => {
@@ -139,6 +184,7 @@ export const auditFunction = inngest.createFunction(
           dietary:                   result.dietary,
         })
       }
+      await emitEvent(audit_id, 'crawler.finished', { data: { website: entity.website ?? null, ok: !result.error } })
     })
 
     // ── Step 3: Generate prompts ──────────────────────────────
@@ -178,6 +224,7 @@ export const auditFunction = inngest.createFunction(
         }))
       )
 
+      await emitEvent(audit_id, 'prompts.generated', { data: { count: generated.length, language } })
       return { prompts: generated }
     })
 
@@ -188,22 +235,67 @@ export const auditFunction = inngest.createFunction(
     // results are never cached (otherwise every "sample" would be identical).
     const providers = await getEnabledProviders()
 
+    // ── Cost guardrail (#10) ──────────────────────────────────
+    // Estimate this audit's cost up front and refuse to start if it would blow the
+    // operator's daily budget (0 = no cap, the default → behaviour unchanged).
+    // Memoized in a step so Inngest retries don't double-count the ledger.
+    const budget = await step.run(`budget-${audit_id}`, async () => {
+      const estimateCents = estimateAuditCostCents(
+        { grounded: AUDIT_GROUNDED, groundedCallCents: settings.groundedCallCents, ungroundedCallCents: settings.ungroundedCallCents },
+        prompts.length, Math.max(1, providers.length), SAMPLES,
+      )
+      const check = await checkDailyBudget(settings, estimateCents)
+      if (check.allowed) await recordSpendCents(estimateCents)
+      return check
+    })
+
+    if (!budget.allowed) {
+      await step.run(`budget-abort-${audit_id}`, async () => {
+        await supabaseAdmin.from('audits').update({
+          status: 'incomplete',
+          error_message:
+            `Audit not started — estimated cost €${(budget.estimateCents / 100).toFixed(2)} would exceed today's ` +
+            `remaining budget (spent €${(budget.spentCents / 100).toFixed(2)} of €${(budget.budgetCents / 100).toFixed(2)}). ` +
+            `Raise or clear the daily budget in Settings, or run it tomorrow.`,
+          completed_at: new Date().toISOString(),
+        }).eq('id', audit_id)
+        await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+        await emitEvent(audit_id, 'budget.exceeded', { data: budget })
+        await emitEvent(audit_id, 'audit.incomplete', { data: { reason: 'budget' } })
+      })
+      return { success: false, audit_id, reason: 'daily budget exceeded', budget }
+    }
+
     // ── Pre-flight provider health check ──────────────────────
     // One cheap, ungrounded call per provider. If too few are reachable to clear
     // the reliability gate, abort NOW with the real per-provider errors (e.g.
     // "Claude: credit balance too low") instead of burning the whole matrix.
     if (AUDIT_PREFLIGHT && providers.length > 0) {
       const health = await step.run(`preflight-${audit_id}`, async () => {
-        return Promise.all(
+        const names = providers.map((p: any) => p.name)
+        // Reuse a fresh health cache (#10) so a batch of audits doesn't re-probe
+        // every provider for each restaurant.
+        const cached = await freshHealthCache(names)
+        if (cached) {
+          await emitEvent(audit_id, 'preflight.finished', { data: { cached: true, healthy: cached.length } })
+          return cached
+        }
+        const live: Health[] = await Promise.all(
           providers.map(async (provider: any) => {
             try {
-              const r = await provider.runPrompt('Reply with the single word: OK.', { temperature: 0, grounded: false })
+              const r: any = await withTimeout(
+                provider.runPrompt('Reply with the single word: OK.', { temperature: 0, grounded: false }),
+                PROVIDER_TIMEOUT_MS, `${provider.name} preflight`,
+              )
               return { model: provider.name, ok: !r.error && !!r.response, error: r.error ?? null }
             } catch (e: any) {
               return { model: provider.name, ok: false, error: e?.message ?? 'provider threw' }
             }
           }),
         )
+        await writeHealthCache(live)
+        await emitEvent(audit_id, 'preflight.finished', { data: { cached: false, healthy: live.filter((h) => h.ok).length } })
+        return live
       })
 
       const healthy = health.filter((h: any) => h.ok)
@@ -228,6 +320,7 @@ export const auditFunction = inngest.createFunction(
             completed_at: new Date().toISOString(),
           }).eq('id', audit_id)
           await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+          await emitEvent(audit_id, 'audit.incomplete', { data: { reason: 'preflight', healthy: healthy.length, providers: providers.length } })
         })
         return { success: false, audit_id, reason: 'preflight failed', reliability: preflightRel }
       }
@@ -277,6 +370,9 @@ export const auditFunction = inngest.createFunction(
                   started_at:      new Date().toISOString(),
                   retry_of_run_id: retryOf,
                   raw_response:    '',              // filled on completion (column is NOT NULL)
+                  // Raw-evidence provenance (#2): variables that filled the template
+                  // and the prompt category, so the call is replayable later.
+                  prompt_vars:     { city: entity.city ?? null, country: entity.country ?? null, cuisine: entity.cuisine ?? null, category: promptObj.category ?? null, business_type: 'restaurant' },
                   metadata:        { temperature: AUDIT_TEMPERATURE, grounded: AUDIT_GROUNDED && provider.supportsGrounding },
                 })
                 .select('id')
@@ -285,10 +381,13 @@ export const auditFunction = inngest.createFunction(
 
               let result: any
               try {
-                result = await provider.runPrompt(promptObj.prompt, {
-                  temperature: AUDIT_TEMPERATURE,
-                  grounded: AUDIT_GROUNDED && provider.supportsGrounding,
-                })
+                result = await withTimeout(
+                  provider.runPrompt(promptObj.prompt, {
+                    temperature: AUDIT_TEMPERATURE,
+                    grounded: AUDIT_GROUNDED && provider.supportsGrounding,
+                  }),
+                  PROVIDER_TIMEOUT_MS, `${provider.name} call`,
+                )
               } catch (e: any) {
                 result = { error: e?.message ?? 'provider threw', response: '', duration_ms: null }
               }
@@ -312,6 +411,16 @@ export const auditFunction = inngest.createFunction(
 
               // Parse THIS sample independently (no cross-sample caching).
               const extraction = await extractEntities(result.response, promptObj.prompt, provider.name)
+
+              // Persist the parsed extraction (#2) so parser changes can be replayed
+              // offline (golden tests) without re-calling the provider.
+              await supabaseAdmin.from('model_runs').update({
+                parsed_response: {
+                  entities: extraction.entities,
+                  total_mentioned: extraction.total_mentioned,
+                  failed: extraction.failed,
+                },
+              }).eq('id', runId)
 
               for (const ent of extraction.entities) {
                 // Resolve each extracted name against the target so the mention is
@@ -384,6 +493,7 @@ export const auditFunction = inngest.createFunction(
     if (stopped || (await step.run(`cancel-check-final-${audit_id}`, () => isCancelled(audit_id)))) {
       await step.run(`dequeue-cancelled-${audit_id}`, async () => {
         await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+        await emitEvent(audit_id, 'audit.cancelled')
       })
       return { success: false, audit_id, cancelled: true }
     }
@@ -405,6 +515,8 @@ export const auditFunction = inngest.createFunction(
       const rel = reliabilityFromAccounting(acc)
       // Durable snapshot for the admin list/detail + report (no recompute needed).
       await supabaseAdmin.from('audits').update({ reliability: rel }).eq('id', audit_id)
+      await emitEvent(audit_id, 'matrix.finished', { data: { completed: acc.completed, failed: acc.failed, total: acc.total_runs } })
+      await emitEvent(audit_id, 'reliability.assessed', { data: { band: rel.band, completionRate: rel.completionRate } })
       return rel
     })
 
@@ -422,6 +534,7 @@ export const auditFunction = inngest.createFunction(
           })
           .eq('id', audit_id)
         await supabaseAdmin.from('audit_queue').delete().eq('audit_id', audit_id)
+        await emitEvent(audit_id, 'audit.incomplete', { data: { reason: 'reliability', band: reliability.band } })
       })
       return { success: false, audit_id, reason: 'reliability below threshold', reliability }
     }
@@ -562,6 +675,7 @@ export const auditFunction = inngest.createFunction(
         .from('audits')
         .update({ total_prompts: metrics.total_prompts, total_model_runs: metrics.total_model_runs })
         .eq('id', audit_id)
+      await emitEvent(audit_id, 'score.calculated', { data: { visibility_score: breakdown.visibility_score, confidence_score: breakdown.confidence_score } })
     })
 
     // ── Step 6b: Crawl top competitors (why they're recommended instead) ──────
@@ -587,6 +701,7 @@ export const auditFunction = inngest.createFunction(
         })
         crawled++
       }
+      await emitEvent(audit_id, 'competitors.crawled', { data: { crawled } })
       return { crawled }
     })
 
@@ -649,6 +764,7 @@ export const auditFunction = inngest.createFunction(
         locationPresent: !!(wa?.location_present || wa?.contact_present),
         mentionedBy,
       })
+      await emitEvent(audit_id, 'observation.recorded')
     })
 
     // ── Step 7: Complete + create the permanent dashboard ─────
@@ -668,7 +784,10 @@ export const auditFunction = inngest.createFunction(
         .update({ prospect_status: 'audit_complete' })
         .eq('id', restaurant_id)
         .in('prospect_status', ['not_audited', 'audit_queued'])
-      return ensureDashboardSlug(restaurant_id, entity.name)
+      const slug = await ensureDashboardSlug(restaurant_id, entity.name)
+      if (slug) await emitEvent(audit_id, 'dashboard.published', { data: { slug } })
+      await emitEvent(audit_id, 'audit.completed')
+      return slug
     })
 
     // Email the requester a MAGIC LINK to their dashboard (the dashboard is the
@@ -680,7 +799,9 @@ export const auditFunction = inngest.createFunction(
       if (!req?.email) return { skipped: true }
       const reportUrl = dashboardSlug ? dashboardUrl(dashboardSlug) : null
       const mail = reportReadyEmail({ restaurantName: entity.name, reportUrl })
-      return sendEmail({ to: req.email, subject: mail.subject, html: mail.html, text: mail.text })
+      const res = await sendEmail({ to: req.email, subject: mail.subject, html: mail.html, text: mail.text })
+      await emitEvent(audit_id, 'email.sent', { data: { to: req.email, sent: !!res?.sent } })
+      return res
     })
 
     return { success: true, audit_id }

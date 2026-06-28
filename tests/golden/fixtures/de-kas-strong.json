@@ -1,0 +1,142 @@
+{
+  "name": "de-kas-strong-visibility",
+  "description": "Well-known restaurant: mentioned by multiple models, clear top competitor, target name variant must merge.",
+  "target": "De Kas",
+  "providersRan": 3,
+  "completionRate": 1,
+  "authorityScore": 0.6,
+  "websiteSignals": {
+    "present": 4,
+    "total": 5
+  },
+  "mentions": [
+    {
+      "model": "openai",
+      "prompt_id": "p1",
+      "mentioned": true,
+      "mention_frequency": null,
+      "position": 1,
+      "sentiment": "positive"
+    },
+    {
+      "model": "anthropic",
+      "prompt_id": "p1",
+      "mentioned": true,
+      "mention_frequency": null,
+      "position": 1,
+      "sentiment": "positive"
+    },
+    {
+      "model": "gemini",
+      "prompt_id": "p1",
+      "mentioned": false,
+      "mention_frequency": null,
+      "position": null,
+      "sentiment": null
+    },
+    {
+      "model": "openai",
+      "prompt_id": "p2",
+      "mentioned": true,
+      "mention_frequency": null,
+      "position": 2,
+      "sentiment": "neutral"
+    },
+    {
+      "model": "anthropic",
+      "prompt_id": "p2",
+      "mentioned": false,
+      "mention_frequency": null,
+      "position": null,
+      "sentiment": null
+    },
+    {
+      "model": "gemini",
+      "prompt_id": "p2",
+      "mentioned": true,
+      "mention_frequency": null,
+      "position": 3,
+      "sentiment": "positive"
+    }
+  ],
+  "entities": [
+    {
+      "name": "De Kas",
+      "position": 1,
+      "sentiment": "positive",
+      "reasons": [],
+      "model": "openai",
+      "prompt_id": "p1"
+    },
+    {
+      "name": "Restaurant De Kas",
+      "position": 1,
+      "sentiment": "positive",
+      "reasons": [],
+      "model": "anthropic",
+      "prompt_id": "p1"
+    },
+    {
+      "name": "Flore",
+      "position": 2,
+      "sentiment": "positive",
+      "reasons": [],
+      "model": "openai",
+      "prompt_id": "p1"
+    },
+    {
+      "name": "Flore",
+      "position": 1,
+      "sentiment": "positive",
+      "reasons": [],
+      "model": "anthropic",
+      "prompt_id": "p1"
+    },
+    {
+      "name": "Flore",
+      "position": 2,
+      "sentiment": "neutral",
+      "reasons": [],
+      "model": "gemini",
+      "prompt_id": "p2"
+    },
+    {
+      "name": "Breda",
+      "position": 3,
+      "sentiment": "neutral",
+      "reasons": [],
+      "model": "openai",
+      "prompt_id": "p2"
+    },
+    {
+      "name": "De Kas",
+      "position": 2,
+      "sentiment": "neutral",
+      "reasons": [],
+      "model": "openai",
+      "prompt_id": "p2"
+    },
+    {
+      "name": "De Kas",
+      "position": 3,
+      "sentiment": "positive",
+      "reasons": [],
+      "model": "gemini",
+      "prompt_id": "p2"
+    }
+  ],
+  "expected": {
+    "visibility_score": 69,
+    "confidence_score": 0.63,
+    "model_consensus": 3,
+    "mention_frequency": 0.6667,
+    "top_competitor": "Flore"
+  },
+  "versions": {
+    "scoring": "v2",
+    "parser": "v1",
+    "extraction": "v1",
+    "recommendation": "v1",
+    "benchmark": "v1"
+  }
+}

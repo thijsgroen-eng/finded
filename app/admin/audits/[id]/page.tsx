@@ -28,6 +28,8 @@ import { buildKeyFindings, buildCompetitorObservations } from '@/lib/audit/findi
 import { buildCompetitorComparison } from '@/lib/audit/competitor-comparison'
 import { languageForCountry } from '@/lib/i18n'
 import { resolveAuditLanguage } from '@/lib/settings'
+import { loadAuditEvents } from '@/lib/audit/events'
+import { AuditTimeline } from '@/components/admin/audit-timeline'
 
 async function getAuditData(id: string) {
   const { data: audit } = await supabaseAdmin
@@ -80,6 +82,7 @@ async function getAuditData(id: string) {
   const { data: competitorAudits } = await supabaseAdmin
     .from('competitor_audits').select('competitor_name, website, signals').eq('audit_id', id)
 
+  const auditEvents = await loadAuditEvents(id)
   const metrics = computeMetrics(mentions ?? [])
   const runAccounting = buildRunAccounting(modelRuns ?? [])
   const promptEvidence = buildPromptEvidence(promptRuns ?? [], mentions ?? [], modelRuns ?? [], entities ?? [])
@@ -91,6 +94,7 @@ async function getAuditData(id: string) {
     competitors: competitors ?? [], signalGaps: signalGaps ?? [],
     runAccounting, promptEvidence, extractionConfidence, authority, requestEmail: req?.email ?? null,
     competitorAudits: competitorAudits ?? [],
+    auditEvents,
   }
 }
 
@@ -118,7 +122,7 @@ export default async function AuditDetailPage({
   if (!data) notFound()
 
   const { audit, entity, websiteAudit, metrics, visibilityScore, competitors, signalGaps,
-          runAccounting, promptEvidence, extractionConfidence, authority, competitorAudits } = data
+          runAccounting, promptEvidence, extractionConfidence, authority, competitorAudits, auditEvents } = data
 
   const visScore       = visibilityScore?.visibility_score ?? null
   const scoreBreakdown = visibilityScore?.score_breakdown ?? null
@@ -214,6 +218,9 @@ export default async function AuditDetailPage({
         previewSlug={entity.preview_slug}
         current={entity.plan === 'implementation' ? 'implementation' : (entity.plan === 'audit' || entity.report_paid) ? 'audit' : 'free'}
       />
+
+      {/* ── Audit event timeline (per-stage latency + status) ── */}
+      <AuditTimeline events={auditEvents} />
 
       {/* ── Reliability gate banner ── */}
       {reliability.band === 'red' && (

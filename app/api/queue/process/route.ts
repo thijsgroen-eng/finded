@@ -20,14 +20,17 @@ export async function POST(request: NextRequest) {
   const denied = verifyCronRequest(request)
   if (denied) return denied
 
-  // Claim next available queue item (atomic-ish via update+select)
+  // Claim next due queue item (atomic-ish via update+select). Only 'queued' rows
+  // whose backoff window (next_retry_at) has elapsed and that haven't hit the cap.
+  const now = new Date().toISOString()
   const { data: claimed } = await supabaseAdmin
     .from('audit_queue')
-    .update({ locked_at: new Date().toISOString(), locked_by: WORKER_ID })
+    .update({ locked_at: now, locked_by: WORKER_ID, status: 'processing' })
     .is('locked_at', null)
+    .eq('status', 'queued')
     .lt('attempts', 3)
-    .lte('scheduled_at', new Date().toISOString())
-    .select('audit_id, attempts')
+    .lte('next_retry_at', now)
+    .select('audit_id, attempts, max_attempts')
     .limit(1)
     .single()
 
@@ -36,6 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { audit_id, attempts } = claimed
+  const maxAttempts = claimed.max_attempts ?? 3
 
   // Look up the restaurant the audit belongs to so we can build the event.
   const { data: audit } = await supabaseAdmin
@@ -63,14 +67,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Audit dispatched to Inngest', audit_id, processed: 1 })
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
-    // Increment attempts and unlock so it can be retried — but not forever
-    // (the claim query above skips rows once attempts reaches the cap).
+    const nextAttempts = attempts + 1
+    const { emitEvent } = await import('@/lib/audit/events')
+
+    if (nextAttempts >= maxAttempts) {
+      // Terminal failure — stop retrying forever. Mark the job failed and surface
+      // it on the audit so it doesn't sit on 'queued'/'running' with no explanation.
+      await supabaseAdmin
+        .from('audit_queue')
+        .update({ locked_at: null, locked_by: null, attempts: nextAttempts, status: 'failed', last_error: msg.slice(0, 500) })
+        .eq('audit_id', audit_id)
+      await supabaseAdmin
+        .from('audits')
+        .update({ status: 'failed', error_message: `Queue dispatch failed after ${nextAttempts} attempts: ${msg}`.slice(0, 500), completed_at: new Date().toISOString() })
+        .eq('id', audit_id)
+      await emitEvent(audit_id, 'audit.failed', { data: { stage: 'queue', attempts: nextAttempts } })
+      return NextResponse.json({ error: msg, audit_id, terminal: true }, { status: 500 })
+    }
+
+    // Exponential backoff: 1m, 2m, 4m … capped at 1h. Unlock for a later retry.
+    const delayMs = Math.min(60 * 60_000, 60_000 * 2 ** attempts)
     await supabaseAdmin
       .from('audit_queue')
-      .update({ locked_at: null, locked_by: null, attempts: attempts + 1 })
+      .update({
+        locked_at: null, locked_by: null, attempts: nextAttempts, status: 'queued',
+        last_error: msg.slice(0, 500), next_retry_at: new Date(Date.now() + delayMs).toISOString(),
+      })
       .eq('audit_id', audit_id)
 
-    return NextResponse.json({ error: msg, audit_id }, { status: 500 })
+    return NextResponse.json({ error: msg, audit_id, retry_in_ms: delayMs }, { status: 500 })
   }
 }
 

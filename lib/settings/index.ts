@@ -27,6 +27,14 @@ export interface AppSettings {
   maxPrompts: number
   /** Samples per (prompt, model). 1 is plenty; higher multiplies cost. */
   samples: number
+  /** Cost controls (#10). Estimated price per model call, in euro cents, used for
+   *  the up-front cost estimate and the daily spend ledger. */
+  groundedCallCents: number
+  ungroundedCallCents: number
+  /** Hard daily spend cap in euro cents. 0 = no cap (disabled). */
+  dailyBudgetCents: number
+  /** Per-provider-call timeout in ms (a hung provider no longer blocks its cohort). */
+  providerTimeoutMs: number
 }
 
 export type ProviderKey = keyof AppSettings['providers']
@@ -41,6 +49,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   grounded: true,
   maxPrompts: 32,
   samples: 1,
+  // Cost controls. Cap is OFF by default (0) so behaviour is unchanged until an
+  // operator sets a budget. Per-call price is a rough grounding-fee estimate.
+  groundedCallCents: 4,
+  ungroundedCallCents: 1,
+  dailyBudgetCents: 0,
+  providerTimeoutMs: 90000,
 }
 
 /** Validate/normalize a raw stored object into a full AppSettings. */
@@ -61,6 +75,10 @@ function coerce(raw: unknown): AppSettings {
     grounded: typeof d.grounded === 'boolean' ? d.grounded : DEFAULT_SETTINGS.grounded,
     maxPrompts: typeof d.maxPrompts === 'number' && d.maxPrompts >= 1 ? Math.min(64, Math.floor(d.maxPrompts)) : DEFAULT_SETTINGS.maxPrompts,
     samples: typeof d.samples === 'number' && d.samples >= 1 ? Math.min(5, Math.floor(d.samples)) : DEFAULT_SETTINGS.samples,
+    groundedCallCents: typeof d.groundedCallCents === 'number' && d.groundedCallCents >= 0 ? d.groundedCallCents : DEFAULT_SETTINGS.groundedCallCents,
+    ungroundedCallCents: typeof d.ungroundedCallCents === 'number' && d.ungroundedCallCents >= 0 ? d.ungroundedCallCents : DEFAULT_SETTINGS.ungroundedCallCents,
+    dailyBudgetCents: typeof d.dailyBudgetCents === 'number' && d.dailyBudgetCents >= 0 ? Math.floor(d.dailyBudgetCents) : DEFAULT_SETTINGS.dailyBudgetCents,
+    providerTimeoutMs: typeof d.providerTimeoutMs === 'number' && d.providerTimeoutMs >= 5000 ? Math.floor(d.providerTimeoutMs) : DEFAULT_SETTINGS.providerTimeoutMs,
   }
 }
 

@@ -33,6 +33,10 @@ export async function createAudit(restaurantId: string, options: AuditOptions = 
 
   if (error || !audit) throw new Error(`Failed to create audit: ${error?.message}`)
 
+  // Timeline (#3): record creation. Best-effort, never blocks audit creation.
+  const { emitEvent } = await import('@/lib/audit/events')
+  await emitEvent(audit.id, 'audit.created', { data: { restaurant_id: restaurantId } })
+
   try {
     const { inngest } = await import('@/lib/inngest/client')
     await inngest.send({
@@ -50,7 +54,15 @@ export async function createAudit(restaurantId: string, options: AuditOptions = 
     })
   } catch (err) {
     console.error('[createAudit] Inngest send failed, parking in queue:', err)
-    await supabaseAdmin.from('audit_queue').insert({ audit_id: audit.id })
+    await supabaseAdmin.from('audit_queue').insert({
+      audit_id: audit.id,
+      job_type: 'audit',
+      status: 'queued',
+      payload: { audit_id: audit.id, restaurant_id: restaurantId },
+      last_error: err instanceof Error ? err.message.slice(0, 500) : 'inngest send failed',
+      next_retry_at: new Date().toISOString(),
+    })
+    await emitEvent(audit.id, 'audit.queued', { data: { reason: 'inngest_send_failed' } })
   }
 
   return audit.id

@@ -14,6 +14,10 @@ interface Settings {
   grounded: boolean
   maxPrompts: number
   samples: number
+  groundedCallCents: number
+  ungroundedCallCents: number
+  dailyBudgetCents: number
+  providerTimeoutMs: number
 }
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
@@ -151,6 +155,44 @@ export default function SettingsPage() {
                   </div>
                 )
               })()}
+            </CardContent>
+          </Card>
+
+          {/* Cost controls (#10) */}
+          <Card>
+            <CardHeader>
+              <CardTitle><span className="inline-flex items-center gap-2"><Coins className="w-4 h-4 text-gray-400" /> Cost controls</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <p className="text-xs text-gray-400">A hard daily cap on estimated audit spend. When the next audit&rsquo;s estimate would push today&rsquo;s spend over the cap, it&rsquo;s held back as <span className="font-medium">incomplete</span> with a clear message. Set to 0 to disable the cap.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Daily budget (€)</label>
+                  <input type="number" min={0} step={1} value={(s.dailyBudgetCents / 100).toString()}
+                    onChange={(e) => set('dailyBudgetCents', Math.max(0, Math.round((Number(e.target.value) || 0) * 100)))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                  <p className="text-xs text-gray-400 mt-1">{s.dailyBudgetCents === 0 ? 'No cap (disabled).' : `Caps spend at €${(s.dailyBudgetCents / 100).toFixed(0)}/day.`}</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Per-call timeout (seconds)</label>
+                  <input type="number" min={5} max={600} value={Math.round(s.providerTimeoutMs / 1000)}
+                    onChange={(e) => set('providerTimeoutMs', Math.max(5000, Math.min(600000, (Number(e.target.value) || 90) * 1000)))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                  <p className="text-xs text-gray-400 mt-1">A hung provider no longer blocks the rest.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Est. grounded call (€ cents)</label>
+                  <input type="number" min={0} step={0.5} value={s.groundedCallCents}
+                    onChange={(e) => set('groundedCallCents', Math.max(0, Number(e.target.value) || 0))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Est. ungrounded call (€ cents)</label>
+                  <input type="number" min={0} step={0.5} value={s.ungroundedCallCents}
+                    onChange={(e) => set('ungroundedCallCents', Math.max(0, Number(e.target.value) || 0))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 

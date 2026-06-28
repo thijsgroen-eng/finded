@@ -9,6 +9,8 @@ import { reliabilityFromAccounting } from '@/lib/audit/reliability'
 import { resolveAuditLanguage } from '@/lib/settings'
 import { LANGUAGE_NAME_EN } from '@/lib/i18n'
 import { loadObservations, computePatterns, patternEvidence, factBenchmark, benchmarkSentence, FIXTYPE_FACT, ObsRow } from '@/lib/observations'
+import { RECOMMENDATION_VERSION } from '@/lib/versions'
+import { emitEvent } from '@/lib/audit/events'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -290,6 +292,7 @@ Rules:
             confidence,                 // data-backed confidence band (020)
             data_source: dataSource,    // where the support came from (021)
             benchmark,                  // measured benchmark sentence (021)
+            algo_version: RECOMMENDATION_VERSION, // reproducibility stamp (#1)
           }
         })
       )
@@ -317,6 +320,8 @@ Rules:
       asset_type: r.asset_type ?? r.type ?? null,
       status: r.status ?? 'pending',
     }))
+
+    await emitEvent(audit_id, 'recommendations.generated', { data: { count: recommendations.length, version: RECOMMENDATION_VERSION } })
 
     // Also store as JSON blob for backward compat
     await supabaseAdmin

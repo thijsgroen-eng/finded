@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
   if (typeof body.grounded === 'boolean') patch.grounded = body.grounded
   if (typeof body.maxPrompts === 'number') patch.maxPrompts = body.maxPrompts
   if (typeof body.samples === 'number') patch.samples = body.samples
+  // Cost controls (#10)
+  if (typeof body.groundedCallCents === 'number') patch.groundedCallCents = body.groundedCallCents
+  if (typeof body.ungroundedCallCents === 'number') patch.ungroundedCallCents = body.ungroundedCallCents
+  if (typeof body.dailyBudgetCents === 'number') patch.dailyBudgetCents = body.dailyBudgetCents
+  if (typeof body.providerTimeoutMs === 'number') patch.providerTimeoutMs = body.providerTimeoutMs
   const settings = await updateSettings(patch)
   return NextResponse.json({ ok: true, settings })
 }

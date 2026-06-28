@@ -279,7 +279,7 @@ export default async function LandingPage() {
           <a href={`mailto:${contactEmail}?subject=Finded for Agencies`} style={navLink}>For Agencies</a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/login" style={{ ...navLink, fontWeight: 600 }}>Log in</a>
+          <a href="/portal/login" style={{ ...navLink, fontWeight: 600 }}>Log in</a>
           <a href="#check" style={{ fontSize: 13.5, fontWeight: 700, background: GRAD, color: '#fff', padding: '10px 18px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 10px 24px -10px rgba(99,102,241,0.7)' }}>Get your free check</a>
         </div>
       </nav>

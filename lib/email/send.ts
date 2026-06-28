@@ -81,6 +81,20 @@ export function reportReadyEmail(opts: { restaurantName?: string | null; reportU
   }
 }
 
+/** Passwordless customer login link. */
+export function customerMagicLinkEmail(opts: { url: string }): { subject: string; html: string; text: string } {
+  return {
+    subject: 'Your Finded login link',
+    html: wrap(
+      `<h2 style="font-size:20px;margin:0 0 12px">Sign in to your dashboard</h2>
+       <p>Click below to open your Finded AI Visibility dashboard. This link works once and expires in 30 minutes.</p>
+       <p style="margin:22px 0"><a href="${opts.url}" style="background:#7c5cff;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;display:inline-block">Open my dashboard</a></p>
+       <p style="font-size:13px;color:#7a7874">If you didn&rsquo;t request this, you can ignore this email.</p>`,
+    ),
+    text: `Sign in to your Finded dashboard (link works once, expires in 30 min): ${opts.url}`,
+  }
+}
+
 export interface MonitoringSummaryInput {
   restaurantName?: string | null
   visibilityScore: number | null

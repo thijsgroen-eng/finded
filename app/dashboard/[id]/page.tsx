@@ -7,6 +7,10 @@ import { computeModelBreakdown } from '@/lib/engine/metrics-core'
 import { loadObservations, computePatterns, patternEvidence } from '@/lib/observations'
 import { LogoutButton } from '@/components/portal/logout-button'
 import { RestaurantDashboard, type DashboardData } from '@/components/portal/restaurant-dashboard'
+import { LangToggle } from '@/components/lang-toggle'
+import { getViewerLang } from '@/lib/i18n-viewer'
+import { getSettings } from '@/lib/settings'
+import { PORTAL } from '@/lib/portal-copy'
 import { ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -102,23 +106,28 @@ export default async function CustomerRestaurantDashboard({ params }: { params: 
   const data = await getData(id, customer?.cid ?? null, adminPreview)
   if (!data) notFound()
 
+  const lang = await getViewerLang((await getSettings()).defaultLanguage)
+  const td = PORTAL[lang].detail
+  const tl = PORTAL[lang].list
+
   return (
     <div style={{ minHeight: '100vh', background: BG, color: '#f4f5fa', fontFamily: 'var(--font-inter), sans-serif' }}>
       {adminPreview && (
         <div style={{ background: 'rgba(124,92,255,0.15)', borderBottom: '1px solid rgba(124,92,255,0.3)', padding: '8px 24px', fontSize: 12.5, color: '#c4b5fd', textAlign: 'center' }}>
-          Admin preview — this is exactly what the client sees. <a href={`/admin/restaurants/${id}`} style={{ color: '#fff', fontWeight: 600 }}>Back to backoffice</a>
+          {td.adminPreview} <a href={`/admin/restaurants/${id}`} style={{ color: '#fff', fontWeight: 600 }}>{td.backOffice}</a>
         </div>
       )}
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href={adminPreview ? `/admin/restaurants/${id}` : '/dashboard'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: MUTED, textDecoration: 'none', fontSize: 13.5, fontWeight: 600 }}>
-          <ArrowLeft style={{ width: 15, height: 15 }} /> {adminPreview ? 'Back to backoffice' : 'All restaurants'}
+          <ArrowLeft style={{ width: 15, height: 15 }} /> {adminPreview ? td.backOffice : td.allRestaurants}
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 13, color: FAINT }}>{adminPreview ? 'Admin preview' : customer!.email}</span>
-          {!adminPreview && <LogoutButton />}
+          <LangToggle current={lang} tone="dark" />
+          <span style={{ fontSize: 13, color: FAINT }}>{adminPreview ? td.adminPreviewShort : customer!.email}</span>
+          {!adminPreview && <LogoutButton label={tl.logout} />}
         </div>
       </nav>
-      <RestaurantDashboard data={data} />
+      <RestaurantDashboard data={data} lang={lang} />
     </div>
   )
 }

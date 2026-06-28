@@ -1,7 +1,11 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { readCustomerSession, listCustomerRestaurants, CUSTOMER_COOKIE } from '@/lib/auth/customer'
+import { getViewerLang } from '@/lib/i18n-viewer'
+import { getSettings } from '@/lib/settings'
+import { PORTAL } from '@/lib/portal-copy'
 import { LogoutButton } from '@/components/portal/logout-button'
+import { LangToggle } from '@/components/lang-toggle'
 import { ArrowRight, Building2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -16,13 +20,15 @@ function scoreColor(n: number | null) {
   if (n >= 30) return '#fbbf24'
   return '#fb7185'
 }
-const planLabel = (p: string | null) => p === 'implementation' ? 'Implementation' : p === 'audit' ? 'Audit' : 'Free'
 
 export default async function CustomerDashboard() {
   const session = await readCustomerSession((await cookies()).get(CUSTOMER_COOKIE)?.value)
   if (!session) redirect('/portal/login')
 
+  const lang = await getViewerLang((await getSettings()).defaultLanguage)
+  const t = PORTAL[lang].list
   const restaurants = await listCustomerRestaurants(session.cid)
+  const planLabel = (p: string | null) => t.plan[p ?? 'free'] ?? t.plan.free
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: INK, fontFamily: 'var(--font-inter), sans-serif' }}>
@@ -32,24 +38,22 @@ export default async function CustomerDashboard() {
           <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5 }}>finded</span>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <LangToggle current={lang} tone="dark" />
           <span style={{ fontSize: 13, color: FAINT }}>{session.email}</span>
-          <LogoutButton />
+          <LogoutButton label={t.logout} />
         </div>
       </nav>
 
       <main style={{ maxWidth: 920, margin: '0 auto', padding: '48px 24px' }}>
-        <h1 style={{ fontSize: 'clamp(26px,4vw,34px)', fontWeight: 800, letterSpacing: -1, marginBottom: 6 }}>Your restaurants</h1>
-        <p style={{ fontSize: 15, color: MUTED, marginBottom: 32 }}>Open a restaurant to see its AI Visibility dashboard.</p>
+        <h1 style={{ fontSize: 'clamp(26px,4vw,34px)', fontWeight: 800, letterSpacing: -1, marginBottom: 6 }}>{t.title}</h1>
+        <p style={{ fontSize: 15, color: MUTED, marginBottom: 32 }}>{t.sub}</p>
 
         {restaurants.length === 0 ? (
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 40, textAlign: 'center' }}>
             <Building2 style={{ width: 36, height: 36, color: FAINT, margin: '0 auto 14px' }} />
-            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>No restaurants linked yet</h2>
-            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, maxWidth: 440, margin: '0 auto' }}>
-              We link dashboards to the email your audit was requested with. If your audit is still running, or you used a
-              different email, it may not appear yet. Start a free check from the homepage, or reply to your audit email and we&rsquo;ll connect it.
-            </p>
-            <a href="/#check" style={{ display: 'inline-block', marginTop: 20, background: GRAD, color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px 20px', borderRadius: 10, textDecoration: 'none' }}>Start a free check</a>
+            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{t.emptyTitle}</h2>
+            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, maxWidth: 440, margin: '0 auto' }}>{t.emptyBody}</p>
+            <a href="/#check" style={{ display: 'inline-block', marginTop: 20, background: GRAD, color: '#fff', fontWeight: 700, fontSize: 14, padding: '11px 20px', borderRadius: 10, textDecoration: 'none' }}>{t.startCheck}</a>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 14 }}>
@@ -64,7 +68,7 @@ export default async function CustomerDashboard() {
                   <div style={{ fontSize: 17, fontWeight: 700 }}>{r.name}</div>
                   <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>
                     {[r.city, r.cuisine].filter(Boolean).join(' · ') || '—'}
-                    {r.last_audit_at ? ` · audited ${new Date(r.last_audit_at).toLocaleDateString()}` : ' · not audited yet'}
+                    {r.last_audit_at ? ` · ${t.auditedOn(new Date(r.last_audit_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB'))}` : ` · ${t.notAudited}`}
                   </div>
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.25)', borderRadius: 6, padding: '4px 9px' }}>{planLabel(r.plan)}</span>

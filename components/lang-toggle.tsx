@@ -10,7 +10,7 @@ type Lang = 'nl' | 'en'
  * refreshes so server components re-render in the chosen language.
  * `tone="dark"` for dark backgrounds; default suits light surfaces.
  */
-export function LangToggle({ current, tone = 'dark' }: { current: Lang; tone?: 'dark' | 'light' }) {
+export function LangToggle({ current, tone = 'dark', onChange }: { current: Lang; tone?: 'dark' | 'light'; onChange?: (l: Lang) => void }) {
   const router = useRouter()
   const [lang, setLang] = useState<Lang>(current)
 
@@ -18,7 +18,9 @@ export function LangToggle({ current, tone = 'dark' }: { current: Lang; tone?: '
     if (l === lang) return
     setLang(l)
     document.cookie = `finded_lang=${l}; path=/; max-age=31536000; samesite=lax`
-    router.refresh()
+    // Client pages pass onChange to re-render their own state; server pages refresh.
+    if (onChange) onChange(l)
+    else router.refresh()
   }
 
   const dark = tone === 'dark'

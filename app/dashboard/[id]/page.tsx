@@ -5,6 +5,7 @@ import { readCustomerSession, CUSTOMER_COOKIE } from '@/lib/auth/customer'
 import { isValidSession, ADMIN_COOKIE } from '@/lib/auth/admin'
 import { computeModelBreakdown } from '@/lib/engine/metrics-core'
 import { loadObservations, computePatterns, patternEvidence } from '@/lib/observations'
+import { getRestaurantIntel } from '@/lib/warehouse/restaurant'
 import { LogoutButton } from '@/components/portal/logout-button'
 import { RestaurantDashboard, type DashboardData } from '@/components/portal/restaurant-dashboard'
 import { LangToggle } from '@/components/lang-toggle'
@@ -55,6 +56,10 @@ async function getData(id: string, cid: string | null, bypassOwnership: boolean)
   let insight: string | null = null
   try { const p = computePatterns(await loadObservations()); if (p[0]) insight = patternEvidence(p[0], 'en') } catch { /* none yet */ }
 
+  // Deterministic warehouse intelligence (best-effort: never breaks the dashboard).
+  let intel = null
+  try { intel = await getRestaurantIntel(id) } catch { /* warehouse not ready */ }
+
   return {
     restaurant, ready: true, auditedAt: audit.created_at,
     score: vs.visibility_score != null ? Math.round(Number(vs.visibility_score)) : null,
@@ -87,6 +92,7 @@ async function getData(id: string, cid: string | null, bypassOwnership: boolean)
     insight,
     reliabilityBand: (audit.reliability as { band?: string } | null)?.band ?? null,
     reliabilityPct: audit.reliability ? Math.round(Number((audit.reliability as { completionRate?: number }).completionRate ?? 0) * 100) : null,
+    intel,
   }
 }
 

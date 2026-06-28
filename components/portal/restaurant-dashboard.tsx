@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   Home, Gauge, Bot, Users, ListChecks, Globe, TrendingUp, FileDown,
-  Sparkles, ExternalLink, Check, X,
+  Sparkles, ExternalLink, Check, X, ArrowUp, ArrowDown, Minus, Lock,
+  BarChart3, Newspaper, Target, Activity, Zap,
 } from 'lucide-react'
 import { PORTAL } from '@/lib/portal-copy'
 import type { Language } from '@/lib/i18n'
+import type { RestaurantIntel, Change, Opportunity, BenchmarkRow, ProviderDetail, Finding, HistoryPoint } from '@/lib/warehouse/restaurant'
 
 const CARD = 'rgba(255,255,255,0.035)', BORDER2 = 'rgba(255,255,255,0.06)', BORDER = 'rgba(255,255,255,0.09)'
 const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85', GREEN = '#34d399', AMBER = '#fbbf24', RED = '#fb7185'
@@ -36,9 +38,11 @@ export interface DashboardData {
   insight: string | null
   reliabilityBand: string | null
   reliabilityPct: number | null
+  intel?: RestaurantIntel | null
 }
 
-type Tab = 'overview' | 'score' | 'mentions' | 'competitors' | 'recommendations' | 'website' | 'trends'
+type Tab = 'overview' | 'opportunities' | 'benchmarks' | 'score' | 'mentions' | 'competitors' | 'recommendations' | 'website' | 'industry' | 'trends'
+type Mon = typeof PORTAL['en']['mon']
 const bandColor = (n: number) => n >= 60 ? GREEN : n >= 30 ? AMBER : RED
 const scoreBand = (n: number, t: Dash) => n >= 60 ? t.bandGood : n >= 30 ? t.bandFair : t.bandWork
 const cardBox = { background: CARD, border: `1px solid ${BORDER2}`, borderRadius: 14, padding: 18 } as const
@@ -102,17 +106,22 @@ const rankLabel = (r: string | null, t: Dash) => r === 'do_first' ? t.doFirst : 
 
 export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData; lang?: Language }) {
   const t = PORTAL[lang].dash
+  const m = PORTAL[lang].mon
   const [tab, setTab] = useState<Tab>('overview')
-  const { restaurant, score, mentionedPct, consensus, confidence, scoreComponents, competitors, modelBreakdown, recommendations, website, history, insight, reliabilityBand, reliabilityPct } = data
+  const { restaurant, score, mentionedPct, consensus, confidence, scoreComponents, competitors, modelBreakdown, recommendations, website, history, insight, reliabilityBand, reliabilityPct, intel } = data
+  const hasIntel = !!intel?.ready
+  const isPaid = restaurant.plan === 'audit' || restaurant.plan === 'implementation'
 
   const nav: { key: Tab; icon: typeof Home; label: string }[] = [
     { key: 'overview', icon: Home, label: t.nav[0] },
+    ...(hasIntel ? [{ key: 'opportunities' as Tab, icon: Target, label: m.oppTitle }, { key: 'benchmarks' as Tab, icon: BarChart3, label: m.cmpTitle }] : []),
     { key: 'score', icon: Gauge, label: t.nav[1] },
-    { key: 'mentions', icon: Bot, label: t.nav[2] },
+    { key: 'mentions', icon: Bot, label: hasIntel ? m.provTitle : t.nav[2] },
     { key: 'competitors', icon: Users, label: t.nav[3] },
     { key: 'recommendations', icon: ListChecks, label: t.nav[4] },
     { key: 'website', icon: Globe, label: t.nav[5] },
-    { key: 'trends', icon: TrendingUp, label: t.nav[6] },
+    ...(hasIntel ? [{ key: 'industry' as Tab, icon: Newspaper, label: m.indTitle }] : []),
+    { key: 'trends', icon: TrendingUp, label: hasIntel ? m.histTitle : t.nav[6] },
   ]
 
   if (!data.ready) {
@@ -152,6 +161,24 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
         <div style={{ display: 'grid', gap: 14 }}>
           {tab === 'overview' && <Overview data={data} lang={lang} />}
 
+          {tab === 'opportunities' && intel && (
+            isPaid
+              ? <OpportunitiesSection opps={intel.opportunities} m={m} full />
+              : <LockedOr m={m} preview={<OpportunitiesSection opps={intel.opportunities.slice(0, 1)} m={m} />} />
+          )}
+
+          {tab === 'benchmarks' && intel && (
+            isPaid
+              ? <CompareSection benchmarks={intel.benchmarks} you={intel.current.score} yourRec={intel.current.recRate} m={m} />
+              : <LockedOr m={m} />
+          )}
+
+          {tab === 'industry' && intel && (
+            isPaid
+              ? <IndustrySection industry={intel.industry} research={intel.research} m={m} />
+              : <LockedOr m={m} />
+          )}
+
           {tab === 'score' && (
             <div style={cardBox}>
               <div style={eyebrow}>{t.scoreTitle}</div>
@@ -179,21 +206,25 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
           )}
 
           {tab === 'mentions' && (
+            hasIntel && intel && intel.providers.length > 0 && isPaid ? (
+              <ProviderBreakdown providers={intel.providers} m={m} />
+            ) : (
             <div style={cardBox}>
               <div style={eyebrow}>{t.mentionsTitle}</div>
               <p style={{ fontSize: 13, color: MUTED, margin: '8px 0 16px' }}>{t.mentionsSub(consensus)}</p>
               <div style={{ display: 'grid', gap: 14 }}>
-                {modelBreakdown.map((m) => (
-                  <div key={m.model}>
+                {modelBreakdown.map((mb) => (
+                  <div key={mb.model}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 13.5, color: INK, fontWeight: 600 }}>{ML[m.model] ?? m.model}</span>
-                      <span style={{ fontSize: 13, color: MUTED }}>{Math.round(m.frequency * 100)}% · {m.mentions} {m.mentions === 1 ? t.mentionOne : t.mentionMany}{m.avg_position != null ? ` · ${t.avgPos} ${m.avg_position.toFixed(1)}` : ''}</span>
+                      <span style={{ fontSize: 13.5, color: INK, fontWeight: 600 }}>{ML[mb.model] ?? mb.model}</span>
+                      <span style={{ fontSize: 13, color: MUTED }}>{Math.round(mb.frequency * 100)}% · {mb.mentions} {mb.mentions === 1 ? t.mentionOne : t.mentionMany}{mb.avg_position != null ? ` · ${t.avgPos} ${mb.avg_position.toFixed(1)}` : ''}</span>
                     </div>
-                    <Bar pct={m.frequency * 100} color={m.mentions > 0 ? '#7c5cff' : 'rgba(255,255,255,0.15)'} />
+                    <Bar pct={mb.frequency * 100} color={mb.mentions > 0 ? '#7c5cff' : 'rgba(255,255,255,0.15)'} />
                   </div>
                 ))}
               </div>
             </div>
+            )
           )}
 
           {tab === 'competitors' && (
@@ -261,8 +292,9 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
 
           {tab === 'trends' && (
             <div style={cardBox}>
-              <div style={eyebrow}>{t.overTime}</div>
+              <div style={eyebrow}>{hasIntel ? m.histTitle : t.overTime}</div>
               <TrendChart history={history} lang={lang} t={t} />
+              {hasIntel && intel && intel.history.length > 0 && <AnnotatedHistory history={intel.history} m={m} lang={lang} />}
             </div>
           )}
 
@@ -292,9 +324,30 @@ function Header({ data, lang }: { data: DashboardData; lang: Language }) {
 
 function Overview({ data, lang }: { data: DashboardData; lang: Language }) {
   const t = PORTAL[lang].dash
-  const { score, mentionedPct, consensus, competitors, insight, reliabilityBand, reliabilityPct, history } = data
+  const m = PORTAL[lang].mon
+  const { score, mentionedPct, consensus, competitors, insight, reliabilityBand, reliabilityPct, history, intel, restaurant } = data
+  const hasIntel = !!intel?.ready
+  const isPaid = restaurant.plan === 'audit' || restaurant.plan === 'implementation'
   return (
     <>
+      {hasIntel && intel && (
+        <>
+          <MonitoringHero intel={intel} lang={lang} m={m} />
+          <ChangesSection changes={intel.changes} m={m} />
+          {isPaid ? (
+            <>
+              {intel.opportunities.length > 0 && <OpportunitiesSection opps={intel.opportunities.slice(0, 3)} m={m} />}
+              {intel.benchmarks.length > 0 && <CompareSection benchmarks={intel.benchmarks} you={intel.current.score} yourRec={intel.current.recRate} m={m} />}
+              {intel.industry.length > 0 && <IndustrySection industry={intel.industry.slice(0, 3)} research={intel.research} m={m} />}
+            </>
+          ) : (
+            <>
+              {intel.opportunities.length > 0 && <OpportunitiesSection opps={intel.opportunities.slice(0, 1)} m={m} />}
+              <LockedTeaser m={m} />
+            </>
+          )}
+        </>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr 1fr', gap: 14 }}>
         <div style={cardBox}>
           <div style={eyebrow}>{t.scoreTitle}</div>
@@ -352,5 +405,281 @@ function Overview({ data, lang }: { data: DashboardData; lang: Language }) {
         </div>
       </div>
     </>
+  )
+}
+
+// ── Monitoring sections (deterministic, warehouse-backed) ────────────────────
+const trendIcon = (d: 'up' | 'down' | 'flat') => d === 'up' ? ArrowUp : d === 'down' ? ArrowDown : Minus
+const trendColor = (d: 'up' | 'down' | 'flat') => d === 'up' ? GREEN : d === 'down' ? RED : FAINT
+const fmtDate = (iso: string, lang: Language) => new Date(iso).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+function changeText(c: Change, m: Mon): string {
+  switch (c.kind) {
+    case 'visibility': return c.dir === 'up' ? m.chg.visUp(c.value ?? 0) : m.chg.visDown(c.value ?? 0)
+    case 'provider': return c.dir === 'up' ? m.chg.provUp(c.subject ?? '') : m.chg.provDown(c.subject ?? '')
+    case 'signal': return c.dir === 'up' ? m.chg.sigUp(c.subject ?? '') : m.chg.sigDown(c.subject ?? '')
+    case 'mention': return c.dir === 'up' ? m.chg.menUp(c.value ?? 0) : m.chg.menDown(c.value ?? 0)
+    default: return c.subject ?? ''
+  }
+}
+
+function DeltaPill({ value, suffix }: { value: number; suffix?: string }) {
+  const up = value > 0, flat = value === 0
+  const color = flat ? FAINT : up ? GREEN : RED
+  const Icon = flat ? Minus : up ? ArrowUp : ArrowDown
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 700, color, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 7, padding: '4px 9px' }}>
+      <Icon style={{ width: 12, height: 12 }} />{up ? '+' : ''}{value}{suffix}
+    </span>
+  )
+}
+
+function MonitoringHero({ intel, lang, m }: { intel: RestaurantIntel; lang: Language; m: Mon }) {
+  const score = intel.current.score
+  return (
+    <div style={{ ...cardBox, padding: 20 }}>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Ring pct={score ?? 0} size={104} stroke={11} label={String(score ?? '—')} sub="/100" />
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            {intel.deltas.sinceLast != null && <DeltaPill value={intel.deltas.sinceLast} />}
+            {intel.deltas.monthly != null && <span style={{ fontSize: 11.5, color: FAINT, alignSelf: 'center' }}>{m.monthly(intel.deltas.monthly)}</span>}
+          </div>
+          {intel.providers.length > 0 && (
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 10 }}>
+              {intel.providers.map((p) => { const Icon = trendIcon(p.trend); return (
+                <span key={p.provider} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: INK }}>
+                  {p.provider} <Icon style={{ width: 13, height: 13, color: trendColor(p.trend) }} />
+                </span>
+              ) })}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: FAINT }}>
+            {intel.current.auditedAt ? m.lastUpdated(fmtDate(intel.current.auditedAt, lang)) : ''} · {m.runs(intel.auditCount)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChangesSection({ changes, m }: { changes: Change[]; m: Mon }) {
+  return (
+    <div style={cardBox}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Activity style={{ width: 13, height: 13 }} /> {m.changedTitle}</div>
+      {changes.length === 0 ? (
+        <p style={{ fontSize: 13, color: FAINT, lineHeight: 1.6, marginTop: 10 }}>{m.changedEmpty}</p>
+      ) : (
+        <div style={{ display: 'grid', gap: 2, marginTop: 10 }}>
+          {changes.map((c, i) => { const Icon = trendIcon(c.dir === 'neutral' ? 'flat' : c.dir); return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < changes.length - 1 ? `1px solid ${BORDER2}` : 'none' }}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: c.positive ? 'rgba(52,211,153,0.15)' : 'rgba(251,113,133,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon style={{ width: 12, height: 12, color: c.positive ? GREEN : RED }} />
+              </span>
+              <span style={{ fontSize: 13.5, color: INK }}>{changeText(c, m)}</span>
+            </div>
+          ) })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OpportunitiesSection({ opps, m, full }: { opps: Opportunity[]; m: Mon; full?: boolean }) {
+  return (
+    <div style={cardBox}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow }}><Target style={{ width: 13, height: 13, color: FAINT }} /> {m.oppTitle}</div>
+      <p style={{ fontSize: 12.5, color: MUTED, margin: '7px 0 14px' }}>{m.oppSub}</p>
+      {opps.length === 0 ? <p style={{ fontSize: 13, color: FAINT }}>{m.oppEmpty}</p> : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {opps.map((o) => (
+            <div key={o.key} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 12, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{o.label}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: GREEN }}>+{o.expectedGainPct}%</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, marginTop: 12 }}>
+                <Metric label={m.oppGain} value={`+${o.expectedGainPct}%`} />
+                <Metric label={m.oppConf} value={`${Math.round(o.confidence * 100)}%`} />
+                <Metric label={m.oppMeasured} value={o.measured.toLocaleString()} />
+                <Metric label={m.oppDiff} value={m.diff[o.difficulty] ?? o.difficulty} />
+                <Metric label={m.oppEst} value={m.mins(o.minutes)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {!full && opps.length > 0 && <p style={{ fontSize: 11, color: FAINT, marginTop: 10 }}>{m.oppMeasured} · {m.oppSub}</p>}
+    </div>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: INK }}>{value}</div>
+      <div style={{ fontSize: 10.5, color: FAINT, marginTop: 2 }}>{label}</div>
+    </div>
+  )
+}
+
+function CompareSection({ benchmarks, you, yourRec, m }: { benchmarks: BenchmarkRow[]; you: number | null; yourRec: number | null; m: Mon }) {
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      {benchmarks.map((b) => {
+        const top = Math.max(b.top10 ?? 0, you ?? 0, b.avg ?? 0, 100)
+        const rows: { label: string; val: number | null; color: string }[] = [
+          { label: m.cmpAvg, val: b.avg, color: FAINT },
+          { label: m.cmpYou, val: you, color: '#7c5cff' },
+          { label: m.cmpTop10, val: b.top10, color: GREEN },
+        ]
+        return (
+          <div key={`${b.scope}-${b.key}`} style={cardBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div style={eyebrow}>{m.scope[b.scope] ?? b.scope}{b.scope !== 'overall' ? ` · ${b.key}` : ''}</div>
+              <span style={{ fontSize: 11, color: FAINT }}>n={b.n}</span>
+            </div>
+            <div style={{ display: 'grid', gap: 9, marginTop: 12 }}>
+              {rows.map((r) => (
+                <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 12.5, color: r.label === m.cmpYou ? INK : MUTED, width: 96, fontWeight: r.label === m.cmpYou ? 700 : 400 }}>{r.label}</span>
+                  <div style={{ flex: 1 }}><Bar pct={r.val == null ? 0 : (r.val / top) * 100} color={r.color} /></div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: r.color === FAINT ? MUTED : r.color, width: 30, textAlign: 'right' }}>{r.val ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+            {(b.recRate != null || yourRec != null) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${BORDER2}`, fontSize: 12 }}>
+                <span style={{ color: FAINT }}>{m.cmpRec}: <span style={{ color: MUTED, fontWeight: 600 }}>{b.recRate != null ? `${Math.round(b.recRate * 100)}%` : '—'}</span></span>
+                <span style={{ color: FAINT }}>{m.cmpYourRec}: <span style={{ color: INK, fontWeight: 700 }}>{yourRec != null ? `${Math.round(yourRec * 100)}%` : '—'}</span></span>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ProviderBreakdown({ providers, m }: { providers: ProviderDetail[]; m: Mon }) {
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div style={cardBox}>
+        <div style={eyebrow}>{m.provTitle}</div>
+        <p style={{ fontSize: 13, color: MUTED, margin: '7px 0 0' }}>{m.provSub}</p>
+      </div>
+      {providers.map((p) => { const Icon = trendIcon(p.trend); return (
+        <div key={p.provider} style={cardBox}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: INK }}>{p.provider}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: trendColor(p.trend) }}>
+              <Icon style={{ width: 13, height: 13 }} /> {m.provTrend[p.trend]}{p.driftPts !== 0 ? ` (${p.driftPts > 0 ? '+' : ''}${p.driftPts}pts)` : ''}
+            </span>
+          </div>
+          <Bar pct={p.latestRate * 100} color={p.latestRate > 0 ? '#7c5cff' : 'rgba(255,255,255,0.15)'} />
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: FAINT }}>
+            <span>{Math.round(p.latestRate * 100)}% · {m.provResponses(p.responses)}</span>
+            {p.avgPosition != null && <span>{m.provAvgPos} {p.avgPosition.toFixed(1)}</span>}
+            <span>{m.provStability} {(100 - Math.round(p.stability * 100))}%</span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div style={{ ...eyebrow, marginBottom: 6 }}>{m.provCites}</div>
+            {p.citations.length === 0 ? <p style={{ fontSize: 12, color: FAINT }}>{m.provNoCites}</p> : (
+              <div style={{ display: 'grid', gap: 4 }}>
+                {p.citations.map((c) => (
+                  <div key={c.domain} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: MUTED }}>
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.domain} <span style={{ color: FAINT }}>({c.type})</span></span>
+                    <span style={{ fontWeight: 700, color: INK }}>{c.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) })}
+    </div>
+  )
+}
+
+function IndustrySection({ industry, research, m }: { industry: Finding[]; research: Finding[]; m: Mon }) {
+  const fText = (f: Finding) => f.kind === 'trend'
+    ? (f.dir === 'up' ? m.find.trendUp(f.metricPct) : m.find.trendDown(f.metricPct))
+    : (f.dir === 'up' ? m.find.corrUp(f.metricPct, f.subject) : m.find.corrDown(f.metricPct, f.subject))
+  const Row = (f: Finding) => (
+    <div key={f.id} style={{ display: 'flex', gap: 10, padding: '11px 0', borderBottom: `1px solid ${BORDER2}` }}>
+      <span style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(124,92,255,0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Zap style={{ width: 12, height: 12, color: '#a78bfa' }} />
+      </span>
+      <div>
+        <p style={{ fontSize: 13.5, color: INK, lineHeight: 1.45, margin: 0 }}>{fText(f)}</p>
+        <p style={{ fontSize: 11, color: FAINT, margin: '3px 0 0' }}>{m.findMeta(f.measured, f.confidence)}</p>
+      </div>
+    </div>
+  )
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <div style={cardBox}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Newspaper style={{ width: 13, height: 13 }} /> {m.indTitle}</div>
+        <p style={{ fontSize: 12.5, color: MUTED, margin: '7px 0 8px' }}>{m.indSub}</p>
+        {industry.length === 0 ? <p style={{ fontSize: 13, color: FAINT }}>{m.indEmpty}</p> : <div>{industry.map(Row)}</div>}
+      </div>
+      {research.length > 0 && (
+        <div style={cardBox}>
+          <div style={eyebrow}>{m.resTitle}</div>
+          <div style={{ marginTop: 6 }}>{research.map(Row)}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AnnotatedHistory({ history, m, lang }: { history: HistoryPoint[]; m: Mon; lang: Language }) {
+  const withEvents = [...history].reverse().filter((h) => h.events.length > 0 || h.delta != null)
+  if (withEvents.length === 0) return null
+  return (
+    <div style={{ marginTop: 16, borderTop: `1px solid ${BORDER2}`, paddingTop: 14 }}>
+      <div style={{ ...eyebrow, marginBottom: 10 }}>{m.histTitle}</div>
+      <div style={{ display: 'grid', gap: 0 }}>
+        {withEvents.map((h, i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '9px 0', borderBottom: i < withEvents.length - 1 ? `1px solid ${BORDER2}` : 'none' }}>
+            <span style={{ fontSize: 12, color: FAINT, width: 92, flexShrink: 0 }}>{fmtDate(h.date, lang)}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: INK, width: 64 }}>{h.score}/100</span>
+            {h.delta != null && h.delta !== 0 && <span style={{ flexShrink: 0 }}><DeltaPill value={h.delta} /></span>}
+            <span style={{ fontSize: 12, color: MUTED, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {h.events.map((e, j) => (
+                <span key={j} style={{ fontSize: 11, color: e.kind === 'signal_added' ? GREEN : RED, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '2px 7px' }}>
+                  {e.kind === 'signal_added' ? m.histEvent.signal_added(e.label) : m.histEvent.signal_removed(e.label)}
+                </span>
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LockedTeaser({ m }: { m: Mon }) {
+  return (
+    <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(124,92,255,0.12), rgba(79,124,255,0.04))', border: '1px solid rgba(124,92,255,0.22)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Lock style={{ width: 13, height: 13 }} /> {m.upgrade}</div>
+      <p style={{ fontSize: 13, color: MUTED, margin: '8px 0 12px' }}>{m.lockedBody}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+        {m.locked.map((l) => (
+          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: MUTED }}>
+            <Check style={{ width: 13, height: 13, color: '#a78bfa', flexShrink: 0 }} /> {l}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LockedOr({ m, preview }: { m: Mon; preview?: ReactNode }) {
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      {preview}
+      <LockedTeaser m={m} />
+    </div>
   )
 }

@@ -344,9 +344,17 @@ export default function RestaurantDatabasePage() {
                         <td className="px-4 py-3 text-right text-gray-500 tabular-nums">{r.audit_count || 0}</td>
                         <td className="px-4 py-3 text-gray-400 text-xs">{r.last_audit_at ? formatDate(r.last_audit_at) : '—'}</td>
                         <td className="px-4 py-3 text-right">
-                          <Button variant="ghost" size="sm" onClick={() => { setSelected(new Set([r.id])); bulk('run_audit') }} disabled={busy}>
-                            <PlayCircle className="w-3.5 h-3.5" />Audit
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {r.last_audit_id && (
+                              <a href={`/dashboard/${r.id}`} target="_blank" rel="noreferrer" title="Preview the client dashboard"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 px-2 py-1">
+                                <ExternalLink className="w-3.5 h-3.5" />Client view
+                              </a>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => { setSelected(new Set([r.id])); bulk('run_audit') }} disabled={busy}>
+                              <PlayCircle className="w-3.5 h-3.5" />Audit
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     )

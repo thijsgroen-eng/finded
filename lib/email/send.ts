@@ -81,6 +81,21 @@ export function reportReadyEmail(opts: { restaurantName?: string | null; reportU
   }
 }
 
+/** Operator-sent invite: tell an owner their dashboard is ready and how to log in. */
+export function dashboardInviteEmail(opts: { restaurantName?: string | null; loginUrl: string }): { subject: string; html: string; text: string } {
+  const name = opts.restaurantName?.trim() || 'your restaurant'
+  return {
+    subject: `Your AI Visibility dashboard for ${name} is ready`,
+    html: wrap(
+      `<h2 style="font-size:20px;margin:0 0 12px">Your dashboard is ready</h2>
+       <p>We measured how ChatGPT, Claude, Gemini and Perplexity recommend ${name} — your AI Visibility Score, the competitors named instead, and what to improve.</p>
+       <p style="margin:22px 0"><a href="${opts.loginUrl}" style="background:#7c5cff;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;display:inline-block">Log in to your dashboard</a></p>
+       <p style="font-size:13px;color:#7a7874">Sign in with <strong>this email address</strong> and we&rsquo;ll send you a one-time link — no password needed.</p>`,
+    ),
+    text: `Your AI Visibility dashboard for ${name} is ready. Log in (with this email) at: ${opts.loginUrl}`,
+  }
+}
+
 /** Passwordless customer login link. */
 export function customerMagicLinkEmail(opts: { url: string }): { subject: string; html: string; text: string } {
   return {

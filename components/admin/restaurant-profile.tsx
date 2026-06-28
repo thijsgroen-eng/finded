@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Spinner, Empty
 import { formatDate, formatDateTime, statusVariant } from '@/lib/utils'
 import { PlanControls } from '@/components/admin/plan-controls'
 import { ScoreTrend } from '@/components/admin/score-trend'
-import { ClipboardList, PlayCircle, ExternalLink, Save, Tag } from 'lucide-react'
+import { ClipboardList, PlayCircle, ExternalLink, Save, Tag, Send } from 'lucide-react'
 
 /* The prospecting pipeline — shared legend with the Restaurant Database. */
 const STATUS: Record<string, { label: string; chip: string; dot: string }> = {
@@ -309,6 +309,24 @@ function CrmTab({ restaurant, tier, onToast }: { restaurant: ProfileRestaurant; 
   const [notes, setNotes] = useState(restaurant.internal_notes ?? '')
   const [followUp, setFollowUp] = useState(restaurant.next_follow_up ?? '')
   const [saving, setSaving] = useState(false)
+  const [inviting, setInviting] = useState(false)
+
+  async function sendInvite() {
+    setInviting(true)
+    try {
+      const res = await fetch('/api/admin/send-invite', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant_id: restaurant.id }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error)
+      onToast(`Dashboard invite sent to ${j.to}`, 'success')
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Failed to send invite', 'error')
+    } finally {
+      setInviting(false)
+    }
+  }
 
   async function save() {
     setSaving(true)
@@ -340,6 +358,21 @@ function CrmTab({ restaurant, tier, onToast }: { restaurant: ProfileRestaurant; 
         <PlanControls restaurantId={restaurant.id} previewSlug={restaurant.preview_slug}
           current={tier as 'free' | 'audit' | 'implementation'} />
       </div>
+
+      {/* Invite the owner to log in to their dashboard */}
+      <Card className="mb-5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Dashboard invite</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {restaurant.email ? <>Email <span className="font-medium">{restaurant.email}</span> a “log in to your dashboard” link.</> : 'Add a contact email first to invite the owner.'}
+            </p>
+          </div>
+          <Button size="sm" onClick={sendInvite} disabled={inviting || !restaurant.email}>
+            {inviting ? <Spinner className="w-3.5 h-3.5 text-white" /> : <Send className="w-3.5 h-3.5" />}Send invite
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Outreach & notes</CardTitle></CardHeader>

@@ -1,32 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ADMIN_COOKIE, passwordMatches, expectedToken } from '@/lib/auth/admin'
+import { ADMIN_COOKIE, passwordMatches, createSessionToken, type Session } from '@/lib/auth/admin'
+import { authenticate, logAdminAction } from '@/lib/auth/users'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/admin/login  { password }
- * Sets the admin session cookie on a correct password. Fails closed (503) if
- * ADMIN_PASSWORD is not configured, so the gate is never accidentally open.
+ * POST /api/admin/login  { email?, password }
+ * - With email: authenticate against an admin_users account (#9).
+ * - Without email (or no such user): fall back to the shared ADMIN_PASSWORD,
+ *   which logs in as a bootstrap admin — so existing usage is unchanged.
+ * Issues a signed session cookie carrying the user id + role.
  */
 export async function POST(request: NextRequest) {
-  if (!process.env.ADMIN_PASSWORD) {
+  const haveSecret = !!(process.env.AUTH_SECRET?.trim() || process.env.ADMIN_PASSWORD?.trim())
+  if (!haveSecret) {
     return NextResponse.json({ error: 'Admin login is not configured' }, { status: 503 })
   }
 
   const body = await request.json().catch(() => ({} as Record<string, unknown>))
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
   const password = typeof body.password === 'string' ? body.password : ''
 
-  if (!passwordMatches(password)) {
-    return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+  let session: Session | null = null
+  if (email) {
+    session = await authenticate(email, password)
+  } else if (passwordMatches(password)) {
+    session = { uid: null, email: 'shared', role: 'admin' }
   }
 
-  const token = await expectedToken()
+  if (!session) {
+    return NextResponse.json({ error: 'Incorrect email or password' }, { status: 401 })
+  }
+
+  const token = await createSessionToken(session)
   if (!token) {
     return NextResponse.json({ error: 'Admin login is not configured' }, { status: 503 })
   }
 
-  const res = NextResponse.json({ ok: true })
+  await logAdminAction(session, 'login', session.email)
+
+  const res = NextResponse.json({ ok: true, role: session.role, email: session.email })
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSettings, updateSettings, AppSettings } from '@/lib/settings'
+import { sessionFromRequest, logAdminAction } from '@/lib/auth/users'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,5 +28,6 @@ export async function POST(request: NextRequest) {
   if (typeof body.dailyBudgetCents === 'number') patch.dailyBudgetCents = body.dailyBudgetCents
   if (typeof body.providerTimeoutMs === 'number') patch.providerTimeoutMs = body.providerTimeoutMs
   const settings = await updateSettings(patch)
+  await logAdminAction(await sessionFromRequest(request), 'settings.update', null, { fields: Object.keys(patch) })
   return NextResponse.json({ ok: true, settings })
 }

@@ -9,6 +9,7 @@ function LoginForm() {
   const params = useSearchParams()
   const next = params.get('next') || '/admin/dashboard'
 
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,7 +22,7 @@ function LoginForm() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email: email.trim() || undefined, password }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error ?? 'Login failed')
@@ -43,14 +44,24 @@ function LoginForm() {
             <span className="text-xs text-gray-400 font-medium">admin</span>
           </div>
         </div>
-        <p className="text-sm text-gray-500 mb-5">Enter the admin password to continue.</p>
+        <p className="text-sm text-gray-500 mb-5">Sign in with your account, or leave email blank to use the shared password.</p>
+
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Email <span className="text-gray-300 normal-case font-normal">(optional)</span></label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
+          placeholder="you@finded.com"
+          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 mb-3"
+        />
 
         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Password</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoFocus
+          autoComplete="current-password"
           className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 mb-3"
         />
 

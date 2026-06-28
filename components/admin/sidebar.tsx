@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Building2, ClipboardList,
   Upload, Users, BarChart2, Plus, MessageSquareText,
-  Menu, X, LogOut, Inbox, Settings, Lightbulb
+  Menu, X, LogOut, Inbox, Settings, Lightbulb, ShieldCheck
 } from 'lucide-react'
 
 async function logout() {
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/admin/leads',       label: 'Leads',       icon: Users },
   { href: '/admin/upload',      label: 'Bulk Import', icon: Upload },
   { href: '/admin/settings',    label: 'Settings',    icon: Settings },
+  { href: '/admin/users',       label: 'Users',       icon: ShieldCheck },
 ]
 
 /** The nav body, shared between the desktop rail and the mobile drawer. */

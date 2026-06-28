@@ -471,4 +471,35 @@ questions are answerable without re-running audits. Recorded in the pipeline via
 Behaviour-safe: new columns default to prior behaviour; the digest path only
 triggers for `source='monitoring'` audits (a new path). 165 tests pass.
 
-Phase 5 (security #9) unchanged. Deferred: #5 adaptive execution.
+## Implemented — Phase 5 (migration 027)
+
+**#9 Security: per-user accounts, roles, audit log.** Additive and
+bootstrap-safe — the shared `ADMIN_PASSWORD` still logs in (as a bootstrap admin)
+until real accounts exist, so nothing locks out.
+- `admin_users` (email, PBKDF2-hashed password, role, active) + `admin_audit_log`.
+- **Roles**: admin > operator > viewer, with `roleAtLeast` + a `requireRole`
+  route guard. User-management endpoints require admin.
+- **Sessions** are now signed tokens carrying `{uid, email, role}` (HMAC, still
+  edge-verifiable and stateless). `readSession` validates both the new signed
+  token AND the legacy shared-password token, so existing sessions and all three
+  consumers (middleware, report-PDF gate, login) keep working unchanged.
+- **Login** accepts `email`+`password` (per-user) or password-only (shared
+  fallback); records a `login` audit entry.
+- **Audit log** wired into login, user CRUD, settings updates and plan changes;
+  surfaced (with the user table) at `/admin/users` (admin-only). `requireRole` is
+  there for incremental adoption on other mutations.
+- Password hashing is PBKDF2 via Web Crypto (no node-only deps; admin.ts stays
+  edge-safe). New `AUTH_SECRET` env signs tokens, falling back to ADMIN_PASSWORD
+  so it works with no new config.
+- Unit tests: `tests/auth-roles.test.ts` (hash round-trip, token round-trip +
+  tamper rejection, role hierarchy).
+
+**Deliberately deferred (documented):** reducing service-role usage by moving the
+public dashboard reads to anon-key + RLS policies. It's the riskiest part (a
+slug-scoped RLS policy on the customer read path) and is best done as its own
+change with focused testing. RLS stays enabled meanwhile; access control is
+application-level as before.
+
+Deferred: #5 adaptive execution (opt-in/default-off).
+
+All planned phases (1–5) are now implemented.

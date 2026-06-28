@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { sessionFromRequest, logAdminAction } from '@/lib/auth/users'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,5 +25,6 @@ export async function POST(request: NextRequest) {
     .update(patch)
     .eq('id', restaurantId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAdminAction(await sessionFromRequest(request), 'plan.set', restaurantId, { plan })
   return NextResponse.json({ ok: true, plan })
 }

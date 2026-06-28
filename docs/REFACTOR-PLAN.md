@@ -392,4 +392,24 @@ reuses a fresh provider-health cache so batches skip redundant preflight probes.
 Operator-settable under Settings → Cost controls.
 
 Deferred per decision: **#5 adaptive execution** (opt-in/default-off, later).
-Remaining phases 3–5 unchanged.
+Remaining phases 4–5 unchanged.
+
+## Implemented — Phase 3 (in progress)
+
+**#8 Recommendation separation.** The 380-line route is now a thin orchestrator
+over four explicit layers, all pure and testable:
+- `lib/recommendations/parse.ts` — tolerant JSON salvage (parser layer).
+- `lib/recommendations/prompt.ts` — facts assembly + the prompt (the LLM's
+  text-only contract; the model is asked only to write prose).
+- `lib/recommendations/enrich.ts` — the DETERMINISTIC layer: fix type, impact/
+  effort, priority rank, measured benchmark, data-source attribution and the
+  confidence band are all computed in code. **The LLM never calculates a number.**
+- the route wires them: load → reliability gate → facts → prompt → LLM → parse →
+  enrich → store.
+Behaviour-preserving by relocation (prompt string byte-identical); new unit tests
+in `tests/recommendations.test.ts` lock the parser + enrichment.
+
+Still open in Phase 3: **#13** (metrics-module convergence — needs
+characterization tests first to stay behaviour-safe; DB types; ESLint) and
+**#7** prompt management (draft/publish/rollback/version history). Recommend a
+dedicated pass each.

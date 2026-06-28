@@ -409,7 +409,20 @@ over four explicit layers, all pure and testable:
 Behaviour-preserving by relocation (prompt string byte-identical); new unit tests
 in `tests/recommendations.test.ts` lock the parser + enrichment.
 
+**#7 Prompt management** (migration 025). The override layer (011) is now a
+managed workflow:
+- `status` (draft|published) on `prompt_templates` — audits read **published**
+  only; existing rows default to published so behaviour is unchanged.
+- Edits are saved as **drafts** and don't affect audits until **Publish**, which
+  snapshots the prior published set to the new `prompt_template_history` table.
+- **Version history**, **rollback** (itself snapshotted, so reversible) and a
+  per-category **diff** of any version vs current — all in the admin editor.
+- `provider` column added for future provider-specific overrides, but **not**
+  wired into audit execution on purpose: every model must answer the same prompt
+  for cross-model consensus to mean anything.
+Editor (`components/admin/prompt-editor.tsx`) updated with draft badges, a
+publish/discard bar, and a history+diff panel.
+
 Still open in Phase 3: **#13** (metrics-module convergence — needs
-characterization tests first to stay behaviour-safe; DB types; ESLint) and
-**#7** prompt management (draft/publish/rollback/version history). Recommend a
-dedicated pass each.
+characterization tests first to stay behaviour-safe; DB types; ESLint). Recommend
+a dedicated pass.

@@ -10,9 +10,12 @@ interface Pattern { key: string; lift: number; nWith: number; nWithout: number; 
 interface Opt { key: string; n: number }
 interface Data {
   total: number
-  filter: { cuisine: string; city: string }
+  filter: { cuisine: string; city: string; since: number; mentioned: string }
   filterN: number
+  scopedN: number
   benchmark: Benchmark
+  distribution: { label: string; n: number }[]
+  perModel: { model: string; rate: number; n: number }[]
   patterns: Pattern[]
   patternScope: 'segment' | 'all'
   byCuisine: SegBenchmark[]
@@ -23,6 +26,7 @@ interface Data {
 
 const pctv = (x: number | null) => x == null ? '—' : `${Math.round(x * 100)}%`
 const scorev = (x: number | null) => x == null ? '—' : String(Math.round(x))
+const ML: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
 
 export default function InsightsPage() {
   const [data, setData] = useState<Data | null>(null)
@@ -30,6 +34,8 @@ export default function InsightsPage() {
   const [busy, setBusy] = useState(false)
   const [cuisine, setCuisine] = useState('')
   const [city, setCity] = useState('')
+  const [since, setSince] = useState('0')
+  const [mentioned, setMentioned] = useState('')
   const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -37,10 +43,12 @@ export default function InsightsPage() {
     const qs = new URLSearchParams()
     if (cuisine) qs.set('cuisine', cuisine)
     if (city) qs.set('city', city)
+    if (since !== '0') qs.set('since', since)
+    if (mentioned) qs.set('mentioned', mentioned)
     const res = await fetch(`/api/admin/insights?${qs}`)
     setData(await res.json())
     setLoading(false)
-  }, [cuisine, city])
+  }, [cuisine, city, since, mentioned])
 
   useEffect(() => { load() }, [load])
 
@@ -55,7 +63,7 @@ export default function InsightsPage() {
     setBusy(false)
   }
 
-  const hasFilter = !!(cuisine || city)
+  const hasFilter = !!(cuisine || city || since !== '0' || mentioned)
   const b = data?.benchmark
 
   return (
@@ -79,12 +87,24 @@ export default function InsightsPage() {
           <div className="flex flex-wrap items-end gap-4">
             <Filter label="Cuisine" value={cuisine} onChange={setCuisine} options={data?.options.cuisines ?? []} />
             <Filter label="City" value={city} onChange={setCity} options={data?.options.cities ?? []} />
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Period</label>
+              <select value={since} onChange={(e) => setSince(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[140px]">
+                <option value="0">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Recommended</label>
+              <select value={mentioned} onChange={(e) => setMentioned(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white min-w-[140px]">
+                <option value="">All audits</option><option value="rec">Recommended by AI</option><option value="not">Not recommended</option>
+              </select>
+            </div>
             {hasFilter && (
-              <button onClick={() => { setCuisine(''); setCity('') }} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 mb-1.5">
+              <button onClick={() => { setCuisine(''); setCity(''); setSince('0'); setMentioned('') }} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 mb-1.5">
                 <X className="w-3.5 h-3.5" /> Clear
               </button>
             )}
-            <div className="ml-auto text-xs text-gray-400 mb-1.5">{data ? `${data.total} audits in knowledge base` : ''}</div>
+            <div className="ml-auto text-xs text-gray-400 mb-1.5">{data ? `${data.scopedN} of ${data.total} audits` : ''}</div>
           </div>
         </CardContent>
       </Card>
@@ -110,9 +130,38 @@ export default function InsightsPage() {
             </CardContent>
           </Card>
 
+          {/* Score distribution + per-model mention rates */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Card>
+              <CardHeader><CardTitle>AI visibility distribution</CardTitle></CardHeader>
+              <CardContent className="pt-0 space-y-2.5">
+                {(() => { const max = Math.max(1, ...data.distribution.map((d) => d.n)); return data.distribution.map((d) => (
+                  <div key={d.label} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 w-14 shrink-0 tabular-nums">{d.label}</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden"><div className="h-full bg-gray-900 rounded-full" style={{ width: `${(d.n / max) * 100}%` }} /></div>
+                    <span className="text-sm font-semibold text-gray-900 w-8 text-right tabular-nums">{d.n}</span>
+                  </div>
+                )) })()}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Mention rate by AI model</CardTitle></CardHeader>
+              <CardContent className="pt-0 space-y-2.5">
+                {data.perModel.map((m) => (
+                  <div key={m.model} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-700 w-20 shrink-0">{ML[m.model] ?? m.model}</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round(m.rate * 100)}%` }} /></div>
+                    <span className="text-sm font-semibold text-gray-900 w-10 text-right tabular-nums">{pctv(m.rate)}</span>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 pt-1">Share of {data.filterN} audits in which each model named the restaurant.</p>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Signal presence bars */}
           <Card>
-            <CardHeader><CardTitle>Signal presence {hasFilter ? 'in this segment' : 'overall'}</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Signal presence {hasFilter ? 'in this selection' : 'overall'}</CardTitle></CardHeader>
             <CardContent className="pt-0 space-y-2.5">
               {data.facts.map((f) => (
                 <div key={f.key} className="flex items-center gap-3">

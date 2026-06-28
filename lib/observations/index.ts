@@ -45,6 +45,27 @@ export interface ObsRow {
   mentionFrequency: number | null
   visibilityScore: number | null
   facts: Partial<Record<FactKey, boolean>>
+  createdAt?: string | null
+  /** Per-model mention (from the observation facts) for cross-model analysis. */
+  perModel?: { openai: boolean; anthropic: boolean; gemini: boolean; perplexity: boolean }
+}
+
+export const OBS_MODELS = ['openai', 'anthropic', 'gemini', 'perplexity'] as const
+
+/** Visibility-score distribution (fixed buckets) over a set of rows. */
+export function scoreBuckets(rows: ObsRow[]): { label: string; n: number }[] {
+  const defs: [number, number, string][] = [[0, 19, '0–19'], [20, 39, '20–39'], [40, 59, '40–59'], [60, 79, '60–79'], [80, 100, '80–100']]
+  return defs.map(([lo, hi, label]) => ({
+    label,
+    n: rows.filter((r) => r.visibilityScore != null && r.visibilityScore >= lo && r.visibilityScore <= hi).length,
+  }))
+}
+
+/** Share of audits in which each model mentioned the target (0–1). */
+export function perModelMentionRates(rows: ObsRow[]): { model: string; rate: number; n: number }[] {
+  const withModel = rows.filter((r) => r.perModel)
+  const n = withModel.length
+  return OBS_MODELS.map((m) => ({ model: m, n, rate: n ? withModel.filter((r) => r.perModel![m]).length / n : 0 }))
 }
 
 // ── Benchmarks ────────────────────────────────────────────────────────────────
@@ -221,7 +242,7 @@ export function buildObservationFacts(i: ObservationInput): Record<string, boole
 }
 
 /** Map a stored observation row (jsonb facts) into the aggregator's ObsRow. */
-export function toObsRow(r: { cuisine: string | null; city: string | null; mentioned_any: boolean | null; mention_frequency: number | null; visibility_score: number | null; facts: Record<string, unknown> | null }): ObsRow {
+export function toObsRow(r: { cuisine: string | null; city: string | null; mentioned_any: boolean | null; mention_frequency: number | null; visibility_score: number | null; facts: Record<string, unknown> | null; created_at?: string | null }): ObsRow {
   const f = r.facts ?? {}
   const b = (k: string) => f[k] === true
   return {
@@ -229,6 +250,11 @@ export function toObsRow(r: { cuisine: string | null; city: string | null; menti
     mentionedAny: !!r.mentioned_any,
     mentionFrequency: r.mention_frequency != null ? Number(r.mention_frequency) : null,
     visibilityScore: r.visibility_score != null ? Number(r.visibility_score) : null,
+    createdAt: r.created_at ?? null,
+    perModel: {
+      openai: b('mentioned_openai'), anthropic: b('mentioned_anthropic'),
+      gemini: b('mentioned_gemini'), perplexity: b('mentioned_perplexity'),
+    },
     facts: {
       restaurant_schema: b('restaurant_schema'),
       html_menu: b('html_menu'),
@@ -418,7 +444,7 @@ export async function loadObservations(): Promise<ObsRow[]> {
   const { supabaseAdmin } = await import('@/lib/supabase/client')
   const { data } = await supabaseAdmin
     .from('observations')
-    .select('cuisine, city, mentioned_any, mention_frequency, visibility_score, facts')
+    .select('cuisine, city, mentioned_any, mention_frequency, visibility_score, facts, created_at')
     .limit(5000)
   return (data ?? []).map(toObsRow)
 }

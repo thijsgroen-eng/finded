@@ -423,6 +423,28 @@ managed workflow:
 Editor (`components/admin/prompt-editor.tsx`) updated with draft badges, a
 publish/discard bar, and a history+diff panel.
 
-Still open in Phase 3: **#13** (metrics-module convergence — needs
-characterization tests first to stay behaviour-safe; DB types; ESLint). Recommend
-a dedicated pass.
+**#13 Engineering hygiene.** No migration.
+- **Metrics convergence:** `metrics.ts` (read-time) and `metrics-v2.ts`
+  (audit-time) no longer duplicate the per-model breakdown, sentiment breakdown
+  and position-score loops — both now call shared primitives in
+  `metrics-core.ts` (`computeModelBreakdown`, `computeSentimentBreakdown`,
+  `weightedPositionScore`). Guarded behaviour-safe by **new characterization
+  tests** for `computeMetrics` (`tests/metrics.test.ts`, baselined against the
+  pre-refactor output) plus the existing golden tests for the v2 chain.
+- **DB types:** `lib/db-types.ts` documents/types the JSONB payloads
+  (`ParsedResponseJson`, `PromptVarsJson`, algo-versions/score-breakdown/
+  reliability) and the most-handled rows (audit/restaurant/model_run), to be
+  adopted incrementally in place of `any`. Types-only; zero runtime change.
+- **ESLint:** turned back on with a pragmatic, **build-safe** flat config — a
+  small set of high-signal correctness rules (dupe keys, unsafe negation,
+  constant binary expr, self-compare, unreachable, fallthrough, isNaN,
+  hooks rules) all at `warn`, so `npm run lint` surfaces real bugs but
+  `next build` never fails on style. Style rules (unused vars etc.) stay off by
+  design.
+- Business-logic-out-of-routes was delivered by **#8** (recommendation engine).
+
+Phase 3 complete (#8, #7, #13). Optional remainders flagged but not done:
+splitting the monolithic PDF document and migrating the deprecated Gemini SDK —
+both larger and better as their own change.
+
+Phases 4–5 (observation expansion #11 + monitoring #12; security #9) unchanged.

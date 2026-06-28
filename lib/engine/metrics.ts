@@ -1,5 +1,5 @@
 import { ModelBreakdown, ModelName, VisibilityMetrics } from '@/types/database'
-import { positionWeight, gradedMentionFrequency } from './metrics-core'
+import { weightedPositionScore, gradedMentionFrequency, computeModelBreakdown, computeSentimentBreakdown } from './metrics-core'
 
 // NOTE: as of the N-sampling change, a `mentions` row's `mentioned` boolean is a
 // MAJORITY threshold over sampled runs (>= 0.5); the graded value is
@@ -53,48 +53,17 @@ export function computeMetrics(mentions: MentionRow[]): ComputedMetrics {
   // Mention frequency — graded, shared with metrics-v2.ts (see metrics-core.ts).
   const mention_frequency = gradedMentionFrequency(mentions)
 
-  // Position score — weighted average over all mentioned rows
-  const positionScores = allMentions
-    .filter((m) => m.position !== null)
-    .map((m) => positionWeight(m.position!))
+  // Position score — weighted average over all mentioned, ranked rows.
+  const position_score = weightedPositionScore(
+    allMentions.filter((m) => m.position !== null).map((m) => m.position!),
+  )
 
-  const position_score =
-    positionScores.length > 0
-      ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
-      : 0
+  // Model consensus — distinct models that mentioned at least once.
+  const model_consensus = new Set(allMentions.map((m) => m.model)).size
 
-  // Model consensus — distinct models that mentioned at least once
-  const mentioningModels = new Set(allMentions.map((m) => m.model))
-  const model_consensus = mentioningModels.size
-
-  // Per-model breakdown
-  const models: ModelName[] = ['openai', 'anthropic', 'gemini', 'perplexity']
-  const model_breakdown: ModelBreakdown[] = models.map((model) => {
-    const modelRows = mentions.filter((m) => m.model === model)
-    const modelMentions = modelRows.filter((m) => m.mentioned)
-    const positions = modelMentions
-      .filter((m) => m.position !== null)
-      .map((m) => m.position!)
-
-    return {
-      model,
-      mentions: modelMentions.length,
-      total_prompts: new Set(modelRows.map((m) => m.prompt_id)).size,
-      frequency:
-        modelRows.length > 0 ? Math.min(1, modelMentions.length / new Set(modelRows.map((m) => m.prompt_id)).size) : 0,
-      avg_position:
-        positions.length > 0
-          ? positions.reduce((a, b) => a + b, 0) / positions.length
-          : null,
-    }
-  })
-
-  // Sentiment breakdown
-  const sentiment_breakdown = {
-    positive: allMentions.filter((m) => m.sentiment === 'positive').length,
-    neutral:  allMentions.filter((m) => m.sentiment === 'neutral').length,
-    negative: allMentions.filter((m) => m.sentiment === 'negative').length,
-  }
+  // Per-model + sentiment breakdowns — shared primitives (metrics-core.ts).
+  const model_breakdown = computeModelBreakdown(mentions) as ModelBreakdown[]
+  const sentiment_breakdown = computeSentimentBreakdown(allMentions)
 
   return {
     mention_frequency,

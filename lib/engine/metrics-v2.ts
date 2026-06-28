@@ -1,5 +1,5 @@
 import type { ExtractedEntity } from './entity-extractor'
-import { positionWeight, gradedMentionFrequency } from './metrics-core'
+import { weightedPositionScore, gradedMentionFrequency, computeModelBreakdown, computeSentimentBreakdown } from './metrics-core'
 import { estimateOpportunity } from '@/lib/estimates'
 import { normalizeName, identityKey } from './normalize'
 
@@ -171,28 +171,13 @@ export function computeFullMetrics(
   const bestPosition = positions.length > 0 ? Math.min(...positions) : null
   const worstPosition = positions.length > 0 ? Math.max(...positions) : null
 
-  const positionScores = positions.map(p => positionWeight(p))
-  const positionScore = positionScores.length > 0
-    ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
-    : 0
+  const positionScore = weightedPositionScore(positions)
 
-  const models = ['openai', 'anthropic', 'gemini', 'perplexity']
-  const modelBreakdown = models.map(model => {
-    const modelRows = mentions.filter(m => m.model === model)
-    const modelMentions = modelRows.filter(m => m.mentioned)
-    const modelPrompts = new Set(modelRows.map(m => m.prompt_id)).size
-    const modelPositions = modelMentions
-      .filter(m => m.position !== null)
-      .map(m => m.position!)
-    return {
-      model,
-      frequency: modelPrompts > 0 ? Math.min(1, modelMentions.length / modelPrompts) : 0,
-      avg_position: modelPositions.length > 0
-        ? modelPositions.reduce((a, b) => a + b, 0) / modelPositions.length
-        : null,
-      mentions: modelMentions.length,
-    }
-  })
+  // Per-model breakdown — shared primitive (metrics-core.ts). total_prompts is
+  // dropped to keep this type's existing shape.
+  const modelBreakdown = computeModelBreakdown(mentions).map(({ model, frequency, avg_position, mentions: count }) => ({
+    model, frequency, avg_position, mentions: count,
+  }))
   const modelConsensus = modelBreakdown.filter(m => m.mentions > 0).length
 
   const visibility_score = computeVisibilityScore(
@@ -207,11 +192,7 @@ export function computeFullMetrics(
   const sentiment_score = sentimentValues.length > 0
     ? sentimentValues.reduce((a, b) => a + b, 0) / sentimentValues.length
     : 0
-  const sentiment_breakdown = {
-    positive: targetMentions.filter(m => m.sentiment === 'positive').length,
-    neutral:  targetMentions.filter(m => m.sentiment === 'neutral').length,
-    negative: targetMentions.filter(m => m.sentiment === 'negative').length,
-  }
+  const sentiment_breakdown = computeSentimentBreakdown(targetMentions)
 
   // Dedupe competitors by canonical name so "De Kas" / "Restaurant De Kas" merge
   // into one row instead of inflating the count.

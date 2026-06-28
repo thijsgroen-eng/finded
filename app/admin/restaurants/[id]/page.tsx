@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { notFound } from 'next/navigation'
-import { RestaurantProfile, type ProfileAudit } from '@/components/admin/restaurant-profile'
+import { RestaurantProfile, type ProfileAudit, type Revenue } from '@/components/admin/restaurant-profile'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,12 +40,26 @@ async function getProfile(id: string) {
     visibility_score: scoreByAudit.has(a.id) ? Math.round(scoreByAudit.get(a.id)!) : null,
   }))
 
-  return { restaurant, audits: profileAudits }
+  // Revenue breakdown (paid Stripe payments) — audit vs implementation.
+  const { data: pays } = await supabaseAdmin
+    .from('payments').select('plan, amount, status, created_at').eq('restaurant_id', id).eq('status', 'paid')
+    .order('created_at', { ascending: false })
+  const revenue: Revenue = { total: 0, audit: 0, implementation: 0, other: 0, count: (pays ?? []).length, items: [] }
+  for (const p of pays ?? []) {
+    const amt = p.amount ?? 0
+    revenue.total += amt
+    if (p.plan === 'audit') revenue.audit += amt
+    else if (p.plan === 'implementation') revenue.implementation += amt
+    else revenue.other += amt
+    revenue.items.push({ plan: p.plan ?? 'other', amount: amt, created_at: p.created_at })
+  }
+
+  return { restaurant, audits: profileAudits, revenue }
 }
 
 export default async function RestaurantProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const data = await getProfile(id)
   if (!data) notFound()
-  return <RestaurantProfile restaurant={data.restaurant} audits={data.audits} />
+  return <RestaurantProfile restaurant={data.restaurant} audits={data.audits} revenue={data.revenue} />
 }

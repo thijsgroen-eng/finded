@@ -49,6 +49,17 @@ export interface ProfileAudit {
   visibility_score: number | null
 }
 
+export interface Revenue {
+  total: number
+  audit: number
+  implementation: number
+  other: number
+  count: number
+  items: { plan: string; amount: number; created_at: string }[]
+}
+
+const eur = (cents: number) => cents ? `€${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '€0'
+
 type Tab = 'overview' | 'audits' | 'crm'
 
 function scoreColor(n: number | null) {
@@ -58,7 +69,7 @@ function scoreColor(n: number | null) {
   return 'text-red-600'
 }
 
-export function RestaurantProfile({ restaurant, audits }: { restaurant: ProfileRestaurant; audits: ProfileAudit[] }) {
+export function RestaurantProfile({ restaurant, audits, revenue }: { restaurant: ProfileRestaurant; audits: ProfileAudit[]; revenue: Revenue }) {
   const [tab, setTab] = useState<Tab>('overview')
   const [status, setStatus] = useState(restaurant.prospect_status)
   const [busy, setBusy] = useState(false)
@@ -211,7 +222,7 @@ export function RestaurantProfile({ restaurant, audits }: { restaurant: ProfileR
 
       {tab === 'overview' && <OverviewTab restaurant={restaurant} />}
       {tab === 'audits' && <AuditsTab audits={audits} latestAuditId={latestAuditId} />}
-      {tab === 'crm' && <CrmTab restaurant={restaurant} tier={tier} onToast={showToast} />}
+      {tab === 'crm' && <CrmTab restaurant={restaurant} tier={tier} revenue={revenue} onToast={showToast} />}
 
       {toast && (
         <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white z-50 ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
@@ -304,7 +315,7 @@ function AuditsTab({ audits, latestAuditId }: { audits: ProfileAudit[]; latestAu
   )
 }
 
-function CrmTab({ restaurant, tier, onToast }: { restaurant: ProfileRestaurant; tier: string; onToast: (m: string, t: 'success' | 'error') => void }) {
+function CrmTab({ restaurant, tier, revenue, onToast }: { restaurant: ProfileRestaurant; tier: string; revenue: Revenue; onToast: (m: string, t: 'success' | 'error') => void }) {
   const [tags, setTags] = useState((restaurant.tags ?? []).join(', '))
   const [notes, setNotes] = useState(restaurant.internal_notes ?? '')
   const [followUp, setFollowUp] = useState(restaurant.next_follow_up ?? '')
@@ -358,6 +369,41 @@ function CrmTab({ restaurant, tier, onToast }: { restaurant: ProfileRestaurant; 
         <PlanControls restaurantId={restaurant.id} previewSlug={restaurant.preview_slug}
           current={tier as 'free' | 'audit' | 'implementation'} />
       </div>
+
+      {/* Revenue breakdown */}
+      <Card className="mb-5">
+        <CardHeader><CardTitle>Revenue</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xl font-bold text-emerald-600">{eur(revenue.total)}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Total paid</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xl font-bold text-gray-900">{eur(revenue.audit)}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Audit (€49)</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xl font-bold text-gray-900">{eur(revenue.implementation)}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Implementation (€299)</div>
+            </div>
+          </div>
+          {revenue.count === 0 ? (
+            <p className="text-xs text-gray-400">No payments recorded yet.{revenue.other > 0 ? '' : ''}</p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {revenue.items.map((p, i) => (
+                <div key={i} className="flex items-center justify-between py-1.5 text-sm">
+                  <span className="text-gray-600 capitalize">{p.plan}</span>
+                  <span className="text-gray-400 text-xs">{formatDate(p.created_at)}</span>
+                  <span className="font-medium text-gray-900 tabular-nums">{eur(p.amount)}</span>
+                </div>
+              ))}
+              {revenue.other > 0 && <p className="text-xs text-gray-400 pt-2">Includes {eur(revenue.other)} from other plans.</p>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Invite the owner to log in to their dashboard */}
       <Card className="mb-5">

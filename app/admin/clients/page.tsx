@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, Spinner, EmptyState } from '@/components/ui'
-import { Users, Search, HeartPulse, BadgeEuro, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react'
+import { Users, Search, HeartPulse, BadgeEuro, AlertTriangle, ChevronUp, ChevronDown, Download } from 'lucide-react'
+import { Button } from '@/components/ui'
 
 interface Client {
   id: string; name: string; city: string | null; cuisine: string | null; email: string | null
@@ -62,6 +63,21 @@ export default function ClientsPage() {
     else { setSort(k); setDir(k === 'name' ? 'asc' : 'desc') }
   }
 
+  function exportCsv(rows: Client[]) {
+    const head = ['Name', 'Email', 'City', 'Cuisine', 'Plan', 'Onboarded', 'Signed up', 'Last active', 'Audits', 'Score', 'Revenue (EUR)', 'Health', 'Health score']
+    const esc = (v: unknown) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
+    const lines = rows.map((c) => [
+      c.name, c.email ?? '', c.city ?? '', c.cuisine ?? '', PLAN_LABEL[c.plan],
+      c.onboarded_at ? fmt(c.onboarded_at) : '', c.signed_up_at ? fmt(c.signed_up_at) : '', c.last_active_at ? fmt(c.last_active_at) : '',
+      c.audit_count, c.visibility_score ?? '', (c.revenue_cents / 100).toFixed(2), HEALTH[c.health_band].label, c.health_score,
+    ].map(esc).join(','))
+    const csv = [head.join(','), ...lines].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = 'finded-clients.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const filtered = useMemo(() => {
     const rows = (clients ?? []).filter((c) => {
       if (plan && c.plan !== plan) return false
@@ -118,6 +134,9 @@ export default function ClientsPage() {
         <select value={band} onChange={(e) => setBand(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-600">
           <option value="">All health</option><option value="at_risk">At risk</option><option value="steady">Steady</option><option value="healthy">Healthy</option>
         </select>
+        <Button variant="secondary" size="sm" onClick={() => exportCsv(filtered)} disabled={filtered.length === 0}>
+          <Download className="w-3.5 h-3.5" />Export CSV
+        </Button>
       </div>
 
       <Card>

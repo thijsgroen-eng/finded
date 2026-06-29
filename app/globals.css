@@ -25,7 +25,7 @@ body {
 
 /* Cards: soft border, light shadow, hover elevation + subtle scale */
 .card-fx { transition: transform .24s cubic-bezier(.21,.6,.35,1), box-shadow .24s ease, border-color .24s ease; will-change: transform; }
-.card-fx:hover { transform: translateY(-4px) scale(1.008); box-shadow: 0 26px 54px -30px rgba(16,40,34,0.30); border-color: #cfe9e1; }
+.card-fx:hover { transform: translateY(-4px) scale(1.008); box-shadow: 0 26px 54px -30px rgba(36,28,19,0.22); border-color: rgba(181,104,58,0.45); }
 
 /* Buttons: large, soft shadow, hover elevation, smooth */
 .btn { transition: transform .16s cubic-bezier(.21,.6,.35,1), box-shadow .2s ease, background-color .15s ease; }
@@ -86,4 +86,4 @@ body::before {
 
 @media (max-width: 720px) { .insights-grid { grid-template-columns: 1fr !important; } }
 
-::selection { background: #0B5D56; color: #fff; }
+::selection { background: #B5683A; color: #F1E8D7; }

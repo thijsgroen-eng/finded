@@ -16,15 +16,17 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-const BG = '#070711', BG_SOFT = '#13132c', CARD = 'rgba(255,255,255,0.035)', CARD2 = 'rgba(255,255,255,0.055)'
-const BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.08)'
-const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85', GREEN = '#34d399'
-const GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)'
-const TEXT_GRAD = 'linear-gradient(90deg, #5b8cff 0%, #a78bfa 100%)'
+// Warm direction — core trio: cream #F1E8D7, charcoal #241C13, copper #B5683A.
+// Everything else is a supporting tonal step on the same warm scale.
+const BG = '#F1E8D7', BG_SOFT = '#E7DAC1', CARD = 'rgba(255,255,255,0.55)', CARD2 = 'rgba(255,255,255,0.82)'
+const BORDER = 'rgba(36,28,19,0.16)', BORDER2 = 'rgba(36,28,19,0.10)'
+const INK = '#241C13', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)', GREEN = '#3f7d52'
+const GRAD = 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)'
+const TEXT_GRAD = 'linear-gradient(90deg, #B5683A 0%, #8A4A28 100%)'
 const FONT = 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
 const PROVIDERS = [
-  { name: 'ChatGPT', color: '#19c37d' }, { name: 'Gemini', color: '#4f8cff' },
+  { name: 'ChatGPT', color: '#19c37d' }, { name: 'Gemini', color: '#D08A5A' },
   { name: 'Claude', color: '#d97757' }, { name: 'Perplexity', color: '#20b8cd' },
 ]
 
@@ -213,7 +215,7 @@ type Copy = typeof T['en']
 function Logo({ size = 30 }: { size?: number }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-      <span style={{ width: size, height: size, borderRadius: size * 0.28, background: GRAD, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 16px -6px rgba(99,102,241,0.7)' }}>
+      <span style={{ width: size, height: size, borderRadius: size * 0.28, background: GRAD, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 16px -6px rgba(181,104,58,0.7)' }}>
         <span style={{ fontSize: size * 0.56, fontWeight: 800, color: '#fff', letterSpacing: -0.5 }}>F</span>
       </span>
       <span style={{ fontSize: size * 0.62, fontWeight: 700, color: INK, letterSpacing: -0.5 }}>finded</span>
@@ -224,7 +226,7 @@ function Logo({ size = 30 }: { size?: number }) {
 function SectionTitle({ kicker, title, sub }: { kicker?: string; title: string; sub?: string }) {
   return (
     <div style={{ textAlign: 'center', marginBottom: 52, maxWidth: 720, marginLeft: 'auto', marginRight: 'auto' }}>
-      {kicker && <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 14 }}>{kicker}</div>}
+      {kicker && <div style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 14 }}>{kicker}</div>}
       <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, letterSpacing: -1.4, color: INK, lineHeight: 1.08 }}>{title}</h2>
       {sub && <p style={{ fontSize: 18, color: MUTED, marginTop: 16, lineHeight: 1.6 }}>{sub}</p>}
     </div>
@@ -241,7 +243,7 @@ function Ring({ pct, size, stroke, label, sub, animate }: { pct: number; size: n
     : { strokeDasharray: `${dash} ${c - dash}` }
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
-      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7c5cff" /><stop offset="100%" stopColor="#4f8cff" /></linearGradient></defs>
+      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#B5683A" /><stop offset="100%" stopColor="#D08A5A" /></linearGradient></defs>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round" {...arc} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       <text x="50%" y="49%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.26, fontWeight: 800, fill: '#fff' }}>{label}</text>
@@ -251,6 +253,10 @@ function Ring({ pct, size, stroke, label, sub, animate }: { pct: number; size: n
 }
 
 function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
+  // The preview is a real (dark) product screenshot framed on the warm page —
+  // its own dark surface tokens, with the copper accent applied above.
+  const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#6f6a60', GREEN = '#34d399'
+  const CARD = 'rgba(255,255,255,0.04)', BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.07)'
   const NAV_ICONS = [Home, Gauge, Bot, Users, ListChecks, Globe, TrendingUp]
   const competitors = [['1', 'La Bella Italia', 82, false], ['2', 'Casa di Roma', 75, true], ['3', 'Trattoria Milano', 68, false], ['4', 'Osteria da Vinci', 63, false], ['5', 'Il Gusto', 58, false]] as const
   const vals = [38, 52, 66, 64, 71, 75, 72]
@@ -260,14 +266,14 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
   const cardBox = { background: CARD, border: `1px solid ${BORDER2}`, borderRadius: 14, padding: 18 } as const
   const eyebrow = { fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase' as const, letterSpacing: 1 }
   return (
-    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, background: 'linear-gradient(180deg, #0e0e1d, #0a0a15)', boxShadow: '0 60px 120px -50px rgba(80,60,200,0.45), 0 0 0 1px rgba(255,255,255,0.03)', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'minmax(0, 210px) 1fr' }}>
+    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, background: 'linear-gradient(180deg, #2a2017, #181009)', boxShadow: '0 60px 120px -50px rgba(40,28,19,0.5), 0 0 0 1px rgba(255,255,255,0.03)', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'minmax(0, 210px) 1fr' }}>
       <aside style={{ borderRight: `1px solid ${BORDER2}`, padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 4, background: 'rgba(255,255,255,0.015)' }}>
         <div style={{ padding: '2px 8px 16px' }}><Logo size={24} /></div>
         {t.nav.slice(0, 7).map((label, i) => {
           const Icon = NAV_ICONS[i]; const active = i === 0
           return (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : MUTED, background: active ? 'rgba(124,92,255,0.16)' : 'transparent', border: active ? '1px solid rgba(124,92,255,0.3)' : '1px solid transparent' }}>
-              <Icon style={{ width: 15, height: 15, color: active ? '#a78bfa' : FAINT }} /> {label}
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : MUTED, background: active ? 'rgba(181,104,58,0.16)' : 'transparent', border: active ? '1px solid rgba(181,104,58,0.3)' : '1px solid transparent' }}>
+              <Icon style={{ width: 15, height: 15, color: active ? '#B5683A' : FAINT }} /> {label}
             </div>
           )
         })}
@@ -299,14 +305,14 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
             <div style={eyebrow}>{t.competitors}</div>
             <div style={{ marginTop: 10, display: 'grid', gap: 2 }}>
               {competitors.map(([rank, name, score, hot], ci) => (
-                <div key={name} className="comp-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 7, background: hot ? 'rgba(124,92,255,0.12)' : 'transparent', ['--d']: `${0.25 + ci * 0.08}s` } as CSSProperties}>
+                <div key={name} className="comp-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 7, background: hot ? 'rgba(181,104,58,0.12)' : 'transparent', ['--d']: `${0.25 + ci * 0.08}s` } as CSSProperties}>
                   <span style={{ fontSize: 11, color: FAINT, width: 10 }}>{rank}</span>
                   <span style={{ fontSize: 12.5, color: INK, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: hot ? '#a78bfa' : MUTED }}>{score}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: hot ? '#B5683A' : MUTED }}>{score}</span>
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: 11.5, color: '#a78bfa', fontWeight: 600, marginTop: 10 }}>{t.viewComparison}</div>
+            <div style={{ fontSize: 11.5, color: '#B5683A', fontWeight: 600, marginTop: 10 }}>{t.viewComparison}</div>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14 }}>
@@ -314,23 +320,23 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
             <div style={eyebrow}>{t.overTime}</div>
             <svg viewBox="0 0 520 175" style={{ width: '100%', height: 'auto', marginTop: 8 }}>
               <defs>
-                <linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(124,92,255,0.35)" /><stop offset="100%" stopColor="rgba(124,92,255,0)" /></linearGradient>
-                <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#5b8cff" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient>
+                <linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(181,104,58,0.35)" /><stop offset="100%" stopColor="rgba(181,104,58,0)" /></linearGradient>
+                <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#D08A5A" /><stop offset="100%" stopColor="#B5683A" /></linearGradient>
               </defs>
               {[0, 25, 50, 75, 100].map((g) => (<g key={g}><line x1={44} y1={Y(g)} x2={510} y2={Y(g)} stroke="rgba(255,255,255,0.06)" strokeWidth={1} /><text x={32} y={Y(g) + 3} textAnchor="end" style={{ fontFamily: FONT, fontSize: 9, fill: FAINT }}>{g}</text></g>))}
               <polygon points={area} fill="url(#area)" />
               <polyline points={line} fill="none" stroke="url(#stroke)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-              {vals.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r={2.6} fill="#a78bfa" />)}
-              <circle cx={X(6)} cy={Y(72)} r={4.5} fill="#fff" stroke="#a78bfa" strokeWidth={2} />
-              <g transform={`translate(${X(6) - 14}, ${Y(72) - 24})`}><rect width={30} height={17} rx={4} fill="#7c5cff" /><text x={15} y={12} textAnchor="middle" style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, fill: '#fff' }}>72</text></g>
+              {vals.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r={2.6} fill="#B5683A" />)}
+              <circle cx={X(6)} cy={Y(72)} r={4.5} fill="#fff" stroke="#B5683A" strokeWidth={2} />
+              <g transform={`translate(${X(6) - 14}, ${Y(72) - 24})`}><rect width={30} height={17} rx={4} fill="#B5683A" /><text x={15} y={12} textAnchor="middle" style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, fill: '#fff' }}>72</text></g>
               {months.map((m, i) => <text key={m} x={X(i)} y={170} textAnchor="middle" style={{ fontFamily: FONT, fontSize: 9, fill: FAINT }}>{m}</text>)}
             </svg>
           </div>
           <div style={{ display: 'grid', gap: 14 }}>
-            <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(124,92,255,0.16), rgba(79,124,255,0.06))', border: '1px solid rgba(124,92,255,0.25)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Sparkles style={{ width: 13, height: 13 }} /> {t.insight}</div>
+            <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(181,104,58,0.16), rgba(208,138,90,0.06))', border: '1px solid rgba(181,104,58,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#B5683A' }}><Sparkles style={{ width: 13, height: 13 }} /> {t.insight}</div>
               <p style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, margin: '10px 0 0' }}>{t.insightBody}</p>
-              <div style={{ fontSize: 11.5, color: '#a78bfa', fontWeight: 600, marginTop: 10 }}>{t.allInsights}</div>
+              <div style={{ fontSize: 11.5, color: '#B5683A', fontWeight: 600, marginTop: 10 }}>{t.allInsights}</div>
             </div>
             <div style={cardBox}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={eyebrow}>{t.reliability}</div><span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>{t.high}</span></div>
@@ -345,7 +351,10 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
 }
 
 function EvidenceExample({ t }: { t: typeof T['en']['evidence'] }) {
-  const provColor = PROVIDERS.find((p) => p.name === t.model)?.color ?? '#a78bfa'
+  // A real AI answer shown as a dark chat surface framed on the warm page.
+  const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#6f6a60'
+  const BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.07)'
+  const provColor = PROVIDERS.find((p) => p.name === t.model)?.color ?? '#B5683A'
   // Highlight the named rivals inside the AI answer (deterministic string split).
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(`(${t.rivals.map(esc).join('|')})`, 'g')
@@ -354,9 +363,9 @@ function EvidenceExample({ t }: { t: typeof T['en']['evidence'] }) {
   const iconWrap = { width: 32, height: 32, borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } as const
   const chip = { display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, padding: '6px 11px', borderRadius: 8 } as const
   return (
-    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, background: 'linear-gradient(180deg, #0e0e1d, #0a0a15)', boxShadow: '0 40px 100px -50px rgba(80,60,200,0.4)', overflow: 'hidden' }}>
+    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, background: 'linear-gradient(180deg, #2a2017, #181009)', boxShadow: '0 40px 100px -50px rgba(40,28,19,0.45)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px', borderBottom: `1px solid ${BORDER2}`, background: 'rgba(255,255,255,0.015)' }}>
-        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase', color: '#a78bfa', background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.28)', padding: '4px 9px', borderRadius: 6 }}>{t.badge}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase', color: '#B5683A', background: 'rgba(181,104,58,0.12)', border: '1px solid rgba(181,104,58,0.28)', padding: '4px 9px', borderRadius: 6 }}>{t.badge}</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#cfd2e0' }}>
           <span style={{ width: 14, height: 14, borderRadius: '50%', background: provColor, boxShadow: `0 0 12px -2px ${provColor}` }} />{t.model}
         </span>
@@ -377,14 +386,14 @@ function EvidenceExample({ t }: { t: typeof T['en']['evidence'] }) {
             <div style={{ fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{t.answerLabel}</div>
             <p style={{ fontSize: 15, color: '#cfd2e0', lineHeight: 1.7, margin: 0 }}>
               {parts.map((p, i) => rivalSet.has(p)
-                ? <strong key={i} style={{ color: '#fff', fontWeight: 700, background: 'rgba(124,92,255,0.18)', borderBottom: '1.5px solid rgba(167,139,250,0.7)', borderRadius: 3, padding: '0 3px' }}>{p}</strong>
+                ? <strong key={i} style={{ color: '#fff', fontWeight: 700, background: 'rgba(181,104,58,0.18)', borderBottom: '1.5px solid rgba(181,104,58,0.7)', borderRadius: 3, padding: '0 3px' }}>{p}</strong>
                 : <span key={i}>{p}</span>)}
             </p>
           </div>
         </div>
         {/* Verdict chips */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', borderTop: `1px solid ${BORDER2}`, paddingTop: 16 }}>
-          <span style={{ ...chip, color: '#a78bfa', background: 'rgba(124,92,255,0.1)', border: '1px solid rgba(124,92,255,0.28)' }}><CircleCheck style={{ width: 14, height: 14 }} /> {t.namedNote}</span>
+          <span style={{ ...chip, color: '#B5683A', background: 'rgba(181,104,58,0.1)', border: '1px solid rgba(181,104,58,0.28)' }}><CircleCheck style={{ width: 14, height: 14 }} /> {t.namedNote}</span>
           <span style={{ ...chip, color: '#fda4af', background: 'rgba(251,113,133,0.1)', border: '1px solid rgba(251,113,133,0.32)' }}>
             <X style={{ width: 14, height: 14 }} /> <strong style={{ color: '#fff', fontWeight: 700 }}>{t.absentName}</strong> — {t.absentNote}
           </span>
@@ -416,7 +425,7 @@ export default async function LandingPage() {
   return (
     <div id="top" style={{ fontFamily: FONT, background: BG, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', color: INK, position: 'relative', zIndex: 1 }}>
       {/* Nav */}
-      <nav style={{ background: 'rgba(7,7,17,0.72)', backdropFilter: 'blur(14px)', borderBottom: `1px solid ${BORDER2}`, padding: '0 24px', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav style={{ background: 'rgba(241,232,215,0.82)', backdropFilter: 'blur(14px)', borderBottom: `1px solid ${BORDER2}`, padding: '0 24px', height: 66, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <a href="/" style={{ textDecoration: 'none' }}><Logo /></a>
         <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
           <a href="#measure" style={navLink}>{t.nav.product}</a>
@@ -426,23 +435,23 @@ export default async function LandingPage() {
           <a href={`mailto:${contactEmail}?subject=Finded for Agencies`} style={navLink}>{t.nav.agencies}</a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <LangToggle current={lang} tone="dark" />
+          <LangToggle current={lang} tone="light" />
           <a href="/portal/login" style={{ ...navLink, fontWeight: 600 }}>{t.nav.login}</a>
-          <a href="#check" style={{ fontSize: 13.5, fontWeight: 700, background: GRAD, color: '#fff', padding: '10px 18px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 10px 24px -10px rgba(99,102,241,0.7)' }}>{t.nav.cta}</a>
+          <a href="#check" style={{ fontSize: 13.5, fontWeight: 700, background: GRAD, color: '#fff', padding: '10px 18px', borderRadius: 10, textDecoration: 'none', boxShadow: '0 10px 24px -10px rgba(181,104,58,0.7)' }}>{t.nav.cta}</a>
         </div>
       </nav>
 
       {/* Hero */}
       <section style={{ position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${BORDER2}` }}>
-        <div style={{ position: 'absolute', top: -260, left: '50%', transform: 'translateX(-50%)', width: 1100, height: 620, background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.28), rgba(124,92,255,0.10) 40%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -260, left: '50%', transform: 'translateX(-50%)', width: 1100, height: 620, background: 'radial-gradient(ellipse at center, rgba(181,104,58,0.28), rgba(181,104,58,0.10) 40%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 1240, margin: '0 auto', padding: 'clamp(48px,6vw,84px) 24px 0', position: 'relative', textAlign: 'center' }}>
-          <div className="rise" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: MUTED, fontSize: 11.5, fontWeight: 700, padding: '7px 16px', borderRadius: 20, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 30 }}>{t.eyebrow}</div>
+          <div className="rise" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: CARD, border: `1px solid ${BORDER}`, color: MUTED, fontSize: 11.5, fontWeight: 700, padding: '7px 16px', borderRadius: 20, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 30 }}>{t.eyebrow}</div>
           <h1 className="rise" style={{ fontSize: 'clamp(40px, 7vw, 78px)', fontWeight: 800, lineHeight: 1.0, letterSpacing: -2.6, marginBottom: 26 }}>
             {t.heroLine}<br /><span style={{ background: TEXT_GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>{t.heroGrad}</span>
           </h1>
           <p className="rise rise-2" style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: MUTED, lineHeight: 1.6, margin: '0 auto 36px', maxWidth: 660 }}>{t.heroSub}</p>
           <div className="rise rise-2" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <a href="#check" className="btn" style={{ display: 'flex', alignItems: 'center', gap: 11, background: GRAD, color: '#fff', padding: '14px 26px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 16px 36px -14px rgba(99,102,241,0.8)' }}>
+            <a href="#check" className="btn" style={{ display: 'flex', alignItems: 'center', gap: 11, background: GRAD, color: '#fff', padding: '14px 26px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 16px 36px -14px rgba(181,104,58,0.8)' }}>
               <Sparkles style={{ width: 18, height: 18 }} />
               <span style={{ textAlign: 'left' }}><span style={{ display: 'block', fontSize: 15.5, fontWeight: 700 }}>{t.cta1}</span><span style={{ display: 'block', fontSize: 11.5, opacity: 0.85 }}>{t.cta1sub}</span></span>
             </a>
@@ -456,7 +465,7 @@ export default async function LandingPage() {
               const Icon = TRUST_ICONS[i]
               return (
                 <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 11, textAlign: 'left' }}>
-                  <span style={{ display: 'inline-flex', width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, alignItems: 'center', justifyContent: 'center' }}><Icon style={{ width: 17, height: 17, color: '#a78bfa' }} /></span>
+                  <span style={{ display: 'inline-flex', width: 36, height: 36, borderRadius: 10, background: CARD, border: `1px solid ${BORDER}`, alignItems: 'center', justifyContent: 'center' }}><Icon style={{ width: 17, height: 17, color: '#B5683A' }} /></span>
                   <span><span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: INK }}>{title}</span><span style={{ display: 'block', fontSize: 12, color: FAINT }}>{desc}</span></span>
                 </div>
               )
@@ -465,8 +474,8 @@ export default async function LandingPage() {
           <Reveal className="reveal-shot" style={{ marginTop: 44 }}>
             <div id="sample" style={{ scrollMarginTop: 80, position: 'relative' }}>
               {/* indigo glow to lift the showpiece off the hero */}
-              <div aria-hidden style={{ position: 'absolute', inset: '-12% -8% -6%', background: 'radial-gradient(ellipse at 50% 30%, rgba(99,102,241,0.30), transparent 66%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'relative', background: 'linear-gradient(180deg, #1b1b3a, #101024)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 28, padding: 'clamp(12px, 1.8vw, 20px)', boxShadow: '0 60px 130px -50px rgba(70,55,180,0.7), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+              <div aria-hidden style={{ position: 'absolute', inset: '-12% -8% -6%', background: 'radial-gradient(ellipse at 50% 30%, rgba(181,104,58,0.30), transparent 66%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', background: 'linear-gradient(180deg, #2e2419, #1c150d)', border: '1px solid rgba(36,28,19,0.45)', borderRadius: 28, padding: 'clamp(12px, 1.8vw, 20px)', boxShadow: '0 60px 130px -50px rgba(120,70,40,0.55), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
                 <DashboardMock t={t.mock} />
               </div>
               <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{t.sampleCaption}</p>
@@ -476,7 +485,7 @@ export default async function LandingPage() {
             <div style={{ fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1.6, marginBottom: 18 }}>{t.providersEyebrow}</div>
             <div style={{ display: 'flex', gap: 'clamp(20px,4vw,46px)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center', paddingBottom: 8 }}>
               {PROVIDERS.map((p) => (
-                <span key={p.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 700, color: '#cfd2e0' }}>
+                <span key={p.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 16, fontWeight: 700, color: 'rgba(36,28,19,0.74)' }}>
                   <span style={{ width: 22, height: 22, borderRadius: '50%', background: p.color, display: 'inline-block', boxShadow: `0 0 16px -2px ${p.color}` }} />{p.name}
                 </span>
               ))}
@@ -488,9 +497,9 @@ export default async function LandingPage() {
       {/* Evidence — one representative prompt + AI answer, rival-marked */}
       <section id="evidence" style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
         <div style={{ maxWidth: 960, margin: '0 auto', padding: '64px 24px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 12 }}>{t.evidence.eyebrow}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 12 }}>{t.evidence.eyebrow}</div>
           <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.12, marginBottom: 14, maxWidth: '20ch' }}>{t.evidence.title}</h2>
-          <p style={{ fontSize: 17, color: '#cfd2e0', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 28 }}>{t.evidence.sub}</p>
+          <p style={{ fontSize: 17, color: 'rgba(36,28,19,0.74)', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 28 }}>{t.evidence.sub}</p>
           <EvidenceExample t={t.evidence} />
           <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, lineHeight: 1.6, maxWidth: '62ch' }}>{t.evidence.caption}</p>
         </div>
@@ -499,14 +508,14 @@ export default async function LandingPage() {
       {/* Insights — rigor-led: anchor metric + supporting counts */}
       <section style={{ background: BG, borderBottom: `1px solid ${BORDER2}` }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '60px 24px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 10 }}>{t.insightsEyebrow}</div>
-          <p style={{ fontSize: 14.5, color: '#cfd2e0', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 30 }}>{t.insightsFrame}</p>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 10 }}>{t.insightsEyebrow}</div>
+          <p style={{ fontSize: 14.5, color: 'rgba(36,28,19,0.74)', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 30 }}>{t.insightsFrame}</p>
           {haveData ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) minmax(0, 1.8fr)', gap: 18, alignItems: 'stretch' }} className="insights-grid">
               {/* Anchor: AI searches performed (the strongest figure) */}
-              <div style={{ background: 'linear-gradient(160deg, rgba(124,92,255,0.16), rgba(79,124,255,0.05))', border: '1px solid rgba(124,92,255,0.3)', borderRadius: 18, padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <span style={{ display: 'inline-flex', width: 40, height: 40, borderRadius: 11, background: 'rgba(124,92,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}><Search style={{ width: 20, height: 20, color: '#a78bfa' }} /></span>
-                <div style={{ fontSize: 'clamp(46px, 6vw, 64px)', fontWeight: 800, letterSpacing: -2.5, color: '#fff', lineHeight: 1 }}><CountUp value={statValues[1]} /></div>
+              <div style={{ background: 'linear-gradient(160deg, rgba(181,104,58,0.16), rgba(208,138,90,0.05))', border: '1px solid rgba(181,104,58,0.3)', borderRadius: 18, padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ display: 'inline-flex', width: 40, height: 40, borderRadius: 11, background: 'rgba(181,104,58,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}><Search style={{ width: 20, height: 20, color: '#B5683A' }} /></span>
+                <div style={{ fontSize: 'clamp(46px, 6vw, 64px)', fontWeight: 800, letterSpacing: -2.5, color: INK, lineHeight: 1 }}><CountUp value={statValues[1]} /></div>
                 <div style={{ fontSize: 14, color: MUTED, marginTop: 8, fontWeight: 600 }}>{t.insightsAnchorLabel}</div>
               </div>
               {/* Supporting counts, demoted */}
@@ -515,7 +524,7 @@ export default async function LandingPage() {
                   const Icon = STAT_ICONS[i]
                   return (
                     <div key={i} className="card-fx" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 16px' }}>
-                      <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 8, background: 'rgba(124,92,255,0.13)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}><Icon style={{ width: 15, height: 15, color: '#a78bfa' }} /></span>
+                      <span style={{ display: 'inline-flex', width: 30, height: 30, borderRadius: 8, background: 'rgba(181,104,58,0.13)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}><Icon style={{ width: 15, height: 15, color: '#B5683A' }} /></span>
                       <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.8, color: INK }}><CountUp value={statValues[i]} /></div>
                       <div style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{t.statLabels[i]}</div>
                     </div>
@@ -524,7 +533,7 @@ export default async function LandingPage() {
               </div>
             </div>
           ) : (
-            <p style={{ fontSize: 15.5, color: '#cfd2e0', maxWidth: '62ch', lineHeight: 1.6 }}>{t.insightsEmpty}</p>
+            <p style={{ fontSize: 15.5, color: 'rgba(36,28,19,0.74)', maxWidth: '62ch', lineHeight: 1.6 }}>{t.insightsEmpty}</p>
           )}
         </div>
       </section>
@@ -535,7 +544,7 @@ export default async function LandingPage() {
           <div style={{ position: 'relative', overflow: 'hidden', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 22, padding: 'clamp(28px, 4vw, 46px)', maxWidth: 880 }}>
             <span style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: GRAD }} />
             <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 16, lineHeight: 1.12, maxWidth: '18ch' }}>{t.whyTitle}</h2>
-            <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.65, maxWidth: '60ch', margin: 0 }}>{t.whyBody}</p>
+            <p style={{ fontSize: 17.5, color: 'rgba(36,28,19,0.74)', lineHeight: 1.65, maxWidth: '60ch', margin: 0 }}>{t.whyBody}</p>
           </div>
         </div>
       </section>
@@ -549,10 +558,10 @@ export default async function LandingPage() {
             const Icon = MEASURE_ICONS[i]
             return (
               <div key={title} className="card-fx" style={card}>
-                <span style={{ display: 'inline-flex', width: 42, height: 42, borderRadius: 12, background: 'rgba(124,92,255,0.14)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}><Icon style={{ width: 20, height: 20, color: '#a78bfa' }} /></span>
+                <span style={{ display: 'inline-flex', width: 42, height: 42, borderRadius: 12, background: 'rgba(181,104,58,0.14)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}><Icon style={{ width: 20, height: 20, color: '#B5683A' }} /></span>
                 <h3 style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 8 }}>{title}</h3>
                 <p style={{ fontSize: 14.5, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>{d}</p>
-                <div style={{ fontSize: 12.5, color: '#a78bfa', background: 'rgba(124,92,255,0.08)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 10px' }}>{ex}</div>
+                <div style={{ fontSize: 12.5, color: '#B5683A', background: 'rgba(181,104,58,0.08)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 10px' }}>{ex}</div>
               </div>
             )
           })}
@@ -579,17 +588,17 @@ export default async function LandingPage() {
 
       {/* Data */}
       <section id="data" style={{ background: BG, borderBottom: `1px solid ${BORDER2}`, position: 'relative', overflow: 'hidden', scrollMarginTop: 60 }}>
-        <div style={{ position: 'absolute', top: -120, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,92,255,0.22), transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -120, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(181,104,58,0.22), transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 940, margin: '0 auto', padding: '76px 24px', position: 'relative' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 18 }}>{t.dataEyebrow}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 18 }}>{t.dataEyebrow}</div>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.3, lineHeight: 1.1, marginBottom: 20, maxWidth: '20ch' }}>{t.dataTitle}</h2>
-          <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.7, marginBottom: 32, maxWidth: '62ch' }}>{t.dataBody}</p>
+          <p style={{ fontSize: 17.5, color: 'rgba(36,28,19,0.74)', lineHeight: 1.7, marginBottom: 32, maxWidth: '62ch' }}>{t.dataBody}</p>
           <div style={{ fontSize: 12, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>{t.dataLearn}</div>
           {haveBench ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16 }}>
               {[`${100 - rate('restaurant_schema')}%`, `${100 - rate('html_menu')}%`, `${100 - rate('faq_present')}%`, `${stats!.pctMentioned != null ? Math.round(stats!.pctMentioned * 100) : 0}%`].map((v, i) => (
                 <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20 }}>
-                  <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1, color: '#fff' }}>{v}</div>
+                  <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1, color: INK }}>{v}</div>
                   <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{t.learn[i]}</div>
                 </div>
               ))}
@@ -609,18 +618,18 @@ export default async function LandingPage() {
             {t.tiers.map((p, idx) => {
               const href = idx === 0 ? '#check' : `mailto:${contactEmail}?subject=${encodeURIComponent(p.name)}`
               return (
-                <div key={p.name} className="card-fx" style={{ background: p.highlight ? 'linear-gradient(180deg, rgba(124,92,255,0.14), rgba(79,124,255,0.05))' : CARD, color: INK, border: `1px solid ${p.highlight ? 'rgba(124,92,255,0.4)' : BORDER}`, borderRadius: 20, padding: 26, display: 'flex', flexDirection: 'column', boxShadow: p.highlight ? '0 30px 70px -40px rgba(124,92,255,0.6)' : 'none' }}>
+                <div key={p.name} className="card-fx" style={{ background: p.highlight ? 'linear-gradient(180deg, rgba(181,104,58,0.14), rgba(208,138,90,0.05))' : CARD, color: INK, border: `1px solid ${p.highlight ? 'rgba(181,104,58,0.4)' : BORDER}`, borderRadius: 20, padding: 26, display: 'flex', flexDirection: 'column', boxShadow: p.highlight ? '0 30px 70px -40px rgba(181,104,58,0.6)' : 'none' }}>
                   {p.badge && <span style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase', color: '#fff', background: GRAD, padding: '4px 9px', borderRadius: 6, marginBottom: 14 }}>{p.badge}</span>}
                   <div style={{ fontSize: 16, fontWeight: 800 }}>{p.name}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '10px 0 6px' }}>
                     <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1.5 }}>{p.price}</span>
                     {p.cadence && <span style={{ fontSize: 13, color: MUTED }}>{p.cadence}</span>}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa', marginBottom: 18 }}>{p.q}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#B5683A', marginBottom: 18 }}>{p.q}</div>
                   <div style={{ display: 'grid', gap: 10, marginBottom: 22 }}>
-                    {p.features.map((f) => (<div key={f} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}><Check style={{ width: 15, height: 15, color: '#a78bfa', flexShrink: 0, marginTop: 2 }} /><span style={{ fontSize: 13.5, color: '#d7dae6', lineHeight: 1.5 }}>{f}</span></div>))}
+                    {p.features.map((f) => (<div key={f} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}><Check style={{ width: 15, height: 15, color: '#B5683A', flexShrink: 0, marginTop: 2 }} /><span style={{ fontSize: 13.5, color: 'rgba(36,28,19,0.78)', lineHeight: 1.5 }}>{f}</span></div>))}
                   </div>
-                  <a href={href} className="btn" style={{ marginTop: 'auto', textAlign: 'center', textDecoration: 'none', fontWeight: 700, fontSize: 14.5, padding: '14px 16px', borderRadius: 11, background: p.highlight ? GRAD : CARD2, color: '#fff', border: p.highlight ? 'none' : `1px solid ${BORDER}`, boxShadow: p.highlight ? '0 14px 30px -12px rgba(99,102,241,0.7)' : 'none' }}>{p.cta}</a>
+                  <a href={href} className="btn" style={{ marginTop: 'auto', textAlign: 'center', textDecoration: 'none', fontWeight: 700, fontSize: 14.5, padding: '14px 16px', borderRadius: 11, background: p.highlight ? GRAD : CARD2, color: p.highlight ? '#fff' : INK, border: p.highlight ? 'none' : `1px solid ${BORDER}`, boxShadow: p.highlight ? '0 14px 30px -12px rgba(181,104,58,0.7)' : 'none' }}>{p.cta}</a>
                   <p style={{ fontSize: 12, color: FAINT, marginTop: 12, textAlign: 'center', lineHeight: 1.45 }}>{p.note}</p>
                 </div>
               )
@@ -633,15 +642,15 @@ export default async function LandingPage() {
       <section style={{ background: BG, borderBottom: `1px solid ${BORDER2}` }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '92px 24px', display: 'flex', gap: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ flexShrink: 0 }}>
-            <div style={{ width: 150, height: 150, borderRadius: 24, background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px -28px rgba(124,92,255,0.7)' }}><span style={{ fontSize: 52, fontWeight: 800, color: '#fff' }}>{founder.charAt(0)}</span></div>
+            <div style={{ width: 150, height: 150, borderRadius: 24, background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px -28px rgba(181,104,58,0.7)' }}><span style={{ fontSize: 52, fontWeight: 800, color: '#fff' }}>{founder.charAt(0)}</span></div>
           </div>
           <div style={{ flex: 1, minWidth: 280 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14 }}>{t.founderKicker}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14 }}>{t.founderKicker}</div>
             <p style={{ fontSize: 'clamp(20px, 2.4vw, 26px)', color: INK, lineHeight: 1.35, marginBottom: 14, fontWeight: 700, letterSpacing: -0.6 }}>{t.founderQuote(founder)}</p>
             <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, marginBottom: 18 }}>{t.founderBody}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{founder}</span><span style={{ color: FAINT }}>·</span>
-              <a href={`mailto:${contactEmail}`} style={{ fontSize: 14, color: '#a78bfa', fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
+              <a href={`mailto:${contactEmail}`} style={{ fontSize: 14, color: '#B5683A', fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
             </div>
           </div>
         </div>
@@ -649,11 +658,11 @@ export default async function LandingPage() {
 
       {/* Lead capture */}
       <section id="check" style={{ background: BG_SOFT, position: 'relative', overflow: 'hidden', scrollMarginTop: 60, borderBottom: `1px solid ${BORDER2}` }}>
-        <div style={{ position: 'absolute', top: -160, left: '50%', transform: 'translateX(-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.25), transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -160, left: '50%', transform: 'translateX(-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse at center, rgba(181,104,58,0.25), transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '96px 24px', textAlign: 'center', position: 'relative' }}>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 14, color: '#fff' }}>{t.leadTitle}</h2>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 14, color: INK }}>{t.leadTitle}</h2>
           <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.6, marginBottom: 30 }}>{t.leadSub}</p>
-          <div style={{ background: '#fff', borderRadius: 18, padding: 'clamp(20px, 3vw, 28px)', textAlign: 'left', boxShadow: '0 40px 80px -30px rgba(0,0,0,0.7)' }}><LeadForm /></div>
+          <div style={{ background: '#fff', borderRadius: 18, padding: 'clamp(20px, 3vw, 28px)', textAlign: 'left', boxShadow: '0 30px 70px -30px rgba(36,28,19,0.30)', border: `1px solid ${BORDER}` }}><LeadForm /></div>
         </div>
       </section>
 
@@ -681,13 +690,13 @@ export default async function LandingPage() {
           </div>
           <div style={{ fontSize: 13, lineHeight: 2 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>{t.footerProduct}</div>
-            {['#check', '#measure', '#how', '#pricing'].map((href, i) => <a key={href} href={href} style={{ color: '#cfd2e0', textDecoration: 'none', display: 'block' }}>{t.footerLinks[i]}</a>)}
+            {['#check', '#measure', '#how', '#pricing'].map((href, i) => <a key={href} href={href} style={{ color: 'rgba(36,28,19,0.74)', textDecoration: 'none', display: 'block' }}>{t.footerLinks[i]}</a>)}
           </div>
           <div style={{ fontSize: 13, lineHeight: 2 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: FAINT, marginBottom: 6 }}>{t.footerCompany}</div>
-            <a href={`mailto:${contactEmail}`} style={{ color: '#cfd2e0', textDecoration: 'none', display: 'block' }}>{contactEmail}</a>
-            <a href="/privacy" style={{ color: '#cfd2e0', textDecoration: 'none', display: 'block' }}>{t.footerPrivacy}</a>
-            <a href="/terms" style={{ color: '#cfd2e0', textDecoration: 'none', display: 'block' }}>{t.footerTerms}</a>
+            <a href={`mailto:${contactEmail}`} style={{ color: 'rgba(36,28,19,0.74)', textDecoration: 'none', display: 'block' }}>{contactEmail}</a>
+            <a href="/privacy" style={{ color: 'rgba(36,28,19,0.74)', textDecoration: 'none', display: 'block' }}>{t.footerPrivacy}</a>
+            <a href="/terms" style={{ color: 'rgba(36,28,19,0.74)', textDecoration: 'none', display: 'block' }}>{t.footerTerms}</a>
             <div style={{ color: MUTED, marginTop: 6 }}>{t.footerBuilt}</div>
           </div>
         </div>

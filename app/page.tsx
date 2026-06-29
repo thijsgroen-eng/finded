@@ -6,6 +6,7 @@ import { LangToggle } from '@/components/lang-toggle'
 import { getSettings } from '@/lib/settings'
 import { getViewerLang } from '@/lib/i18n-viewer'
 import { platformStats } from '@/lib/observations'
+import { getPublicDiscoveries } from '@/lib/warehouse/discoveries'
 import type { Language } from '@/lib/i18n'
 import {
   Building2, Search, ClipboardCheck, MapPin, UtensilsCrossed, Cpu,
@@ -92,6 +93,11 @@ const T = {
     learn: ['are missing Restaurant schema', 'don’t have a crawlable HTML menu', 'have no FAQ content', 'are recommended by AI at all'],
     dataEmpty: 'As the warehouse grows we surface the most common issues here — like how many restaurants are missing Restaurant schema, rely on PDF menus, or have no FAQ. These benchmarks become stronger with every check.',
     dataFine: "Only aggregate, anonymous statistics — never individual restaurant data. We measure how AI recommends restaurants today and help you improve; we don't promise rankings or control AI.",
+    researchHeading: 'Latest discoveries',
+    researchLabels: { menu_detected: 'an HTML menu', schema_detected: 'Restaurant schema', reservation_widget: 'a reservation widget', faq_detected: 'an FAQ page', opening_hours: 'clear opening hours', review_links: 'review signals', social_links: 'social links' } as Record<string, string>,
+    researchLine: (pct: number, label: string, up: boolean) => `Restaurants with ${label} are recommended ${pct}% ${up ? 'more' : 'less'} often`,
+    researchTrend: (pct: number, up: boolean) => `Industry-wide AI visibility is ${up ? 'rising' : 'falling'} ${pct} points per month`,
+    researchMeta: (n: number, c: number | null) => `${n.toLocaleString()} restaurants${c != null ? ` · ${c}% confidence` : ''}`,
     pricingKicker: 'Pricing', pricingTitle: 'Start free. Upgrade to continuous monitoring.',
     pricingSub: 'The free check tells you whether AI recommends you. The full audit explains why — and becomes your monitoring baseline. Implementation helps you fix it.',
     tiers: [
@@ -181,6 +187,11 @@ const T = {
     learn: ['missen een Restaurant-schema', 'hebben geen crawlbaar HTML-menu', 'hebben geen FAQ-inhoud', 'worden überhaupt door AI aanbevolen'],
     dataEmpty: 'Naarmate de warehouse groeit tonen we hier de meest voorkomende problemen — zoals hoeveel restaurants een Restaurant-schema missen, op PDF-menu’s leunen of geen FAQ hebben. Deze benchmarks worden sterker met elke check.',
     dataFine: 'Alleen geaggregeerde, anonieme statistieken — nooit individuele restaurantdata. We meten hoe AI restaurants vandaag aanbeveelt en helpen je verbeteren; we beloven geen ranglijsten en sturen AI niet aan.',
+    researchHeading: 'Laatste ontdekkingen',
+    researchLabels: { menu_detected: 'een HTML-menu', schema_detected: 'Restaurant-schema', reservation_widget: 'een reserveringswidget', faq_detected: 'een FAQ-pagina', opening_hours: 'duidelijke openingstijden', review_links: 'reviewsignalen', social_links: 'social links' } as Record<string, string>,
+    researchLine: (pct: number, label: string, up: boolean) => `Restaurants met ${label} worden ${pct}% ${up ? 'vaker' : 'minder vaak'} aanbevolen`,
+    researchTrend: (pct: number, up: boolean) => `AI-zichtbaarheid in de hele sector ${up ? 'stijgt' : 'daalt'} ${pct} punten per maand`,
+    researchMeta: (n: number, c: number | null) => `${n.toLocaleString()} restaurants${c != null ? ` · ${c}% betrouwbaarheid` : ''}`,
     pricingKicker: 'Prijzen', pricingTitle: 'Start gratis. Upgrade naar continue monitoring.',
     pricingSub: 'De gratis check vertelt je óf AI je aanbeveelt. De volledige audit legt uit waarom — en wordt je monitoring-nulmeting. Implementatie helpt je het op te lossen.',
     tiers: [
@@ -420,6 +431,7 @@ export default async function LandingPage() {
   const founder = settings.founderName
 
   const stats = await platformStats().catch(() => null)
+  const discoveries = await getPublicDiscoveries(4).catch(() => [])
   const haveData = !!stats && stats.audits > 0
   const haveBench = !!stats && stats.n >= 20
   const rate = (k: 'restaurant_schema' | 'html_menu' | 'faq_present') => stats ? Math.round((stats.factRates[k] ?? 0) * 100) : 0
@@ -614,6 +626,26 @@ export default async function LandingPage() {
             </div>
           ) : (
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, fontSize: 14.5, color: MUTED, maxWidth: 720 }}>{t.dataEmpty}</div>
+          )}
+          {discoveries.length > 0 && (
+            <div style={{ marginTop: 36 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>{t.researchHeading}</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {discoveries.map((d) => (
+                  <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 12, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 14px' }}>
+                    <span style={{ display: 'inline-flex', width: 26, height: 26, borderRadius: 7, background: 'rgba(181,104,58,0.13)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles style={{ width: 13, height: 13, color: '#B5683A' }} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14, color: INK, fontWeight: 600, lineHeight: 1.4 }}>
+                        {d.kind === 'trend' ? t.researchTrend(d.effectPct, d.dir === 'up') : t.researchLine(d.effectPct, t.researchLabels[d.key] ?? d.key, d.dir === 'up')}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 11.5, color: FAINT, marginTop: 2 }}>{t.researchMeta(d.measured, d.confidence != null ? Math.round(d.confidence * 100) : null)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
           <p style={{ fontSize: 12, color: FAINT, marginTop: 26, lineHeight: 1.6 }}>{t.dataFine}</p>
         </div>

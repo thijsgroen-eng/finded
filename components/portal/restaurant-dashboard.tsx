@@ -742,7 +742,12 @@ function SavedQuestions({ m }: { m: Mon }) {
   return (
     <div style={{ ...cardBox, borderStyle: 'dashed' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow }}><MessageSquare style={{ width: 13, height: 13, color: FAINT }} /> {m.savedTitle}</div>
-      <p style={{ fontSize: 12.5, color: FAINT, lineHeight: 1.6, marginTop: 8 }}>{m.savedSoon}</p>
+      <p style={{ fontSize: 12.5, color: FAINT, lineHeight: 1.6, margin: '8px 0 12px' }}>{m.savedSoon}</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {m.savedExamples.map((q) => (
+          <span key={q} style={{ fontSize: 12, color: MUTED, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER2}`, borderRadius: 999, padding: '5px 11px' }}>“{q}”</span>
+        ))}
+      </div>
     </div>
   )
 }

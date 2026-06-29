@@ -33,25 +33,25 @@ const PROVIDERS = [
 // ── Bilingual copy ────────────────────────────────────────────────────────────
 const T = {
   en: {
-    nav: { product: 'Product', how: 'How it works', pricing: 'Pricing', resources: 'Resources', agencies: 'For Agencies', login: 'Log in', cta: 'Get your free check' },
-    eyebrow: 'The AI Visibility Platform for restaurants',
-    heroLine: 'See how AI recommends', heroGrad: 'your restaurant',
-    heroSub: 'Finded audits how ChatGPT, Gemini, Claude and Perplexity talk about restaurants like yours. Get your AI Visibility Score, see the gaps, and grow your visibility.',
-    cta1: 'Start your free Visibility Check', cta1sub: 'No card required · 2 minutes',
-    cta2: 'View a sample report', cta2sub: "See what you'll get",
-    trust: [['100% evidence-backed', 'No guesswork. Ever.'], ['Your data is private', 'We never share or sell data.'], ['Audit in ~24 hours', 'Full report delivered by email.']],
-    providersEyebrow: 'Audits across all major AI assistants',
-    sampleCaption: 'Sample dashboard · representative data',
+    nav: { product: 'Product', how: 'How it works', pricing: 'Pricing', resources: 'Intelligence', agencies: 'For Agencies', login: 'Log in', cta: 'Check my restaurant' },
+    eyebrow: 'The AI Visibility Monitoring Platform for restaurants',
+    heroLine: 'More guests now let AI decide', heroGrad: 'where to eat',
+    heroSub: 'Finded continuously monitors how ChatGPT, Claude, Gemini and Perplexity recommend restaurants like yours — so you always know whether AI is sending guests to you, or to your competitors.',
+    cta1: 'Check my restaurant for free', cta1sub: 'No card required · 2 minutes',
+    cta2: 'View a live dashboard', cta2sub: 'See monitoring in action',
+    trust: [['100% evidence-backed', 'Measured, never guesswork.'], ['Your data is private', 'We never share or sell data.'], ['Monitored continuously', 'New checks added over time.']],
+    providersEyebrow: 'Monitored across all major AI assistants',
+    sampleCaption: 'Live dashboard · representative data',
     trustedPre: 'Trusted by restaurant owners in', trustedCities: 'Amsterdam · Rotterdam · Utrecht', trustedPost: 'and across the Netherlands',
-    insightsEyebrow: 'Finded Insights · measured continuously',
-    insightsFrame: 'Deterministic and reproducible from our observation warehouse — measured, never AI-generated guesses.',
-    insightsAnchorLabel: 'AI searches performed',
-    statLabels: ['Restaurants analysed', 'AI searches performed', 'Audits completed', 'Cities covered', 'Cuisine types', 'AI models tested'],
-    insightsEmpty: 'Our dataset grows with every completed audit. Live platform statistics — restaurants analysed, AI searches performed, cities and cuisines covered — appear here as the knowledge base fills.',
+    insightsEyebrow: 'Finded Intelligence · Observation Warehouse',
+    insightsFrame: 'Deterministic and reproducible from our Observation Warehouse, updated daily — measured, never AI-generated guesses.',
+    insightsAnchorLabel: 'AI interactions analysed',
+    statLabels: ['Restaurants monitored', 'AI interactions analysed', 'Audits completed', 'Cities covered', 'Cuisine types', 'AI models monitored'],
+    insightsEmpty: 'Our Observation Warehouse grows with every check we run. Live platform intelligence — restaurants monitored, AI interactions analysed, cities and cuisines covered — appears here as the warehouse fills.',
     evidence: {
       eyebrow: 'See it in action',
       title: 'AI is already answering — sometimes without you',
-      sub: 'When a guest asks an assistant where to eat, it names just a handful of restaurants. Your audit shows exactly which prompts you appear in — and which you don’t.',
+      sub: 'When a guest asks an assistant where to eat, it names just a handful of restaurants. Finded monitors exactly which prompts you appear in — and which you don’t.',
       badge: 'Representative example',
       model: 'ChatGPT',
       promptLabel: 'A guest asks',
@@ -62,11 +62,11 @@ const T = {
       namedNote: '3 competitors named',
       absentName: 'Tavola Rosa',
       absentNote: 'your restaurant — not mentioned',
-      caption: 'Illustrative example. Your real audit shows the actual prompts and AI responses behind every finding.',
+      caption: 'Illustrative example. Your live dashboard shows the actual prompts and AI responses behind every finding.',
     },
     whyTitle: 'Guests no longer only search Google.',
-    whyBody: "They ask AI where to eat, where to celebrate, which place is romantic. These tools name only a few restaurants — if your competitors are mentioned and you aren't, you're missing a discovery channel that's quietly growing.",
-    measureTitle: 'What your audit actually measures',
+    whyBody: "They ask AI where to eat, where to celebrate, which place is romantic. These tools name only a few restaurants — if your competitors are mentioned and you aren't, you're losing a discovery channel that's quietly growing. Finded watches it for you, every month.",
+    measureTitle: 'What Finded monitors',
     measure: [
       ['AI recommendations', 'Which AI models mention your restaurant, and how often.', 'e.g. Claude names you, ChatGPT doesn’t.'],
       ['Competitor comparison', 'Which restaurants AI recommends instead of you.', 'e.g. 3 rivals appear in 18/32 searches.'],
@@ -75,25 +75,25 @@ const T = {
       ['Evidence', 'The exact prompts and AI responses behind each finding.', 'e.g. the 12 prompts you’re absent from.'],
       ['Prioritised action plan', 'The most important improvements first.', 'e.g. add Restaurant schema — do first.'],
     ],
-    howKicker: 'How it works', howTitle: 'From your website to evidence-based recommendations',
+    howKicker: 'How it works', howTitle: 'From your website to continuous AI visibility monitoring',
     how: [
       ['1', 'Website crawl', 'We read your site the way AI does.'],
       ['2', 'AI prompt testing', 'Dozens of real searches across 4 models.'],
       ['3', 'Competitor comparison', 'Who gets named instead, and why.'],
       ['4', 'Evidence', 'The prompts & responses behind each finding.'],
       ['5', 'Recommendations', 'Prioritised, backed by data.'],
-      ['6', 'Implementation', 'We help you make the changes.'],
+      ['6', 'Monitoring', 'We re-check every month and flag what changed.'],
     ],
-    howNote: 'Monthly AI visibility monitoring is coming next — so you can track changes over time.',
-    dataEyebrow: 'Built from real restaurant data',
-    dataTitle: 'We measure how AI recommends restaurants — and learn from every audit.',
-    dataBody: 'Every completed audit anonymously sharpens our understanding of how AI discovers restaurants. Recommendations become evidence-based over time — drawn from patterns across real restaurants, not general SEO advice.',
+    howNote: 'Your first check is the baseline. Every month after, Finded re-measures and shows you what changed and why.',
+    dataEyebrow: 'The Observation Warehouse',
+    dataTitle: 'The more we monitor, the smarter your recommendations get.',
+    dataBody: 'Every check anonymously sharpens our understanding of how AI discovers restaurants. Because recommendations are measured across thousands of observations — not general SEO advice — they get more accurate over time. No individual restaurant’s data is ever shared. This is data ChatGPT doesn’t have.',
     dataLearn: "What we're learning",
     learn: ['are missing Restaurant schema', 'don’t have a crawlable HTML menu', 'have no FAQ content', 'are recommended by AI at all'],
-    dataEmpty: 'As the dataset grows we surface the most common issues here — like how many restaurants are missing Restaurant schema, rely on PDF menus, or have no FAQ. These benchmarks become stronger with every audit.',
+    dataEmpty: 'As the warehouse grows we surface the most common issues here — like how many restaurants are missing Restaurant schema, rely on PDF menus, or have no FAQ. These benchmarks become stronger with every check.',
     dataFine: "Only aggregate, anonymous statistics — never individual restaurant data. We measure how AI recommends restaurants today and help you improve; we don't promise rankings or control AI.",
-    pricingKicker: 'Pricing', pricingTitle: 'Start free. Pay only for more depth.',
-    pricingSub: 'Free tells you whether AI recommends you. The audit explains why. Implementation helps you fix it.',
+    pricingKicker: 'Pricing', pricingTitle: 'Start free. Upgrade to continuous monitoring.',
+    pricingSub: 'The free check tells you whether AI recommends you. The full audit explains why — and becomes your monitoring baseline. Implementation helps you fix it.',
     tiers: [
       { name: 'Free AI Visibility Check', price: '€0', cadence: '', q: 'Is AI recommending my restaurant?', badge: '', features: ['Your AI Visibility Dashboard', 'AI visibility status & score', 'Competitors mentioned instead', 'Top 3 findings + website snapshot', 'Download a summary PDF anytime'], cta: 'Open my free dashboard', note: 'No account, no card, no obligation.', highlight: false },
       { name: 'AI Visibility Audit', price: '€49', cadence: 'one-time', q: 'Why do competitors appear more often?', badge: 'Most popular', features: ['Everything in the free check', 'All four AI models analysed', 'Prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data analysis', 'Evidence-backed recommendations', '30-day action plan'], cta: 'Get the full audit', note: 'Understand exactly why competitors appear more often.', highlight: true },
@@ -118,28 +118,28 @@ const T = {
     footerLinks: ['Free visibility check', 'What we measure', 'How it works', 'Pricing'],
     footerPrivacy: 'Privacy policy', footerTerms: 'Terms', footerBuilt: 'Built in the Netherlands',
     footerRights: '· We measure how AI recommends restaurants — not rankings.',
-    mock: { score: 'AI Visibility Score', good: 'Good', scoreBody: "You're visible in AI recommendations, but there's room to grow.", points: 'points', vsLast: 'vs. last audit', mentioned: 'Mentioned by AI', mentionedBody: "You're mentioned in 67% of relevant AI responses.", industryAvg: 'Industry avg.', competitors: 'Top Competitors', viewComparison: 'View full comparison →', overTime: 'Visibility over time', insight: 'Key insight', insightBody: 'Restaurants with a crawlable HTML menu are mentioned 2.1× more often by AI assistants.', allInsights: 'See all insights →', reliability: 'Reliability', high: 'High', allNormal: 'All systems normal', nav: ['Overview', 'AI Visibility Score', 'AI Mentions', 'Competitors', 'Recommendations', 'Website Audit', 'Trends (Beta)', 'Export PDF'] },
+    mock: { score: 'AI Visibility', good: 'Good', scoreBody: 'You appear in AI recommendations — with room to grow.', points: 'points', weekly: '+3 this week', monthly: '+8 this month', lastRun: 'Last monitoring run · yesterday', providerTitle: 'Provider changes', competitors: 'Top Competitors', viewComparison: 'View full comparison →', overTime: 'Visibility over time', insight: 'Latest discovery', insightBody: 'Restaurants with a crawlable HTML menu are recommended 2.1× more often by AI assistants.', discoveryMeta: '2,184 restaurants · 96% confidence', recTitle: 'Top recommendation', recBody: 'Publish an HTML menu AI can read.', recGain: '+18% expected visibility', nav: ['Overview', 'What changed', 'Providers', 'Competitors', 'Recommendations', 'Benchmarks', 'Industry', 'Export'] },
   },
   nl: {
-    nav: { product: 'Product', how: 'Hoe het werkt', pricing: 'Prijzen', resources: 'Bronnen', agencies: 'Voor bureaus', login: 'Inloggen', cta: 'Gratis check' },
-    eyebrow: 'Het AI-zichtbaarheidsplatform voor restaurants',
-    heroLine: 'Zie hoe AI', heroGrad: 'jouw restaurant aanbeveelt',
-    heroSub: 'Finded meet hoe ChatGPT, Gemini, Claude en Perplexity over restaurants zoals dat van jou praten. Krijg je AI-zichtbaarheidsscore, zie de hiaten en vergroot je zichtbaarheid.',
-    cta1: 'Start je gratis zichtbaarheidscheck', cta1sub: 'Geen creditcard · 2 minuten',
-    cta2: 'Bekijk een voorbeeldrapport', cta2sub: 'Zie wat je krijgt',
-    trust: [['100% op bewijs gebaseerd', 'Nooit giswerk.'], ['Je gegevens zijn privé', 'We delen of verkopen nooit data.'], ['Audit in ~24 uur', 'Volledig rapport per e-mail.']],
-    providersEyebrow: 'Audits op alle grote AI-assistenten',
-    sampleCaption: 'Voorbeelddashboard · representatieve data',
+    nav: { product: 'Product', how: 'Hoe het werkt', pricing: 'Prijzen', resources: 'Intelligence', agencies: 'Voor bureaus', login: 'Inloggen', cta: 'Check mijn restaurant' },
+    eyebrow: 'Het AI-zichtbaarheidsmonitoringplatform voor restaurants',
+    heroLine: 'Steeds meer gasten laten AI bepalen', heroGrad: 'waar ze gaan eten',
+    heroSub: 'Finded monitort continu hoe ChatGPT, Claude, Gemini en Perplexity restaurants zoals dat van jou aanbevelen — zodat je altijd weet of AI gasten naar jou stuurt, of naar je concurrenten.',
+    cta1: 'Check mijn restaurant gratis', cta1sub: 'Geen creditcard · 2 minuten',
+    cta2: 'Bekijk een live dashboard', cta2sub: 'Zie monitoring in actie',
+    trust: [['100% op bewijs gebaseerd', 'Gemeten, nooit giswerk.'], ['Je gegevens zijn privé', 'We delen of verkopen nooit data.'], ['Continu gemonitord', 'Steeds nieuwe checks erbij.']],
+    providersEyebrow: 'Gemonitord op alle grote AI-assistenten',
+    sampleCaption: 'Live dashboard · representatieve data',
     trustedPre: 'Vertrouwd door restauranthouders in', trustedCities: 'Amsterdam · Rotterdam · Utrecht', trustedPost: 'en in heel Nederland',
-    insightsEyebrow: 'Finded Insights · continu gemeten',
-    insightsFrame: 'Deterministisch en reproduceerbaar uit onze observation warehouse — gemeten, nooit door AI gegenereerd giswerk.',
-    insightsAnchorLabel: 'AI-zoekopdrachten uitgevoerd',
-    statLabels: ['Restaurants geanalyseerd', 'AI-zoekopdrachten uitgevoerd', 'Audits voltooid', 'Steden gedekt', 'Keukentypes', 'AI-modellen getest'],
-    insightsEmpty: 'Onze dataset groeit met elke voltooide audit. Live platformstatistieken — geanalyseerde restaurants, uitgevoerde AI-zoekopdrachten, gedekte steden en keukens — verschijnen hier naarmate de kennisbank zich vult.',
+    insightsEyebrow: 'Finded Intelligence · Observation Warehouse',
+    insightsFrame: 'Deterministisch en reproduceerbaar uit onze Observation Warehouse, dagelijks bijgewerkt — gemeten, nooit door AI gegenereerd giswerk.',
+    insightsAnchorLabel: 'AI-interacties geanalyseerd',
+    statLabels: ['Restaurants gemonitord', 'AI-interacties geanalyseerd', 'Audits voltooid', 'Steden gedekt', 'Keukentypes', 'AI-modellen gemonitord'],
+    insightsEmpty: 'Onze Observation Warehouse groeit met elke check die we draaien. Live platform-intelligence — gemonitorde restaurants, geanalyseerde AI-interacties, gedekte steden en keukens — verschijnt hier naarmate de warehouse zich vult.',
     evidence: {
       eyebrow: 'Zo ziet het eruit',
       title: 'AI geeft al antwoord — soms zonder jou',
-      sub: 'Als een gast een assistent vraagt waar te eten, worden er maar een handvol restaurants genoemd. Je audit laat precies zien in welke prompts je verschijnt — en in welke niet.',
+      sub: 'Als een gast een assistent vraagt waar te eten, worden er maar een handvol restaurants genoemd. Finded monitort precies in welke prompts je verschijnt — en in welke niet.',
       badge: 'Representatief voorbeeld',
       model: 'ChatGPT',
       promptLabel: 'Een gast vraagt',
@@ -150,11 +150,11 @@ const T = {
       namedNote: '3 concurrenten genoemd',
       absentName: 'Tavola Rosa',
       absentNote: 'jouw restaurant — niet genoemd',
-      caption: 'Illustratief voorbeeld. Je echte audit toont de werkelijke prompts en AI-antwoorden achter elke bevinding.',
+      caption: 'Illustratief voorbeeld. Je live dashboard toont de werkelijke prompts en AI-antwoorden achter elke bevinding.',
     },
     whyTitle: 'Gasten zoeken niet meer alleen op Google.',
-    whyBody: 'Ze vragen AI waar ze moeten eten, waar ze iets kunnen vieren, welke plek romantisch is. Deze tools noemen maar een paar restaurants — als je concurrenten worden genoemd en jij niet, mis je een ontdekkingskanaal dat stilletjes groeit.',
-    measureTitle: 'Wat je audit echt meet',
+    whyBody: 'Ze vragen AI waar ze moeten eten, waar ze iets kunnen vieren, welke plek romantisch is. Deze tools noemen maar een paar restaurants — als je concurrenten worden genoemd en jij niet, verlies je een ontdekkingskanaal dat stilletjes groeit. Finded houdt het voor je in de gaten, elke maand.',
+    measureTitle: 'Wat Finded monitort',
     measure: [
       ['AI-aanbevelingen', 'Welke AI-modellen je restaurant noemen, en hoe vaak.', 'bijv. Claude noemt je, ChatGPT niet.'],
       ['Concurrentievergelijking', 'Welke restaurants AI in plaats van jou aanbeveelt.', 'bijv. 3 concurrenten in 18/32 zoekopdrachten.'],
@@ -163,25 +163,25 @@ const T = {
       ['Bewijs', 'De exacte prompts en AI-antwoorden achter elke bevinding.', 'bijv. de 12 prompts waarin je ontbreekt.'],
       ['Geprioriteerd actieplan', 'De belangrijkste verbeteringen eerst.', 'bijv. voeg Restaurant-schema toe — eerst doen.'],
     ],
-    howKicker: 'Hoe het werkt', howTitle: 'Van je website naar onderbouwde aanbevelingen',
+    howKicker: 'Hoe het werkt', howTitle: 'Van je website naar continue AI-zichtbaarheidsmonitoring',
     how: [
       ['1', 'Website-crawl', 'We lezen je site zoals AI dat doet.'],
       ['2', 'AI-prompttests', 'Tientallen echte zoekopdrachten over 4 modellen.'],
       ['3', 'Concurrentievergelijking', 'Wie er in plaats van jou wordt genoemd, en waarom.'],
       ['4', 'Bewijs', 'De prompts & antwoorden achter elke bevinding.'],
       ['5', 'Aanbevelingen', 'Geprioriteerd, onderbouwd met data.'],
-      ['6', 'Implementatie', 'We helpen je de wijzigingen door te voeren.'],
+      ['6', 'Monitoring', 'Elke maand opnieuw meten en tonen wat veranderde.'],
     ],
-    howNote: 'Maandelijkse AI-zichtbaarheidsmonitoring komt eraan — zodat je veranderingen kunt volgen.',
-    dataEyebrow: 'Gebouwd op echte restaurantdata',
-    dataTitle: 'We meten hoe AI restaurants aanbeveelt — en leren van elke audit.',
-    dataBody: 'Elke voltooide audit scherpt anoniem ons inzicht aan in hoe AI restaurants ontdekt. Aanbevelingen worden in de loop van de tijd op bewijs gebaseerd — uit patronen over echte restaurants, geen algemeen SEO-advies.',
+    howNote: 'Je eerste check is de nulmeting. Daarna meet Finded elke maand opnieuw en laat zien wat er veranderde en waarom.',
+    dataEyebrow: 'De Observation Warehouse',
+    dataTitle: 'Hoe meer we monitoren, hoe slimmer je aanbevelingen worden.',
+    dataBody: 'Elke check scherpt anoniem ons inzicht aan in hoe AI restaurants ontdekt. Omdat aanbevelingen gemeten worden over duizenden observaties — geen algemeen SEO-advies — worden ze na verloop van tijd nauwkeuriger. Individuele restaurantdata wordt nooit gedeeld. Dit is data die ChatGPT niet heeft.',
     dataLearn: 'Wat we leren',
     learn: ['missen een Restaurant-schema', 'hebben geen crawlbaar HTML-menu', 'hebben geen FAQ-inhoud', 'worden überhaupt door AI aanbevolen'],
-    dataEmpty: 'Naarmate de dataset groeit tonen we hier de meest voorkomende problemen — zoals hoeveel restaurants een Restaurant-schema missen, op PDF-menu’s leunen of geen FAQ hebben. Deze benchmarks worden sterker met elke audit.',
+    dataEmpty: 'Naarmate de warehouse groeit tonen we hier de meest voorkomende problemen — zoals hoeveel restaurants een Restaurant-schema missen, op PDF-menu’s leunen of geen FAQ hebben. Deze benchmarks worden sterker met elke check.',
     dataFine: 'Alleen geaggregeerde, anonieme statistieken — nooit individuele restaurantdata. We meten hoe AI restaurants vandaag aanbeveelt en helpen je verbeteren; we beloven geen ranglijsten en sturen AI niet aan.',
-    pricingKicker: 'Prijzen', pricingTitle: 'Start gratis. Betaal alleen voor meer diepgang.',
-    pricingSub: 'Gratis vertelt je óf AI je aanbeveelt. De audit legt uit waarom. Implementatie helpt je het op te lossen.',
+    pricingKicker: 'Prijzen', pricingTitle: 'Start gratis. Upgrade naar continue monitoring.',
+    pricingSub: 'De gratis check vertelt je óf AI je aanbeveelt. De volledige audit legt uit waarom — en wordt je monitoring-nulmeting. Implementatie helpt je het op te lossen.',
     tiers: [
       { name: 'Gratis AI-zichtbaarheidscheck', price: '€0', cadence: '', q: 'Beveelt AI mijn restaurant aan?', badge: '', features: ['Je AI-zichtbaarheidsdashboard', 'AI-zichtbaarheidsstatus & score', 'Concurrenten die in plaats van jou worden genoemd', 'Top 3 bevindingen + websitesnapshot', 'Download altijd een samenvatting als PDF'], cta: 'Open mijn gratis dashboard', note: 'Geen account, geen creditcard, geen verplichting.', highlight: false },
       { name: 'AI-zichtbaarheidsaudit', price: '€49', cadence: 'eenmalig', q: 'Waarom verschijnen concurrenten vaker?', badge: 'Populairst', features: ['Alles uit de gratis check', 'Alle vier de AI-modellen geanalyseerd', 'Bewijs op promptniveau', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Op bewijs gebaseerde aanbevelingen', '30-dagen actieplan'], cta: 'Volledige audit aanvragen', note: 'Begrijp precies waarom concurrenten vaker verschijnen.', highlight: true },
@@ -206,7 +206,7 @@ const T = {
     footerLinks: ['Gratis zichtbaarheidscheck', 'Wat we meten', 'Hoe het werkt', 'Prijzen'],
     footerPrivacy: 'Privacybeleid', footerTerms: 'Voorwaarden', footerBuilt: 'Gebouwd in Nederland',
     footerRights: '· We meten hoe AI restaurants aanbeveelt — geen ranglijsten.',
-    mock: { score: 'AI-zichtbaarheidsscore', good: 'Goed', scoreBody: 'Je bent zichtbaar in AI-aanbevelingen, maar er is ruimte om te groeien.', points: 'punten', vsLast: 'vs. vorige audit', mentioned: 'Genoemd door AI', mentionedBody: 'Je wordt genoemd in 67% van de relevante AI-antwoorden.', industryAvg: 'Sectorgemiddelde', competitors: 'Top concurrenten', viewComparison: 'Volledige vergelijking →', overTime: 'Zichtbaarheid over tijd', insight: 'Belangrijkste inzicht', insightBody: 'Restaurants met een crawlbaar HTML-menu worden 2,1× vaker genoemd door AI-assistenten.', allInsights: 'Alle inzichten →', reliability: 'Betrouwbaarheid', high: 'Hoog', allNormal: 'Alles in orde', nav: ['Overzicht', 'AI-zichtbaarheidsscore', 'AI-vermeldingen', 'Concurrenten', 'Aanbevelingen', 'Website-audit', 'Trends (Bèta)', 'PDF exporteren'] },
+    mock: { score: 'AI-zichtbaarheid', good: 'Goed', scoreBody: 'Je verschijnt in AI-aanbevelingen — met ruimte om te groeien.', points: 'punten', weekly: '+3 deze week', monthly: '+8 deze maand', lastRun: 'Laatste monitoringrun · gisteren', providerTitle: 'Wijzigingen per AI', competitors: 'Top concurrenten', viewComparison: 'Volledige vergelijking →', overTime: 'Zichtbaarheid over tijd', insight: 'Laatste ontdekking', insightBody: 'Restaurants met een crawlbaar HTML-menu worden 2,1× vaker aanbevolen door AI-assistenten.', discoveryMeta: '2.184 restaurants · 96% betrouwbaarheid', recTitle: 'Belangrijkste aanbeveling', recBody: 'Publiceer een HTML-menu dat AI kan lezen.', recGain: '+18% verwachte zichtbaarheid', nav: ['Overzicht', 'Wat veranderde', 'AI-modellen', 'Concurrenten', 'Aanbevelingen', 'Benchmarks', 'Sector', 'Export'] },
   },
 }
 
@@ -259,6 +259,7 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
   const CARD = 'rgba(255,255,255,0.04)', BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.07)'
   const NAV_ICONS = [Home, Gauge, Bot, Users, ListChecks, Globe, TrendingUp]
   const competitors = [['1', 'La Bella Italia', 82, false], ['2', 'Casa di Roma', 75, true], ['3', 'Trattoria Milano', 68, false], ['4', 'Osteria da Vinci', 63, false], ['5', 'Il Gusto', 58, false]] as const
+  const providerTrends = [['ChatGPT', 'up'], ['Claude', 'flat'], ['Gemini', 'down'], ['Perplexity', 'up']] as const
   const vals = [38, 52, 66, 64, 71, 75, 72]
   const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const X = (i: number) => 44 + i * (456 / 6), Y = (v: number) => 150 - v * 1.3
@@ -290,15 +291,21 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
               <div>
                 <span style={{ fontSize: 11, fontWeight: 800, color: GREEN, background: 'rgba(52,211,153,0.14)', border: '1px solid rgba(52,211,153,0.3)', padding: '3px 9px', borderRadius: 6 }}>{t.good}</span>
                 <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: '10px 0 0' }}>{t.scoreBody}</p>
-                <div style={{ fontSize: 12, fontWeight: 700, color: GREEN, marginTop: 8 }}>↑ 18 {t.points} <span style={{ color: FAINT, fontWeight: 500 }}>{t.vsLast}</span></div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: GREEN, marginTop: 8 }}>↑ {t.weekly} <span style={{ color: FAINT, fontWeight: 500 }}>· {t.monthly}</span></div>
+                <div style={{ fontSize: 10.5, color: FAINT, marginTop: 6 }}>{t.lastRun}</div>
               </div>
             </div>
           </div>
           <div style={cardBox}>
-            <div style={eyebrow}>{t.mentioned}</div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 10 }}>
-              <Ring pct={67} size={84} stroke={10} label="67%" />
-              <div><p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: 0 }}>{t.mentionedBody}</p><div style={{ fontSize: 11, color: FAINT, marginTop: 10 }}>{t.industryAvg} <strong style={{ color: MUTED }}>48%</strong></div></div>
+            <div style={eyebrow}>{t.providerTitle}</div>
+            <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+              {providerTrends.map(([name, dir]) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: PROVIDERS.find((p) => p.name === name)?.color ?? '#B5683A' }} />
+                  <span style={{ fontSize: 12.5, color: INK, flex: 1 }}>{name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: dir === 'up' ? GREEN : dir === 'down' ? '#f0846b' : FAINT }}>{dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→'}</span>
+                </div>
+              ))}
             </div>
           </div>
           <div style={cardBox}>
@@ -336,12 +343,12 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
             <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(181,104,58,0.16), rgba(208,138,90,0.06))', border: '1px solid rgba(181,104,58,0.25)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#B5683A' }}><Sparkles style={{ width: 13, height: 13 }} /> {t.insight}</div>
               <p style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, margin: '10px 0 0' }}>{t.insightBody}</p>
-              <div style={{ fontSize: 11.5, color: '#B5683A', fontWeight: 600, marginTop: 10 }}>{t.allInsights}</div>
+              <div style={{ fontSize: 11, color: FAINT, marginTop: 8 }}>{t.discoveryMeta}</div>
             </div>
             <div style={cardBox}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={eyebrow}>{t.reliability}</div><span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>{t.high}</span></div>
-              <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.08)', marginTop: 10, overflow: 'hidden' }}><div style={{ width: '86%', height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${GREEN}, #6ee7b7)` }} /></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7 }}><span style={{ fontSize: 10.5, color: FAINT }}>{t.allNormal}</span><span style={{ fontSize: 11, fontWeight: 700, color: INK }}>86%</span></div>
+              <div style={eyebrow}>{t.recTitle}</div>
+              <p style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, margin: '10px 0 8px' }}>{t.recBody}</p>
+              <span style={{ fontSize: 12, fontWeight: 800, color: GREEN, background: 'rgba(52,211,153,0.14)', border: '1px solid rgba(52,211,153,0.3)', padding: '3px 9px', borderRadius: 6 }}>{t.recGain}</span>
             </div>
           </div>
         </div>

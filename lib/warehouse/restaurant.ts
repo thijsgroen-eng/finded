@@ -93,6 +93,14 @@ export interface HistoryPoint {
   events: { kind: 'signal_added' | 'signal_removed'; label: string }[]
 }
 
+export interface CompetitorTrend {
+  name: string
+  latest: number            // times AI named them in the latest audit
+  prev: number              // …in the previous audit
+  delta: number
+  dir: 'up' | 'down' | 'flat' | 'new'
+}
+
 export interface RestaurantIntel {
   ready: boolean
   auditCount: number
@@ -102,6 +110,7 @@ export interface RestaurantIntel {
   opportunities: Opportunity[]
   benchmarks: BenchmarkRow[]
   providers: ProviderDetail[]
+  competitors: CompetitorTrend[]
   industry: Finding[]
   research: Finding[]
   history: HistoryPoint[]
@@ -116,7 +125,7 @@ export async function getRestaurantIntel(restaurantId: string): Promise<Restaura
     ready: false, auditCount: 0,
     current: { score: null, recRate: null, auditedAt: null },
     deltas: { sinceLast: null, monthly: null },
-    changes: [], opportunities: [], benchmarks: [], providers: [], industry: [], research: [], history: [],
+    changes: [], opportunities: [], benchmarks: [], providers: [], competitors: [], industry: [], research: [], history: [],
   }
 
   const safe = async <T>(p: PromiseLike<{ data: T | null; error: unknown }>): Promise<T | null> => {
@@ -300,6 +309,26 @@ export async function getRestaurantIntel(restaurantId: string): Promise<Restaura
     }
   }
 
+  // ── COMPETITORS (gaining / losing visibility in your AI answers) ─────────────
+  const competitorCount = (auditId: string | null) => {
+    const m = new Map<string, number>()
+    if (!auditId) return m
+    for (const e of ((entities as any[]) ?? [])) {
+      if (e.audit_id !== auditId || !e.normalized_name) continue
+      m.set(e.normalized_name, (m.get(e.normalized_name) ?? 0) + 1)
+    }
+    return m
+  }
+  const lastComp = competitorCount(last.audit_id)
+  const prevComp = competitorCount(prev?.audit_id ?? null)
+  const competitorNames = new Set<string>([...lastComp.keys(), ...prevComp.keys()])
+  const competitors: CompetitorTrend[] = [...competitorNames].map((name) => {
+    const latest = lastComp.get(name) ?? 0, prevN = prevComp.get(name) ?? 0
+    const delta = latest - prevN
+    const dir: CompetitorTrend['dir'] = prevN === 0 && latest > 0 ? 'new' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+    return { name, latest, prev: prevN, delta, dir }
+  }).sort((a, b) => b.latest - a.latest || b.delta - a.delta)
+
   // ── VISIBILITY HISTORY (annotated with signal-change events) ─────────────────
   const history: HistoryPoint[] = audits.map((a, i) => {
     const score = scoreOf(a) ?? 0
@@ -323,6 +352,6 @@ export async function getRestaurantIntel(restaurantId: string): Promise<Restaura
       sinceLast: sLast != null && sPrev != null ? sLast - sPrev : null,
       monthly: sLast != null && monthlyBase && scoreOf(monthlyBase) != null ? sLast - scoreOf(monthlyBase)! : null,
     },
-    changes, opportunities, benchmarks, providers, industry, research, history,
+    changes, opportunities, benchmarks, providers, competitors, industry, research, history,
   }
 }

@@ -4,11 +4,11 @@ import { useState, type ReactNode } from 'react'
 import {
   Home, Gauge, Bot, Users, ListChecks, Globe, TrendingUp, FileDown,
   Sparkles, ExternalLink, Check, X, ArrowUp, ArrowDown, Minus, Lock,
-  BarChart3, Newspaper, Target, Activity, Zap,
+  BarChart3, Newspaper, Target, Activity, Zap, MessageSquare,
 } from 'lucide-react'
 import { PORTAL } from '@/lib/portal-copy'
 import type { Language } from '@/lib/i18n'
-import type { RestaurantIntel, Change, Opportunity, BenchmarkRow, ProviderDetail, Finding, HistoryPoint } from '@/lib/warehouse/restaurant'
+import type { RestaurantIntel, Change, Opportunity, BenchmarkRow, ProviderDetail, Finding, HistoryPoint, CompetitorTrend } from '@/lib/warehouse/restaurant'
 
 const CARD = 'rgba(255,255,255,0.035)', BORDER2 = 'rgba(255,255,255,0.06)', BORDER = 'rgba(255,255,255,0.09)'
 const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85', GREEN = '#34d399', AMBER = '#fbbf24', RED = '#fb7185'
@@ -227,6 +227,10 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
             )
           )}
 
+          {tab === 'competitors' && hasIntel && intel && isPaid && intel.competitors.length > 0 && (
+            <CompetitorMovement competitors={intel.competitors} m={m} />
+          )}
+
           {tab === 'competitors' && (
             <div style={cardBox}>
               <div style={eyebrow}>{t.competitorsTitle}</div>
@@ -339,6 +343,7 @@ function Overview({ data, lang }: { data: DashboardData; lang: Language }) {
               {intel.opportunities.length > 0 && <OpportunitiesSection opps={intel.opportunities.slice(0, 3)} m={m} />}
               {intel.benchmarks.length > 0 && <CompareSection benchmarks={intel.benchmarks} you={intel.current.score} yourRec={intel.current.recRate} m={m} />}
               {intel.industry.length > 0 && <IndustrySection industry={intel.industry.slice(0, 3)} research={intel.research} m={m} />}
+              <SavedQuestions m={m} />
             </>
           ) : (
             <>
@@ -436,6 +441,10 @@ function DeltaPill({ value, suffix }: { value: number; suffix?: string }) {
 
 function MonitoringHero({ intel, lang, m }: { intel: RestaurantIntel; lang: Language; m: Mon }) {
   const score = intel.current.score
+  // Next monitoring run ≈ last run + 30 days (monthly cadence). Deterministic.
+  const nextDate = intel.current.auditedAt
+    ? fmtDate(new Date(new Date(intel.current.auditedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), lang)
+    : null
   return (
     <div style={{ ...cardBox, padding: 20 }}>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -458,6 +467,13 @@ function MonitoringHero({ intel, lang, m }: { intel: RestaurantIntel; lang: Lang
             {intel.current.auditedAt ? m.lastUpdated(fmtDate(intel.current.auditedAt, lang)) : ''} · {m.runs(intel.auditCount)}
           </div>
         </div>
+      </div>
+      {/* Monitoring status strip — makes the platform feel live + recurring */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: `1px solid ${BORDER2}` }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700, color: GREEN }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN, boxShadow: `0 0 8px ${GREEN}` }} /> {m.cadence}
+        </span>
+        {nextDate && <span style={{ fontSize: 11.5, color: FAINT, marginLeft: 'auto' }}>{m.nextCheck(nextDate)}</span>}
       </div>
     </div>
   )
@@ -570,16 +586,21 @@ function ProviderBreakdown({ providers, m }: { providers: ProviderDetail[]; m: M
       </div>
       {providers.map((p) => { const Icon = trendIcon(p.trend); return (
         <div key={p.provider} style={cardBox}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: INK }}>{p.provider}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: trendColor(p.trend) }}>
-              <Icon style={{ width: 13, height: 13 }} /> {m.provTrend[p.trend]}{p.driftPts !== 0 ? ` (${p.driftPts > 0 ? '+' : ''}${p.driftPts}pts)` : ''}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {Math.abs(p.driftPts) >= 5 && (
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: AMBER, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 6, padding: '2px 7px' }}>{m.provDriftFlag}</span>
+              )}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: trendColor(p.trend) }}>
+                <Icon style={{ width: 13, height: 13 }} /> {m.provTrend[p.trend]}{p.driftPts !== 0 ? ` (${p.driftPts > 0 ? '+' : ''}${p.driftPts}pts)` : ''}
+              </span>
             </span>
           </div>
           <Bar pct={p.latestRate * 100} color={p.latestRate > 0 ? '#7c5cff' : 'rgba(255,255,255,0.15)'} />
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: FAINT }}>
             <span>{Math.round(p.latestRate * 100)}% · {m.provResponses(p.responses)}</span>
-            {p.avgPosition != null && <span>{m.provAvgPos} {p.avgPosition.toFixed(1)}</span>}
+            {p.avgPosition != null && <span>{m.provRanking} {p.avgPosition.toFixed(1)}</span>}
             <span>{m.provStability} {(100 - Math.round(p.stability * 100))}%</span>
           </div>
           <div style={{ marginTop: 12 }}>
@@ -680,6 +701,48 @@ function LockedOr({ m, preview }: { m: Mon; preview?: ReactNode }) {
     <div style={{ display: 'grid', gap: 14 }}>
       {preview}
       <LockedTeaser m={m} />
+    </div>
+  )
+}
+
+function CompetitorMovement({ competitors, m }: { competitors: CompetitorTrend[]; m: Mon }) {
+  const gaining = competitors.filter((c) => c.dir === 'up' || c.dir === 'new').slice(0, 6)
+  const losing = competitors.filter((c) => c.dir === 'down').slice(0, 6)
+  const Row = (c: CompetitorTrend) => {
+    const up = c.dir === 'up' || c.dir === 'new'
+    return (
+      <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${BORDER2}` }}>
+        <span style={{ fontSize: 13.5, color: INK, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'capitalize' }}>{c.name}</span>
+        <span style={{ fontSize: 11.5, color: FAINT }}>{m.compNamed(c.latest)}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12.5, fontWeight: 700, color: up ? RED : GREEN }}>
+          {c.dir === 'new' ? <span style={{ fontSize: 10.5, fontWeight: 800 }}>{m.compNew}</span> : <>{up ? <ArrowUp style={{ width: 12, height: 12 }} /> : <ArrowDown style={{ width: 12, height: 12 }} />}{Math.abs(c.delta)}</>}
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div style={cardBox}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Users style={{ width: 13, height: 13 }} /> {m.compTitle}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginTop: 12 }}>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: RED, marginBottom: 4 }}>{m.compGaining}</div>
+          {gaining.length === 0 ? <p style={{ fontSize: 12.5, color: FAINT }}>{m.compEmpty}</p> : gaining.map(Row)}
+        </div>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: GREEN, marginBottom: 4 }}>{m.compLosing}</div>
+          {losing.length === 0 ? <p style={{ fontSize: 12.5, color: FAINT }}>{m.compEmpty}</p> : losing.map(Row)}
+        </div>
+      </div>
+      <p style={{ fontSize: 11, color: FAINT, marginTop: 10 }}>Movement is measured between your last two monitoring runs — a rival gaining visibility is a competitive threat.</p>
+    </div>
+  )
+}
+
+function SavedQuestions({ m }: { m: Mon }) {
+  return (
+    <div style={{ ...cardBox, borderStyle: 'dashed' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow }}><MessageSquare style={{ width: 13, height: 13, color: FAINT }} /> {m.savedTitle}</div>
+      <p style={{ fontSize: 12.5, color: FAINT, lineHeight: 1.6, marginTop: 8 }}>{m.savedSoon}</p>
     </div>
   )
 }

@@ -7,7 +7,8 @@ import { auditFunction } from "@/lib/inngest/audit-function";
 import { fixFunction } from "@/lib/inngest/fix-function";
 import { auditRequestFunction } from "@/lib/inngest/audit-request-function";
 
-export const { GET, POST, PUT } = serve(inngest, {
+export const { GET, POST, PUT } = serve({
+  client: inngest,
   functions: [
     auditFunction,
     fixFunction,

@@ -96,9 +96,10 @@ const T = {
     pricingSub: 'The free check tells you whether AI recommends you. The full audit explains why — and becomes your monitoring baseline. Implementation helps you fix it.',
     tiers: [
       { name: 'Free AI Visibility Check', price: '€0', cadence: '', q: 'Is AI recommending my restaurant?', badge: '', features: ['Your AI Visibility Dashboard', 'AI visibility status & score', 'Competitors mentioned instead', 'Top 3 findings + website snapshot', 'Download a summary PDF anytime'], cta: 'Open my free dashboard', note: 'No account, no card, no obligation.', highlight: false },
-      { name: 'AI Visibility Audit', price: '€49', cadence: 'one-time', q: 'Why do competitors appear more often?', badge: 'Most popular', features: ['Everything in the free check', 'All four AI models analysed', 'Prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data analysis', 'Evidence-backed recommendations', '30-day action plan'], cta: 'Get the full audit', note: 'Understand exactly why competitors appear more often.', highlight: true },
-      { name: 'AI Visibility Implementation', price: '€299', cadence: 'one-time', q: 'Help me actually fix it.', badge: 'Best value', features: ['Everything in the audit', 'Restaurant schema implemented', 'FAQ & AI-friendly content', 'Homepage & location improvements', 'Menu & Google Business improvements', 'Follow-up audit (before / after)'], cta: 'Discuss implementation', note: 'We make your restaurant easier for AI to understand and recommend.', highlight: false },
+      { name: 'AI Visibility Check', price: '€49', cadence: 'one-time', q: 'Why do competitors appear more often?', badge: 'Most popular', features: ['Everything in the free check', 'All four AI models analysed', 'Prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data analysis', 'Evidence-backed recommendations', 'Becomes your monitoring baseline'], cta: 'Get the full check', note: 'Understand exactly why competitors appear more often.', highlight: true },
+      { name: 'AI Visibility Implementation', price: '€299', cadence: 'one-time', q: 'Help me actually fix it.', badge: 'Best value', features: ['Everything in the check', 'Restaurant schema implemented', 'FAQ & AI-friendly content', 'Homepage & location improvements', 'Menu & Google Business improvements', 'Follow-up check (before / after)'], cta: 'Discuss implementation', note: 'We make your restaurant easier for AI to understand and recommend.', highlight: false },
     ],
+    monitorBanner: { tag: 'Flagship · coming soon', title: 'AI Visibility Monitoring', body: 'Continuous monthly monitoring of how AI recommends you — what changed, why, and what to do next. Your free check and one-time check feed straight into it.', cta: 'Join the monitoring waitlist' },
     founderKicker: 'From the founder',
     founderQuote: (f: string) => `“Hi, I'm ${f}. I work with restaurants every day — and I built Finded because owners had no way of knowing whether AI recommends them, or their competitors.”`,
     founderBody: "Every completed audit improves how well we understand the way AI discovers restaurants. It's a small, independent platform built in the Netherlands. If you have a question, email me — I read every one.",
@@ -184,9 +185,10 @@ const T = {
     pricingSub: 'De gratis check vertelt je óf AI je aanbeveelt. De volledige audit legt uit waarom — en wordt je monitoring-nulmeting. Implementatie helpt je het op te lossen.',
     tiers: [
       { name: 'Gratis AI-zichtbaarheidscheck', price: '€0', cadence: '', q: 'Beveelt AI mijn restaurant aan?', badge: '', features: ['Je AI-zichtbaarheidsdashboard', 'AI-zichtbaarheidsstatus & score', 'Concurrenten die in plaats van jou worden genoemd', 'Top 3 bevindingen + websitesnapshot', 'Download altijd een samenvatting als PDF'], cta: 'Open mijn gratis dashboard', note: 'Geen account, geen creditcard, geen verplichting.', highlight: false },
-      { name: 'AI-zichtbaarheidsaudit', price: '€49', cadence: 'eenmalig', q: 'Waarom verschijnen concurrenten vaker?', badge: 'Populairst', features: ['Alles uit de gratis check', 'Alle vier de AI-modellen geanalyseerd', 'Bewijs op promptniveau', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Op bewijs gebaseerde aanbevelingen', '30-dagen actieplan'], cta: 'Volledige audit aanvragen', note: 'Begrijp precies waarom concurrenten vaker verschijnen.', highlight: true },
-      { name: 'AI-zichtbaarheidsimplementatie', price: '€299', cadence: 'eenmalig', q: 'Help me het echt op te lossen.', badge: 'Beste keuze', features: ['Alles uit de audit', 'Restaurant-schema geïmplementeerd', 'FAQ & AI-vriendelijke content', 'Homepage- & locatieverbeteringen', 'Menu- & Google-bedrijfsprofiel-verbeteringen', 'Vervolg-audit (voor / na)'], cta: 'Implementatie bespreken', note: 'We maken je restaurant makkelijker te begrijpen en aan te bevelen voor AI.', highlight: false },
+      { name: 'AI-zichtbaarheidscheck', price: '€49', cadence: 'eenmalig', q: 'Waarom verschijnen concurrenten vaker?', badge: 'Populairst', features: ['Alles uit de gratis check', 'Alle vier de AI-modellen geanalyseerd', 'Bewijs op promptniveau', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Op bewijs gebaseerde aanbevelingen', 'Wordt je monitoring-nulmeting'], cta: 'Volledige check aanvragen', note: 'Begrijp precies waarom concurrenten vaker verschijnen.', highlight: true },
+      { name: 'AI-zichtbaarheidsimplementatie', price: '€299', cadence: 'eenmalig', q: 'Help me het echt op te lossen.', badge: 'Beste keuze', features: ['Alles uit de check', 'Restaurant-schema geïmplementeerd', 'FAQ & AI-vriendelijke content', 'Homepage- & locatieverbeteringen', 'Menu- & Google-bedrijfsprofiel-verbeteringen', 'Vervolgcheck (voor / na)'], cta: 'Implementatie bespreken', note: 'We maken je restaurant makkelijker te begrijpen en aan te bevelen voor AI.', highlight: false },
     ],
+    monitorBanner: { tag: 'Vlaggenschip · binnenkort', title: 'AI-zichtbaarheidsmonitoring', body: 'Continue maandelijkse monitoring van hoe AI je aanbeveelt — wat er veranderde, waarom, en wat je nu moet doen. Je gratis check en eenmalige check voeden er rechtstreeks in.', cta: 'Zet me op de monitoring-wachtlijst' },
     founderKicker: 'Van de oprichter',
     founderQuote: (f: string) => `“Hoi, ik ben ${f}. Ik werk elke dag met restaurants — en ik bouwde Finded omdat eigenaren geen idee hadden of AI hen aanbeveelt, of juist hun concurrenten.”`,
     founderBody: 'Elke voltooide audit verbetert hoe goed we begrijpen hoe AI restaurants ontdekt. Het is een klein, onafhankelijk platform gebouwd in Nederland. Heb je een vraag? Mail me — ik lees ze allemaal.',
@@ -439,7 +441,7 @@ export default async function LandingPage() {
           <a href="#how" style={navLink}>{t.nav.how}</a>
           <a href="#pricing" style={navLink}>{t.nav.pricing}</a>
           <a href="#data" style={navLink}>{t.nav.resources}</a>
-          <a href={`mailto:${contactEmail}?subject=Finded for Agencies`} style={navLink}>{t.nav.agencies}</a>
+          <a href="/agencies" style={navLink}>{t.nav.agencies}</a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <LangToggle current={lang} tone="light" />
@@ -621,6 +623,15 @@ export default async function LandingPage() {
       <section id="pricing" style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 60 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '96px 24px' }}>
           <SectionTitle kicker={t.pricingKicker} title={t.pricingTitle} sub={t.pricingSub} />
+          {/* Flagship: monitoring (messaging-only — waitlist, no billing yet) */}
+          <div style={{ position: 'relative', overflow: 'hidden', background: GRAD, borderRadius: 20, padding: 'clamp(22px, 3vw, 32px)', marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 30px 70px -40px rgba(181,104,58,0.7)' }}>
+            <div style={{ maxWidth: 620 }}>
+              <span style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#fff', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', borderRadius: 999, marginBottom: 12 }}>{t.monitorBanner.tag}</span>
+              <h3 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#fff', letterSpacing: -0.8, marginBottom: 8 }}>{t.monitorBanner.title}</h3>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.92)', lineHeight: 1.6, margin: 0 }}>{t.monitorBanner.body}</p>
+            </div>
+            <a href={`mailto:${contactEmail}?subject=${encodeURIComponent(t.monitorBanner.title + ' — waitlist')}`} className="btn" style={{ flexShrink: 0, background: '#fff', color: '#241C13', fontWeight: 700, fontSize: 14.5, padding: '13px 22px', borderRadius: 12, textDecoration: 'none', boxShadow: '0 14px 30px -12px rgba(0,0,0,0.35)' }}>{t.monitorBanner.cta}</a>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, alignItems: 'stretch' }}>
             {t.tiers.map((p, idx) => {
               const href = idx === 0 ? '#check' : `mailto:${contactEmail}?subject=${encodeURIComponent(p.name)}`

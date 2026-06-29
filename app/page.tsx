@@ -9,7 +9,7 @@ import { platformStats } from '@/lib/observations'
 import type { Language } from '@/lib/i18n'
 import {
   Building2, Search, ClipboardCheck, MapPin, UtensilsCrossed, Cpu,
-  Bot, Users, Globe, FileSearch, ListChecks, Check,
+  Bot, Users, Globe, FileSearch, ListChecks, Check, X,
   ShieldCheck, Lock, CircleCheck, Home, Gauge, MessageSquare,
   TrendingUp, FileDown, Sparkles,
 } from 'lucide-react'
@@ -46,6 +46,22 @@ const T = {
     insightsAnchorLabel: 'AI searches performed',
     statLabels: ['Restaurants analysed', 'AI searches performed', 'Audits completed', 'Cities covered', 'Cuisine types', 'AI models tested'],
     insightsEmpty: 'Our dataset grows with every completed audit. Live platform statistics — restaurants analysed, AI searches performed, cities and cuisines covered — appear here as the knowledge base fills.',
+    evidence: {
+      eyebrow: 'See it in action',
+      title: 'AI is already answering — sometimes without you',
+      sub: 'When a guest asks an assistant where to eat, it names just a handful of restaurants. Your audit shows exactly which prompts you appear in — and which you don’t.',
+      badge: 'Representative example',
+      model: 'ChatGPT',
+      promptLabel: 'A guest asks',
+      prompt: 'What’s the best pasta in the Jordaan?',
+      answerLabel: 'ChatGPT answers',
+      answer: 'For great pasta in the Jordaan, locals love Pasta e Basta for its lively atmosphere, Toscanini for refined Tuscan cooking, and Trattoria Vesuvio for classic homemade dishes — all known for fresh, handmade pasta.',
+      rivals: ['Pasta e Basta', 'Toscanini', 'Trattoria Vesuvio'],
+      namedNote: '3 competitors named',
+      absentName: 'Tavola Rosa',
+      absentNote: 'your restaurant — not mentioned',
+      caption: 'Illustrative example. Your real audit shows the actual prompts and AI responses behind every finding.',
+    },
     whyTitle: 'Guests no longer only search Google.',
     whyBody: "They ask AI where to eat, where to celebrate, which place is romantic. These tools name only a few restaurants — if your competitors are mentioned and you aren't, you're missing a discovery channel that's quietly growing.",
     measureTitle: 'What your audit actually measures',
@@ -118,6 +134,22 @@ const T = {
     insightsAnchorLabel: 'AI-zoekopdrachten uitgevoerd',
     statLabels: ['Restaurants geanalyseerd', 'AI-zoekopdrachten uitgevoerd', 'Audits voltooid', 'Steden gedekt', 'Keukentypes', 'AI-modellen getest'],
     insightsEmpty: 'Onze dataset groeit met elke voltooide audit. Live platformstatistieken — geanalyseerde restaurants, uitgevoerde AI-zoekopdrachten, gedekte steden en keukens — verschijnen hier naarmate de kennisbank zich vult.',
+    evidence: {
+      eyebrow: 'Zo ziet het eruit',
+      title: 'AI geeft al antwoord — soms zonder jou',
+      sub: 'Als een gast een assistent vraagt waar te eten, worden er maar een handvol restaurants genoemd. Je audit laat precies zien in welke prompts je verschijnt — en in welke niet.',
+      badge: 'Representatief voorbeeld',
+      model: 'ChatGPT',
+      promptLabel: 'Een gast vraagt',
+      prompt: 'Wat is het beste pastarestaurant in de Jordaan?',
+      answerLabel: 'ChatGPT antwoordt',
+      answer: 'Voor lekkere pasta in de Jordaan zijn locals dol op Pasta e Basta vanwege de levendige sfeer, Toscanini voor verfijnde Toscaanse keuken, en Trattoria Vesuvio voor klassieke huisgemaakte gerechten — allemaal bekend om verse, handgemaakte pasta.',
+      rivals: ['Pasta e Basta', 'Toscanini', 'Trattoria Vesuvio'],
+      namedNote: '3 concurrenten genoemd',
+      absentName: 'Tavola Rosa',
+      absentNote: 'jouw restaurant — niet genoemd',
+      caption: 'Illustratief voorbeeld. Je echte audit toont de werkelijke prompts en AI-antwoorden achter elke bevinding.',
+    },
     whyTitle: 'Gasten zoeken niet meer alleen op Google.',
     whyBody: 'Ze vragen AI waar ze moeten eten, waar ze iets kunnen vieren, welke plek romantisch is. Deze tools noemen maar een paar restaurants — als je concurrenten worden genoemd en jij niet, mis je een ontdekkingskanaal dat stilletjes groeit.',
     measureTitle: 'Wat je audit echt meet',
@@ -312,6 +344,56 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
   )
 }
 
+function EvidenceExample({ t }: { t: typeof T['en']['evidence'] }) {
+  const provColor = PROVIDERS.find((p) => p.name === t.model)?.color ?? '#a78bfa'
+  // Highlight the named rivals inside the AI answer (deterministic string split).
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`(${t.rivals.map(esc).join('|')})`, 'g')
+  const rivalSet = new Set<string>(t.rivals)
+  const parts = t.answer.split(re)
+  const iconWrap = { width: 32, height: 32, borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } as const
+  const chip = { display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, padding: '6px 11px', borderRadius: 8 } as const
+  return (
+    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, background: 'linear-gradient(180deg, #0e0e1d, #0a0a15)', boxShadow: '0 40px 100px -50px rgba(80,60,200,0.4)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px', borderBottom: `1px solid ${BORDER2}`, background: 'rgba(255,255,255,0.015)' }}>
+        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase', color: '#a78bfa', background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.28)', padding: '4px 9px', borderRadius: 6 }}>{t.badge}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#cfd2e0' }}>
+          <span style={{ width: 14, height: 14, borderRadius: '50%', background: provColor, boxShadow: `0 0 12px -2px ${provColor}` }} />{t.model}
+        </span>
+      </div>
+      <div style={{ padding: 'clamp(18px, 3vw, 26px)', display: 'grid', gap: 18 }}>
+        {/* Guest prompt */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <span style={{ ...iconWrap, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}` }}><MessageSquare style={{ width: 16, height: 16, color: MUTED }} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{t.promptLabel}</div>
+            <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: '4px 14px 14px 14px', padding: '11px 16px', fontSize: 15.5, fontWeight: 600, color: INK }}>{t.prompt}</div>
+          </div>
+        </div>
+        {/* AI answer */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <span style={{ ...iconWrap, background: `${provColor}1f`, border: `1px solid ${provColor}55` }}><Bot style={{ width: 16, height: 16, color: provColor }} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{t.answerLabel}</div>
+            <p style={{ fontSize: 15, color: '#cfd2e0', lineHeight: 1.7, margin: 0 }}>
+              {parts.map((p, i) => rivalSet.has(p)
+                ? <strong key={i} style={{ color: '#fff', fontWeight: 700, background: 'rgba(124,92,255,0.18)', borderBottom: '1.5px solid rgba(167,139,250,0.7)', borderRadius: 3, padding: '0 3px' }}>{p}</strong>
+                : <span key={i}>{p}</span>)}
+            </p>
+          </div>
+        </div>
+        {/* Verdict chips */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', borderTop: `1px solid ${BORDER2}`, paddingTop: 16 }}>
+          <span style={{ ...chip, color: '#a78bfa', background: 'rgba(124,92,255,0.1)', border: '1px solid rgba(124,92,255,0.28)' }}><CircleCheck style={{ width: 14, height: 14 }} /> {t.namedNote}</span>
+          <span style={{ ...chip, color: '#fda4af', background: 'rgba(251,113,133,0.1)', border: '1px solid rgba(251,113,133,0.32)' }}>
+            <X style={{ width: 14, height: 14 }} /> <strong style={{ color: '#fff', fontWeight: 700 }}>{t.absentName}</strong> — {t.absentNote}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default async function LandingPage() {
   const settings = await getSettings()
   const lang: Language = await getViewerLang(settings.defaultLanguage)
@@ -396,6 +478,17 @@ export default async function LandingPage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Evidence — one representative prompt + AI answer, rival-marked */}
+      <section id="evidence" style={{ borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '64px 24px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 12 }}>{t.evidence.eyebrow}</div>
+          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.12, marginBottom: 14, maxWidth: '20ch' }}>{t.evidence.title}</h2>
+          <p style={{ fontSize: 17, color: '#cfd2e0', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 28 }}>{t.evidence.sub}</p>
+          <EvidenceExample t={t.evidence} />
+          <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, lineHeight: 1.6, maxWidth: '62ch' }}>{t.evidence.caption}</p>
         </div>
       </section>
 

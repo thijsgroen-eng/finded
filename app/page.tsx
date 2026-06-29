@@ -16,8 +16,8 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-const BG = '#070711', BG_SOFT = '#0b0b18', CARD = 'rgba(255,255,255,0.035)', CARD2 = 'rgba(255,255,255,0.055)'
-const BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.06)'
+const BG = '#070711', BG_SOFT = '#13132c', CARD = 'rgba(255,255,255,0.035)', CARD2 = 'rgba(255,255,255,0.055)'
+const BORDER = 'rgba(255,255,255,0.09)', BORDER2 = 'rgba(255,255,255,0.08)'
 const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85', GREEN = '#34d399'
 const GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)'
 const TEXT_GRAD = 'linear-gradient(90deg, #5b8cff 0%, #a78bfa 100%)'
@@ -464,9 +464,9 @@ export default async function LandingPage() {
           </div>
           <Reveal className="reveal-shot" style={{ marginTop: 44 }}>
             <div id="sample" style={{ scrollMarginTop: 80, position: 'relative' }}>
-              {/* faint indigo glow to lift the showpiece off the hero */}
-              <div aria-hidden style={{ position: 'absolute', inset: '-10% -6% -4%', background: 'radial-gradient(ellipse at 50% 32%, rgba(99,102,241,0.20), transparent 68%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'relative', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.018))', border: `1px solid ${BORDER}`, borderRadius: 28, padding: 'clamp(10px, 1.6vw, 18px)', boxShadow: '0 50px 120px -50px rgba(60,50,160,0.55), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+              {/* indigo glow to lift the showpiece off the hero */}
+              <div aria-hidden style={{ position: 'absolute', inset: '-12% -8% -6%', background: 'radial-gradient(ellipse at 50% 30%, rgba(99,102,241,0.30), transparent 66%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', background: 'linear-gradient(180deg, #1b1b3a, #101024)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 28, padding: 'clamp(12px, 1.8vw, 20px)', boxShadow: '0 60px 130px -50px rgba(70,55,180,0.7), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07)' }}>
                 <DashboardMock t={t.mock} />
               </div>
               <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{t.sampleCaption}</p>

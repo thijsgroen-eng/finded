@@ -462,9 +462,13 @@ export default async function LandingPage() {
               )
             })}
           </div>
-          <Reveal className="reveal-shot" style={{ marginTop: 40 }}>
-            <div id="sample" style={{ scrollMarginTop: 80 }}>
-              <DashboardMock t={t.mock} />
+          <Reveal className="reveal-shot" style={{ marginTop: 44 }}>
+            <div id="sample" style={{ scrollMarginTop: 80, position: 'relative' }}>
+              {/* faint indigo glow to lift the showpiece off the hero */}
+              <div aria-hidden style={{ position: 'absolute', inset: '-10% -6% -4%', background: 'radial-gradient(ellipse at 50% 32%, rgba(99,102,241,0.20), transparent 68%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.018))', border: `1px solid ${BORDER}`, borderRadius: 28, padding: 'clamp(10px, 1.6vw, 18px)', boxShadow: '0 50px 120px -50px rgba(60,50,160,0.55), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+                <DashboardMock t={t.mock} />
+              </div>
               <p style={{ fontSize: 12.5, color: FAINT, marginTop: 16, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{t.sampleCaption}</p>
             </div>
           </Reveal>
@@ -482,7 +486,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Evidence — one representative prompt + AI answer, rival-marked */}
-      <section id="evidence" style={{ borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
+      <section id="evidence" style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
         <div style={{ maxWidth: 960, margin: '0 auto', padding: '64px 24px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 12 }}>{t.evidence.eyebrow}</div>
           <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.12, marginBottom: 14, maxWidth: '20ch' }}>{t.evidence.title}</h2>
@@ -493,7 +497,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Insights — rigor-led: anchor metric + supporting counts */}
-      <section style={{ borderBottom: `1px solid ${BORDER2}`, background: BG_SOFT }}>
+      <section style={{ background: BG, borderBottom: `1px solid ${BORDER2}` }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '60px 24px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 10 }}>{t.insightsEyebrow}</div>
           <p style={{ fontSize: 14.5, color: '#cfd2e0', lineHeight: 1.6, maxWidth: '60ch', marginBottom: 30 }}>{t.insightsFrame}</p>
@@ -526,16 +530,19 @@ export default async function LandingPage() {
       </section>
 
       {/* Why — editorial, left-aligned on a lifted panel */}
-      <section style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 28px' }}>
-        <div style={{ position: 'relative', overflow: 'hidden', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 22, padding: 'clamp(28px, 4vw, 46px)', maxWidth: 880 }}>
-          <span style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: GRAD }} />
-          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 16, lineHeight: 1.12, maxWidth: '18ch' }}>{t.whyTitle}</h2>
-          <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.65, maxWidth: '60ch', margin: 0 }}>{t.whyBody}</p>
+      <section style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}` }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '72px 24px' }}>
+          <div style={{ position: 'relative', overflow: 'hidden', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 22, padding: 'clamp(28px, 4vw, 46px)', maxWidth: 880 }}>
+            <span style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: GRAD }} />
+            <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 16, lineHeight: 1.12, maxWidth: '18ch' }}>{t.whyTitle}</h2>
+            <p style={{ fontSize: 17.5, color: '#cfd2e0', lineHeight: 1.65, maxWidth: '60ch', margin: 0 }}>{t.whyBody}</p>
+          </div>
         </div>
       </section>
 
       {/* Measure */}
-      <section id="measure" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 96px', scrollMarginTop: 70 }}>
+      <section id="measure" style={{ background: BG, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '84px 24px' }}>
         <SectionTitle title={t.measureTitle} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
           {t.measure.map(([title, d, ex], i) => {
@@ -550,10 +557,12 @@ export default async function LandingPage() {
             )
           })}
         </div>
+        </div>
       </section>
 
       {/* How */}
-      <section id="how" style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 24px 96px', scrollMarginTop: 70 }}>
+      <section id="how" style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 70 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '84px 24px' }}>
         <SectionTitle kicker={t.howKicker} title={t.howTitle} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
           {t.how.map(([n, title, d]) => (
@@ -565,10 +574,11 @@ export default async function LandingPage() {
           ))}
         </div>
         <p style={{ textAlign: 'center', fontSize: 13, color: FAINT, marginTop: 24 }}>{t.howNote}</p>
+        </div>
       </section>
 
       {/* Data */}
-      <section id="data" style={{ background: BG_SOFT, borderTop: `1px solid ${BORDER2}`, borderBottom: `1px solid ${BORDER2}`, position: 'relative', overflow: 'hidden', scrollMarginTop: 60 }}>
+      <section id="data" style={{ background: BG, borderBottom: `1px solid ${BORDER2}`, position: 'relative', overflow: 'hidden', scrollMarginTop: 60 }}>
         <div style={{ position: 'absolute', top: -120, right: -80, width: 460, height: 460, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,92,255,0.22), transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 940, margin: '0 auto', padding: '76px 24px', position: 'relative' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 18 }}>{t.dataEyebrow}</div>
@@ -592,7 +602,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" style={{ scrollMarginTop: 60 }}>
+      <section id="pricing" style={{ background: BG_SOFT, borderBottom: `1px solid ${BORDER2}`, scrollMarginTop: 60 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '96px 24px' }}>
           <SectionTitle kicker={t.pricingKicker} title={t.pricingTitle} sub={t.pricingSub} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, alignItems: 'stretch' }}>
@@ -620,7 +630,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Founder */}
-      <section style={{ borderTop: `1px solid ${BORDER2}`, background: BG_SOFT }}>
+      <section style={{ background: BG, borderBottom: `1px solid ${BORDER2}` }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '92px 24px', display: 'flex', gap: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ flexShrink: 0 }}>
             <div style={{ width: 150, height: 150, borderRadius: 24, background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px -28px rgba(124,92,255,0.7)' }}><span style={{ fontSize: 52, fontWeight: 800, color: '#fff' }}>{founder.charAt(0)}</span></div>
@@ -638,7 +648,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Lead capture */}
-      <section id="check" style={{ position: 'relative', overflow: 'hidden', scrollMarginTop: 60, borderTop: `1px solid ${BORDER2}` }}>
+      <section id="check" style={{ background: BG_SOFT, position: 'relative', overflow: 'hidden', scrollMarginTop: 60, borderBottom: `1px solid ${BORDER2}` }}>
         <div style={{ position: 'absolute', top: -160, left: '50%', transform: 'translateX(-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.25), transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '96px 24px', textAlign: 'center', position: 'relative' }}>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.2, marginBottom: 14, color: '#fff' }}>{t.leadTitle}</h2>
@@ -648,7 +658,7 @@ export default async function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ borderTop: `1px solid ${BORDER2}`, background: BG_SOFT }}>
+      <section style={{ background: BG }}>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '92px 24px' }}>
           <SectionTitle kicker={t.faqKicker} title={t.faqTitle} />
           <div style={{ display: 'grid', gap: 12 }}>

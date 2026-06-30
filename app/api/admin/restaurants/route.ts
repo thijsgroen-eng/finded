@@ -69,11 +69,12 @@ export async function POST(request: NextRequest) {
   if (action === 'run_audit') {
     const { createAudit } = await import('@/lib/engine/audit-runner')
     let queued = 0
+    const failed: string[] = []
     for (const id of ids.slice(0, 500)) {
-      try { await createAudit(id); queued++ } catch { /* skip failures */ }
+      try { await createAudit(id); queued++ } catch { failed.push(id) }
     }
     await supabaseAdmin.from('restaurants').update({ prospect_status: 'audit_queued' }).in('id', ids).eq('prospect_status', 'not_audited')
-    return NextResponse.json({ ok: true, queued })
+    return NextResponse.json({ ok: true, queued, failed: failed.length > 0 ? failed : undefined })
   }
 
   if (action === 'export') {

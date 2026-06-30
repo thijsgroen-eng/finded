@@ -35,7 +35,9 @@ export async function POST(request: NextRequest) {
     const restaurantId = s.metadata?.restaurant_id
     const plan = asPlanKey(s.metadata?.plan)
 
-    if (restaurantId) {
+    if (!restaurantId) {
+      console.error('Stripe webhook: missing restaurant_id in metadata', { sessionId: s.id })
+    } else {
       if (PLANS[plan].grantsReport) {
         await supabaseAdmin.from('restaurants').update({ report_paid: true }).eq('id', restaurantId)
       }

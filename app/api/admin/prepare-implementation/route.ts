@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
   const existingTypes = new Set((assets ?? []).map((a) => a.type))
   const restaurantId = audit?.restaurant_id ?? recs.find((r) => r.restaurant_id)?.restaurant_id ?? null
 
+  if (!restaurantId) {
+    return NextResponse.json({ error: 'Could not determine restaurant_id for this audit.' }, { status: 422 })
+  }
+
   let queued = 0
   const requested = new Set<string>()
   for (const r of recs) {

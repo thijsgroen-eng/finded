@@ -125,8 +125,14 @@ Return ONLY a JSON object:
     })
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : ''
+    if (!text) throw new Error('Model returned no text content')
     const clean = text.replace(/```json|```/g, '').trim()
-    const email = JSON.parse(clean)
+    let email: unknown
+    try {
+      email = JSON.parse(clean)
+    } catch {
+      throw new Error(`Model response was not valid JSON: ${clean.slice(0, 200)}`)
+    }
 
     return NextResponse.json({ email })
   } catch (error) {

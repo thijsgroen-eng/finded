@@ -1,3 +1,4 @@
+import ComingSoon from './coming-soon'
 import { LeadForm } from '@/components/landing/lead-form'
 import { CountUp } from '@/components/landing/count-up'
 import { LangToggle } from '@/components/lang-toggle'
@@ -13,6 +14,8 @@ import {
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+// Set COMING_SOON=true in Vercel env vars to show the coming soon page
 
 const BG = '#F1E8D7', BG_SOFT = '#E7DAC1', CARD = 'rgba(255,255,255,0.55)', CARD2 = 'rgba(255,255,255,0.82)'
 const BORDER = 'rgba(36,28,19,0.16)', BORDER2 = 'rgba(36,28,19,0.10)'
@@ -301,6 +304,7 @@ function DashboardMock({ t }: { t: typeof T['en']['mock'] }) {
 }
 
 export default async function LandingPage() {
+  if (process.env.COMING_SOON === 'true') return <ComingSoon />
   const settings = await getSettings()
   const lang: Language = await getViewerLang(settings.defaultLanguage)
   const t = T[lang]

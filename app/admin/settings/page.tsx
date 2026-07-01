@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui'
 import { Loader2, Check, Globe, User, Cpu, Coins } from 'lucide-react'
+import { useAdminT } from '@/components/admin/lang-context'
 
 type ProviderKey = 'openai' | 'anthropic' | 'gemini' | 'perplexity'
 interface Settings {
@@ -27,6 +28,7 @@ const PROVIDER_LABELS: Record<ProviderKey, string> = {
 }
 
 export default function SettingsPage() {
+  const t = useAdminT().settings
   const [s, setS] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -62,12 +64,12 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Defaults applied across reports, audits and the public site.</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t.subtitle}</p>
       </div>
 
       {loading || !s ? (
-        <div className="flex items-center gap-2 text-sm text-gray-400 py-10"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+        <div className="flex items-center gap-2 text-sm text-gray-400 py-10"><Loader2 className="w-4 h-4 animate-spin" /> {t.loading}</div>
       ) : (
         <div className="space-y-5">
           {/* Language */}

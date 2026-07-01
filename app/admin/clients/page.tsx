@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { useAdminT } from '@/components/admin/lang-context'
 import Link from 'next/link'
 import { Card, CardContent, Spinner, EmptyState } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -160,6 +161,7 @@ function AddClientModal({ onClose, onAdded }: { onClose: () => void; onAdded: ()
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  const t = useAdminT().clients
   const [clients, setClients] = useState<Client[] | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -242,13 +244,13 @@ export default function ClientsPage() {
 
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
           <p className="text-sm text-gray-500 mt-1">Your customers — plan, activity and health at a glance.</p>
         </div>
         <button onClick={() => setShowAdd(true)}
           style={{ background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' }}
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white rounded-xl shadow-sm hover:opacity-90 transition-opacity flex-shrink-0">
-          <Plus className="w-4 h-4" /> Add client
+          <Plus className="w-4 h-4" /> {t.addClient}
         </button>
       </div>
 
@@ -284,9 +286,9 @@ export default function ClientsPage() {
         {loading ? (
           <div className="flex items-center justify-center py-16"><Spinner className="w-6 h-6 text-gray-400" /></div>
         ) : filtered.length === 0 ? (
-          <EmptyState icon={<Users className="w-10 h-10" />} title="No clients yet"
-            description={'Click “Add client” to add your first client, or set a plan from a restaurant profile.'}
-            action={<button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' }} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-lg"><Plus className="w-4 h-4" />Add client</button>} />
+          <EmptyState icon={<Users className="w-10 h-10" />} title={t.noClients}
+            description={t.addFirstClient}
+            action={<button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' }} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-lg"><Plus className="w-4 h-4" />{t.addClient}</button>} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

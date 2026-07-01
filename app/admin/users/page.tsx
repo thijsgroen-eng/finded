@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Spinner, EmptyState } from '@/components/ui'
 import { ShieldCheck, Plus, Trash2, UserPlus, ScrollText } from 'lucide-react'
+import { useAdminT } from '@/components/admin/lang-context'
 
 type Role = 'admin' | 'operator' | 'viewer'
 interface User { id: string; email: string; role: Role; active: boolean; last_login_at: string | null; created_at: string }
@@ -11,6 +12,7 @@ interface AuditEntry { id: string; email: string | null; action: string; target:
 const ROLE_BADGE: Record<Role, 'success' | 'info' | 'default'> = { admin: 'success', operator: 'info', viewer: 'default' }
 
 export default function UsersPage() {
+  const t = useAdminT().users
   const [users, setUsers] = useState<User[] | null>(null)
   const [log, setLog] = useState<AuditEntry[]>([])
   const [forbidden, setForbidden] = useState(false)
@@ -62,8 +64,8 @@ export default function UsersPage() {
   if (forbidden) {
     return (
       <div className="p-8 max-w-3xl mx-auto">
-        <EmptyState icon={<ShieldCheck className="w-10 h-10" />} title="Admins only"
-          description="User management requires the admin role. Ask an admin to grant access." />
+        <EmptyState icon={<ShieldCheck className="w-10 h-10" />} title={t.adminsOnly}
+          description={t.adminsOnlyDesc} />
       </div>
     )
   }
@@ -71,13 +73,13 @@ export default function UsersPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 inline-flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-gray-400" /> Users &amp; access</h1>
-        <p className="text-sm text-gray-500 mt-1">Per-user accounts and roles. The shared password still works as a bootstrap admin until you add accounts.</p>
+        <h1 className="text-2xl font-bold text-gray-900 inline-flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-gray-400" /> {t.title}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t.subtitle}</p>
       </div>
 
       {/* Create */}
       <Card className="mb-5">
-        <CardHeader><CardTitle><span className="inline-flex items-center gap-2"><UserPlus className="w-4 h-4 text-gray-400" /> Add a user</span></CardTitle></CardHeader>
+        <CardHeader><CardTitle><span className="inline-flex items-center gap-2"><UserPlus className="w-4 h-4 text-gray-400" /> {t.addUser}</span></CardTitle></CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@finded.com" type="email"

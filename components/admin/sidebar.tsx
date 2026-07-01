@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import {
@@ -8,30 +8,60 @@ import {
   Upload, Users, BarChart2, Plus, MessageSquareText,
   Menu, X, LogOut, Inbox, Settings, Lightbulb, ShieldCheck, HeartHandshake
 } from 'lucide-react'
+import { useAdminT } from '@/components/admin/lang-context'
 
 async function logout() {
   await fetch('/api/admin/login', { method: 'DELETE' })
   window.location.href = '/login'
 }
 
-const NAV_ITEMS = [
-  { href: '/admin/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/admin/restaurants', label: 'Restaurants', icon: Building2 },
-  { href: '/admin/clients',     label: 'Clients',     icon: HeartHandshake },
-  { href: '/admin/audits',      label: 'Audits',      icon: ClipboardList },
-  { href: '/admin/requests',    label: 'Requests',    icon: Inbox },
-  { href: '/admin/prompts',     label: 'Prompts',     icon: MessageSquareText },
-  { href: '/admin/analytics',   label: 'Analytics',   icon: BarChart2 },
-  { href: '/admin/insights',    label: 'Insights',    icon: Lightbulb },
-  { href: '/admin/leads',       label: 'Leads',       icon: Users },
-  { href: '/admin/upload',      label: 'Bulk Import', icon: Upload },
-  { href: '/admin/settings',    label: 'Settings',    icon: Settings },
-  { href: '/admin/users',       label: 'Users',       icon: ShieldCheck },
-]
+function LangToggle() {
+  const router = useRouter()
+  const [lang, setLang] = useState<'nl' | 'en'>('nl')
 
-/** The nav body, shared between the desktop rail and the mobile drawer. */
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)finded_lang=([^;]+)/)
+    if (match) setLang(match[1] as 'nl' | 'en')
+  }, [])
+
+  function toggle() {
+    const next = lang === 'nl' ? 'en' : 'nl'
+    document.cookie = `finded_lang=${next}; path=/; max-age=31536000`
+    setLang(next)
+    router.refresh()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-[rgba(36,28,19,0.55)] hover:text-[#241C13] hover:bg-[rgba(36,28,19,0.06)] transition-colors border border-[rgba(36,28,19,0.12)]"
+      title={lang === 'nl' ? 'Switch to English' : 'Overschakelen naar Nederlands'}
+    >
+      {lang === 'nl' ? '🇳🇱 NL' : '🇬🇧 EN'}
+    </button>
+  )
+}
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const t = useAdminT()
+
+  const NAV_ITEMS = [
+    { href: '/admin/dashboard',   label: t.nav.dashboard,   icon: LayoutDashboard },
+    { href: '/admin/restaurants', label: t.nav.restaurants, icon: Building2 },
+    { href: '/admin/clients',     label: t.nav.clients,     icon: HeartHandshake },
+    { href: '/admin/audits',      label: t.nav.audits,      icon: ClipboardList },
+    { href: '/admin/requests',    label: t.nav.requests,    icon: Inbox },
+    { href: '/admin/prompts',     label: t.nav.prompts,     icon: MessageSquareText },
+    { href: '/admin/analytics',   label: t.nav.analytics,   icon: BarChart2 },
+    { href: '/admin/insights',    label: t.nav.insights,    icon: Lightbulb },
+    { href: '/admin/leads',       label: t.nav.leads,       icon: Users },
+    { href: '/admin/upload',      label: t.nav.upload,      icon: Upload },
+    { href: '/admin/settings',    label: t.nav.settings,    icon: Settings },
+    { href: '/admin/users',       label: t.nav.users,       icon: ShieldCheck },
+  ]
+
   return (
     <>
       <div className="px-5 py-5 border-b border-[rgba(36,28,19,0.12)]">
@@ -41,7 +71,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
-      {/* New audit CTA */}
       <div className="px-3 py-3 border-b border-[rgba(36,28,19,0.12)]">
         <Link
           href="/admin/new"
@@ -50,7 +79,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           style={{ background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' }}
         >
           <Plus className="w-4 h-4" />
-          New audit
+          {t.nav.newAudit}
         </Link>
       </div>
 
@@ -76,16 +105,19 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="px-3 py-3 border-t border-[rgba(36,28,19,0.12)]">
+      <div className="px-3 py-3 border-t border-[rgba(36,28,19,0.12)] space-y-1">
+        <div className="px-3 py-1">
+          <LangToggle />
+        </div>
         <button
           type="button"
           onClick={logout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-[rgba(36,28,19,0.60)] hover:text-[#241C13] hover:bg-[rgba(36,28,19,0.06)] transition-colors border border-transparent"
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          Log out
+          {t.nav.logout}
         </button>
-        <p className="text-xs text-[rgba(36,28,19,0.36)] px-3 pt-2">Finded Platform v1.0</p>
+        <p className="text-xs text-[rgba(36,28,19,0.36)] px-3 pt-1">Finded Platform v1.0</p>
       </div>
     </>
   )
@@ -95,10 +127,8 @@ export function AdminSidebar() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
-  // Close the mobile drawer whenever the route changes.
   useEffect(() => { setOpen(false) }, [pathname])
 
-  // Lock body scroll while the mobile drawer is open.
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -108,7 +138,6 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile top bar (hidden on md+) */}
       <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-[#E7DAC1] text-[#241C13] border-b border-[rgba(36,28,19,0.12)]">
         <button
           type="button"
@@ -124,12 +153,10 @@ export function AdminSidebar() {
         </div>
       </header>
 
-      {/* Desktop rail (hidden below md) */}
       <aside className="hidden md:flex w-56 min-h-screen bg-[#E7DAC1] text-[#241C13] flex-col flex-shrink-0 border-r border-[rgba(36,28,19,0.12)]">
         <SidebarBody />
       </aside>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="md:hidden fixed inset-0 z-40">
           <div

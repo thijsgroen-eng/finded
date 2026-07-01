@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { StatCard, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui'
 import { formatDateTime } from '@/lib/utils'
@@ -10,6 +11,7 @@ import {
   Send, CalendarClock, Sparkles, ShieldAlert, GaugeCircle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { ADMIN_COPY, type AdminLang } from '@/lib/admin-copy'
 
 const CONTACTED = new Set(['email_sent', 'opened', 'replied', 'interested', 'demo_scheduled', 'customer', 'lost'])
 
@@ -109,58 +111,59 @@ function OppBadge({ score }: { score: number }) {
 }
 
 export default async function DashboardPage() {
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get('finded_lang')?.value ?? 'nl') as AdminLang
+  const t = ADMIN_COPY[lang].dashboard
+
   const d = await getDashboard()
   const hasWarnings = d.warnings.nonRestaurants + d.warnings.duplicateGroups + d.warnings.missingCity + d.warnings.missingCuisine > 0
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Command center</h1>
-        <p className="text-sm text-gray-500 mt-1">What needs action today — audit health, outreach queue, and data quality.</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t.subtitle}</p>
       </div>
 
-      {/* Operational stats (no fabricated revenue) */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard label="Restaurants" value={d.totalRestaurants} sub={`${d.health.completed} audited`} icon={<UtensilsCrossed className="w-4 h-4" />} />
-        <StatCard label="Ready to send" value={d.readyToSend.length} sub="report done, not contacted" icon={<Send className="w-4 h-4" />} />
-        <StatCard label="Follow-ups due" value={d.followUpsDue.length} sub="overdue or due today" icon={<CalendarClock className="w-4 h-4" />} />
-        <StatCard label="Failed audits" value={d.health.failed} sub="need retry" icon={<AlertCircle className="w-4 h-4" />} />
-        <StatCard label="In progress" value={d.health.running + d.health.queued} sub={`${d.health.running} running · ${d.health.queued} queued`} icon={<Loader2 className="w-4 h-4" />} />
+        <StatCard label={t.stats.restaurants} value={d.totalRestaurants} sub={`${d.health.completed} ${t.stats.audited}`} icon={<UtensilsCrossed className="w-4 h-4" />} />
+        <StatCard label={t.stats.readyToSend} value={d.readyToSend.length} sub={t.stats.readyToSendSub} icon={<Send className="w-4 h-4" />} />
+        <StatCard label={t.stats.followUpsDue} value={d.followUpsDue.length} sub={t.stats.followUpsDueSub} icon={<CalendarClock className="w-4 h-4" />} />
+        <StatCard label={t.stats.failedAudits} value={d.health.failed} sub={t.stats.failedAuditsSub} icon={<AlertCircle className="w-4 h-4" />} />
+        <StatCard label={t.stats.inProgress} value={d.health.running + d.health.queued} sub={`${d.health.running} ${t.stats.running} · ${d.health.queued} ${t.stats.queued}`} icon={<Loader2 className="w-4 h-4" />} />
       </div>
 
-      {/* Data quality warnings */}
       {hasWarnings && (
         <Card className="mb-6 border-amber-200 bg-amber-50/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-600" />
-              <CardTitle>Data quality</CardTitle>
+              <CardTitle>{t.dataQuality}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-700">
-              {d.warnings.nonRestaurants > 0 && <span><strong>{d.warnings.nonRestaurants}</strong> non-restaurant entities</span>}
-              {d.warnings.duplicateGroups > 0 && <span><strong>{d.warnings.duplicateGroups}</strong> duplicate groups</span>}
-              {d.warnings.missingCity > 0 && <span><strong>{d.warnings.missingCity}</strong> missing city</span>}
-              {d.warnings.missingCuisine > 0 && <span><strong>{d.warnings.missingCuisine}</strong> missing cuisine</span>}
+              {d.warnings.nonRestaurants > 0 && <span><strong>{d.warnings.nonRestaurants}</strong> {t.nonRestaurants}</span>}
+              {d.warnings.duplicateGroups > 0 && <span><strong>{d.warnings.duplicateGroups}</strong> {t.duplicateGroups}</span>}
+              {d.warnings.missingCity > 0 && <span><strong>{d.warnings.missingCity}</strong> {t.missingCity}</span>}
+              {d.warnings.missingCuisine > 0 && <span><strong>{d.warnings.missingCuisine}</strong> {t.missingCuisine}</span>}
             </div>
             {d.duplicateNames.length > 0 && (
-              <p className="text-xs text-gray-500 mt-2">Possible duplicates: {d.duplicateNames.join(', ')}</p>
+              <p className="text-xs text-gray-500 mt-2">{t.possibleDuplicates}: {d.duplicateNames.join(', ')}</p>
             )}
-            <Link href="/admin/restaurants" className="text-xs text-blue-500 hover:underline mt-2 inline-block">Review entities →</Link>
+            <Link href="/admin/restaurants" className="text-xs text-blue-500 hover:underline mt-2 inline-block">{t.reviewEntities}</Link>
           </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Ready to send */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><Send className="w-4 h-4 text-gray-400" /><CardTitle>Ready for outreach</CardTitle></div>
+            <div className="flex items-center gap-2"><Send className="w-4 h-4 text-gray-400" /><CardTitle>{t.readyForOutreach}</CardTitle></div>
           </CardHeader>
           <CardContent className="pt-0">
             {d.readyToSend.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">Nothing waiting — every completed audit has been contacted.</p>
+              <p className="text-sm text-gray-400 py-3">{t.nothingWaiting}</p>
             ) : (
               <div className="space-y-1">
                 {d.readyToSend.map((r) => (
@@ -177,20 +180,19 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Failed audits */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-400" /><CardTitle>Failed audits — retry</CardTitle></div>
+            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-400" /><CardTitle>{t.failedAuditsRetry}</CardTitle></div>
           </CardHeader>
           <CardContent className="pt-0">
             {d.failedAudits.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">No failed audits.</p>
+              <p className="text-sm text-gray-400 py-3">{t.noFailedAudits}</p>
             ) : (
               <div className="space-y-1">
                 {d.failedAudits.map((a) => (
                   <Link key={a.id} href={`/admin/audits/${a.id}`} className="block py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900">{a.restaurant?.name ?? 'Unknown'}</p>
+                      <p className="text-sm font-medium text-gray-900">{a.restaurant?.name ?? ADMIN_COPY[lang].common.unknown}</p>
                       <span className="text-xs text-gray-400">{formatDateTime(a.created_at)}</span>
                     </div>
                     {a.error_message && <p className="text-xs text-red-500 truncate mt-0.5">{a.error_message}</p>}
@@ -201,14 +203,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Follow-ups due */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-gray-400" /><CardTitle>Follow-ups due</CardTitle></div>
+            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-gray-400" /><CardTitle>{t.followUpsDueCard}</CardTitle></div>
           </CardHeader>
           <CardContent className="pt-0">
             {d.followUpsDue.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">No follow-ups due.</p>
+              <p className="text-sm text-gray-400 py-3">{t.noFollowUps}</p>
             ) : (
               <div className="space-y-1">
                 {d.followUpsDue.map((l) => (
@@ -225,14 +226,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Low-confidence audits */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><GaugeCircle className="w-4 h-4 text-gray-400" /><CardTitle>Low-confidence audits</CardTitle></div>
+            <div className="flex items-center gap-2"><GaugeCircle className="w-4 h-4 text-gray-400" /><CardTitle>{t.lowConfidence}</CardTitle></div>
           </CardHeader>
           <CardContent className="pt-0">
             {d.lowConfidence.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">No low-confidence audits — evidence is solid.</p>
+              <p className="text-sm text-gray-400 py-3">{t.noLowConfidence}</p>
             ) : (
               <div className="space-y-1">
                 {d.lowConfidence.map((c) => (
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
                       <p className="text-sm font-medium text-gray-900">{c.restaurant.name}</p>
                       <p className="text-xs text-gray-400">{displayCity(c.restaurant.city)}</p>
                     </div>
-                    <span className="text-xs text-gray-500">{Math.round((c.confidence_score ?? 0) * 100)}% confidence</span>
+                    <span className="text-xs text-gray-500">{Math.round((c.confidence_score ?? 0) * 100)}{t.confidence}</span>
                   </Link>
                 ))}
               </div>
@@ -249,14 +249,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Interested, no next action */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-amber-400" /><CardTitle>Interested — no next step</CardTitle></div>
+            <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-amber-400" /><CardTitle>{t.interestedNoStep}</CardTitle></div>
           </CardHeader>
           <CardContent className="pt-0">
             {d.interestedNoNext.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">Every interested lead has a next step scheduled.</p>
+              <p className="text-sm text-gray-400 py-3">{t.everyInterested}</p>
             ) : (
               <div className="space-y-1">
                 {d.interestedNoNext.map((l) => (
@@ -274,17 +273,16 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Top opportunities with next action */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Top opportunities</CardTitle>
-            <Link href="/admin/leads" className="text-xs text-blue-500 hover:underline">All leads →</Link>
+            <CardTitle>{t.topOpportunities}</CardTitle>
+            <Link href="/admin/leads" className="text-xs text-blue-500 hover:underline">{t.allLeads}</Link>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           {d.topOpportunities.length === 0 ? (
-            <p className="text-sm text-gray-400 py-3">No completed audits yet.</p>
+            <p className="text-sm text-gray-400 py-3">{t.noCompletedAudits}</p>
           ) : (
             <div className="space-y-1">
               {d.topOpportunities.map((o) => {
@@ -296,7 +294,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-gray-400">{displayCity(o.restaurant.city)}{o.restaurant.cuisine ? ` · ${o.restaurant.cuisine}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400">{contacted ? o.lead.replace('_', ' ') : 'send report'}</span>
+                      <span className="text-xs text-gray-400">{contacted ? o.lead.replace('_', ' ') : t.sendReport}</span>
                       <OppBadge score={o.opportunity_score} />
                     </div>
                   </Link>

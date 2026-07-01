@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, Button, Spinner, Badge } from '@/components/ui'
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X, ArrowRight, Database } from 'lucide-react'
+import { useAdminT } from '@/components/admin/lang-context'
 
 interface Preview {
   mode: 'preview'
@@ -19,6 +20,7 @@ interface Committed {
 }
 
 export default function BulkImportPage() {
+  const t = useAdminT().upload
   const [file, setFile] = useState<File | null>(null)
   const [tag, setTag] = useState('')
   const [country, setCountry] = useState('Netherlands')
@@ -76,7 +78,7 @@ export default function BulkImportPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Bulk import</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Import restaurants from CSV or Excel. Built for large files — we validate, dedupe, and
           preview before writing anything.
@@ -85,7 +87,7 @@ export default function BulkImportPage() {
 
       {/* Stepper */}
       <div className="flex items-center gap-2 mb-6 text-xs font-medium">
-        {[['1', 'Upload'], ['2', 'Preview & dedupe'], ['3', 'Import']].map(([n, label], i) => {
+        {t.steps.map((label, i) => { const n = String(i + 1); return [n, label] }).map(([n, label], i) => {
           const active = (phase === 'select' && i === 0) || ((phase === 'previewing' || phase === 'preview') && i === 1) || ((phase === 'committing' || phase === 'done') && i === 2)
           const passed = (i === 0 && phase !== 'select') || (i === 1 && (phase === 'committing' || phase === 'done'))
           return (

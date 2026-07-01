@@ -6,6 +6,7 @@ import { formatDateTime, statusVariant } from '@/lib/utils'
 import { ClipboardList, RefreshCw, ChevronRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { ProviderHealth } from '@/components/admin/provider-health'
+import { useAdminT } from '@/components/admin/lang-context'
 
 interface AuditRow {
   id: string
@@ -19,6 +20,8 @@ interface AuditRow {
 const STATUS_FILTERS = ['all', 'queued', 'running', 'completed', 'incomplete', 'failed']
 
 export default function AuditsPage() {
+  const t = useAdminT()
+  const tr = t.audits
   const [audits, setAudits] = useState<AuditRow[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -107,7 +110,7 @@ export default function AuditsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audits</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{tr.title}</h1>
           <p className="text-sm text-gray-500 mt-1">{total} total audits</p>
         </div>
         <div className="flex gap-2">
@@ -137,7 +140,7 @@ export default function AuditsPage() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {s}
+            {tr.statusLabels[s as keyof typeof tr.statusLabels] ?? s}
           </button>
         ))}
       </div>
@@ -150,7 +153,7 @@ export default function AuditsPage() {
         ) : audits.length === 0 ? (
           <EmptyState
             icon={<ClipboardList className="w-10 h-10" />}
-            title="No audits found"
+            title={tr.noAuditsFound}
             description="Trigger an audit from the Restaurants page"
           />
         ) : (

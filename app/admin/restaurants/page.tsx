@@ -8,21 +8,23 @@ import {
   Upload, Download, Tag, X, Filter,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useAdminT } from '@/components/admin/lang-context'
 
-/* ── The prospecting pipeline ───────────────────────────────────────────────
- * Every restaurant in the database carries a status. This is the spine of the
- * backoffice: it turns 35k imported restaurants into a workable sales queue.   */
-interface ProspectStatusMeta { label: string; dot: string; chip: string }
+interface ProspectStatusMeta { dot: string; chip: string }
 const STATUS: Record<string, ProspectStatusMeta> = {
-  not_audited:   { label: '🟢 Not audited',   dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  audit_queued:  { label: '🟡 Audit queued',  dot: 'bg-amber-400',   chip: 'bg-amber-50 text-amber-700 border-amber-200' },
-  audit_complete:{ label: '🔵 Audit complete',dot: 'bg-blue-500',    chip: 'bg-blue-50 text-blue-700 border-blue-200' },
-  outreach_ready:{ label: '🟣 Outreach ready',dot: 'bg-purple-500',  chip: 'bg-purple-50 text-purple-700 border-purple-200' },
-  contacted:     { label: '🟠 Contacted',     dot: 'bg-orange-500',  chip: 'bg-orange-50 text-orange-700 border-orange-200' },
-  customer:      { label: '✅ Customer',       dot: 'bg-green-600',   chip: 'bg-green-100 text-green-800 border-green-300' },
-  monitoring:    { label: '⭐ Monitoring',     dot: 'bg-yellow-400',  chip: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
+  not_audited:   { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  audit_queued:  { dot: 'bg-amber-400',   chip: 'bg-amber-50 text-amber-700 border-amber-200' },
+  audit_complete:{ dot: 'bg-blue-500',    chip: 'bg-blue-50 text-blue-700 border-blue-200' },
+  outreach_ready:{ dot: 'bg-purple-500',  chip: 'bg-purple-50 text-purple-700 border-purple-200' },
+  contacted:     { dot: 'bg-orange-500',  chip: 'bg-orange-50 text-orange-700 border-orange-200' },
+  customer:      { dot: 'bg-green-600',   chip: 'bg-green-100 text-green-800 border-green-300' },
+  monitoring:    { dot: 'bg-yellow-400',  chip: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
 }
 const STATUS_ORDER = ['not_audited', 'audit_queued', 'audit_complete', 'outreach_ready', 'contacted', 'customer', 'monitoring']
+const STATUS_EMOJIS: Record<string, string> = {
+  not_audited: '🟢', audit_queued: '🟡', audit_complete: '🔵',
+  outreach_ready: '🟣', contacted: '🟠', customer: '✅', monitoring: '⭐',
+}
 
 interface Row {
   id: string
@@ -51,6 +53,8 @@ function scoreColor(n: number | null) {
 }
 
 export default function RestaurantDatabasePage() {
+  const t = useAdminT()
+  const tr = t.restaurants
   const [rows, setRows] = useState<Row[]>([])
   const [meta, setMeta] = useState({ total: 0, page: 1, pages: 1 })
   const [loading, setLoading] = useState(true)
@@ -175,15 +179,15 @@ export default function RestaurantDatabasePage() {
     <div className="p-4 sm:p-6 md:p-8 max-w-[1400px] mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Restaurant Database</h1>
-          <p className="text-sm text-gray-500 mt-1">{meta.total.toLocaleString()} restaurants · prospecting queue</p>
+          <h1 className="text-2xl font-bold text-gray-900">{tr.title}</h1>
+          <p className="text-sm text-gray-500 mt-1">{meta.total.toLocaleString()} {tr.subtitle}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/admin/upload">
-            <Button size="sm" variant="secondary"><Upload className="w-3.5 h-3.5" />Bulk import</Button>
+            <Button size="sm" variant="secondary"><Upload className="w-3.5 h-3.5" />{tr.bulkImport}</Button>
           </Link>
           <Link href="/admin/new">
-            <Button size="sm"><Plus className="w-3.5 h-3.5" />New restaurant</Button>
+            <Button size="sm"><Plus className="w-3.5 h-3.5" />{tr.newRestaurant}</Button>
           </Link>
         </div>
       </div>
@@ -192,17 +196,17 @@ export default function RestaurantDatabasePage() {
       <div className="flex flex-wrap gap-3 mb-3">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" placeholder="Search name, website, email…" value={q}
+          <input type="text" placeholder={tr.searchPlaceholder} value={q}
             onChange={e => setQ(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-200" />
         </div>
         <select value={status} onChange={e => setStatus(e.target.value)}
           className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-200 text-gray-600">
-          <option value="">All statuses</option>
-          {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS[s].label}</option>)}
+          <option value="">{tr.allStatuses}</option>
+          {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_EMOJIS[s]} {tr.statusLabels[s as keyof typeof tr.statusLabels]}</option>)}
         </select>
         <Button size="sm" variant={showFilters ? 'primary' : 'secondary'} onClick={() => setShowFilters(v => !v)}>
-          <Filter className="w-3.5 h-3.5" />Filters{hasFilters ? ' ·' : ''}
+          <Filter className="w-3.5 h-3.5" />{tr.filters}{hasFilters ? ' ·' : ''}
         </Button>
       </div>
 
@@ -211,33 +215,33 @@ export default function RestaurantDatabasePage() {
         <Card className="mb-4">
           <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">City</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{tr.city}</label>
               <input value={city} onChange={e => setCity(e.target.value)} placeholder="Amsterdam" className={inputClass} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Cuisine</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{tr.cuisine}</label>
               <input value={cuisine} onChange={e => setCuisine(e.target.value)} placeholder="Italian" className={inputClass} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Plan</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{tr.plan}</label>
               <select value={plan} onChange={e => setPlan(e.target.value)} className={inputClass}>
-                <option value="">Any</option>
+                <option value="">{tr.anyPlan}</option>
                 <option value="free">Free</option>
                 <option value="audit">Audit (€49)</option>
                 <option value="implementation">Implementation (€299)</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Score min</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{tr.scoreMin}</label>
               <input value={scoreMin} onChange={e => setScoreMin(e.target.value)} type="number" min={0} max={100} placeholder="0" className={inputClass} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Score max</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{tr.scoreMax}</label>
               <input value={scoreMax} onChange={e => setScoreMax(e.target.value)} type="number" min={0} max={100} placeholder="30" className={inputClass} />
             </div>
             <div className="flex items-end">
               <Button size="sm" variant="ghost" onClick={clearFilters} disabled={!hasFilters}>
-                <X className="w-3.5 h-3.5" />Clear
+                <X className="w-3.5 h-3.5" />{tr.clear}
               </Button>
             </div>
           </div>
@@ -253,28 +257,28 @@ export default function RestaurantDatabasePage() {
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-3 px-4 py-2.5 bg-gray-900 text-white rounded-lg text-sm">
-          <span className="font-medium">{selected.size} selected</span>
+          <span className="font-medium">{selected.size} {tr.selected}</span>
           <span className="text-gray-500">·</span>
           <Button size="sm" variant="secondary" onClick={() => bulk('run_audit')} disabled={busy}>
-            {busy ? <Spinner className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}Run audit
+            {busy ? <Spinner className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}{tr.runAudit}
           </Button>
           <div className="relative">
             <Button size="sm" variant="secondary" onClick={() => setShowStatusMenu(v => !v)} disabled={busy}>
-              <Tag className="w-3.5 h-3.5" />Set status
+              <Tag className="w-3.5 h-3.5" />{tr.setStatus}
             </Button>
             {showStatusMenu && (
               <div className="absolute z-30 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-1">
                 {STATUS_ORDER.map(s => (
                   <button key={s} onClick={() => bulk('set_status', { status: s })}
                     className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    {STATUS[s].label}
+                    {STATUS_EMOJIS[s]} {tr.statusLabels[s as keyof typeof tr.statusLabels]}
                   </button>
                 ))}
               </div>
             )}
           </div>
           <Button size="sm" variant="secondary" onClick={() => bulk('export')} disabled={busy}>
-            <Download className="w-3.5 h-3.5" />Export CSV
+            <Download className="w-3.5 h-3.5" />{tr.exportCsv}
           </Button>
           <button onClick={() => setSelected(new Set())} className="ml-auto text-gray-400 hover:text-white">
             <X className="w-4 h-4" />
@@ -288,9 +292,9 @@ export default function RestaurantDatabasePage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={<Building2 className="w-10 h-10" />}
-            title="No restaurants found"
-            description={hasFilters ? 'Try adjusting your filters' : 'Import restaurants or add one to get started'}
-            action={<Link href="/admin/upload"><Button size="sm"><Upload className="w-4 h-4" />Bulk import</Button></Link>}
+            title={tr.noRestaurantsFound}
+            description={hasFilters ? tr.adjustFilters : tr.importToStart}
+            action={<Link href="/admin/upload"><Button size="sm"><Upload className="w-4 h-4" />{tr.bulkImport}</Button></Link>}
           />
         ) : (
           <>
@@ -302,19 +306,20 @@ export default function RestaurantDatabasePage() {
                       <input type="checkbox" checked={selected.size === rows.length && rows.length > 0}
                         onChange={toggleSelectAll} className="rounded border-gray-300" />
                     </th>
-                    <SortHead col="name" className="text-left">Restaurant</SortHead>
-                    <SortHead col="prospect_status" className="text-left">Status</SortHead>
-                    <SortHead col="city" className="text-left">City</SortHead>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Cuisine</th>
-                    <SortHead col="visibility_score" className="text-right">Score</SortHead>
-                    <SortHead col="audit_count" className="text-right">Audits</SortHead>
-                    <SortHead col="last_audit_at" className="text-left">Last audit</SortHead>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
+                    <SortHead col="name" className="text-left">{tr.colRestaurant}</SortHead>
+                    <SortHead col="prospect_status" className="text-left">{tr.colStatus}</SortHead>
+                    <SortHead col="city" className="text-left">{tr.colCity}</SortHead>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{tr.colCuisine}</th>
+                    <SortHead col="visibility_score" className="text-right">{tr.colScore}</SortHead>
+                    <SortHead col="audit_count" className="text-right">{tr.colAudits}</SortHead>
+                    <SortHead col="last_audit_at" className="text-left">{tr.colLastAudit}</SortHead>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {rows.map(r => {
                     const meta = STATUS[r.prospect_status] ?? STATUS.not_audited
+                    const statusLabel = tr.statusLabels[r.prospect_status as keyof typeof tr.statusLabels] ?? r.prospect_status
                     return (
                       <tr key={r.id} className={`hover:bg-gray-50 transition-colors ${selected.has(r.id) ? 'bg-gray-50' : ''}`}>
                         <td className="px-4 py-3">
@@ -333,7 +338,7 @@ export default function RestaurantDatabasePage() {
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${meta.chip}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                            {meta.label.replace(/^\S+\s/, '')}
+                            {statusLabel}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-600">{r.city ?? <span className="text-gray-300">—</span>}</td>
@@ -348,11 +353,11 @@ export default function RestaurantDatabasePage() {
                             {r.last_audit_id && (
                               <a href={`/dashboard/${r.id}`} target="_blank" rel="noreferrer" title="Preview the client dashboard"
                                 className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 px-2 py-1">
-                                <ExternalLink className="w-3.5 h-3.5" />Client view
+                                <ExternalLink className="w-3.5 h-3.5" />{tr.clientView}
                               </a>
                             )}
                             <Button variant="ghost" size="sm" onClick={() => { setSelected(new Set([r.id])); bulk('run_audit') }} disabled={busy}>
-                              <PlayCircle className="w-3.5 h-3.5" />Audit
+                              <PlayCircle className="w-3.5 h-3.5" />{tr.audit}
                             </Button>
                           </div>
                         </td>
@@ -364,10 +369,10 @@ export default function RestaurantDatabasePage() {
             </div>
             {meta.pages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Page {meta.page} of {meta.pages} · {meta.total.toLocaleString()} total</p>
+                <p className="text-xs text-gray-400">{tr.page} {meta.page} {tr.of} {meta.pages} · {meta.total.toLocaleString()} {tr.total}</p>
                 <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
-                  <Button variant="secondary" size="sm" disabled={page >= meta.pages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                  <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>{tr.previous}</Button>
+                  <Button variant="secondary" size="sm" disabled={page >= meta.pages} onClick={() => setPage(p => p + 1)}>{tr.next}</Button>
                 </div>
               </div>
             )}

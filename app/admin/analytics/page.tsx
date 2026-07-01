@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { ESTIMATE_CAVEAT } from '@/lib/estimates'
+import { useAdminT } from '@/components/admin/lang-context'
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Overview {
@@ -113,6 +114,7 @@ function SignalBar({ label, pct }: { label: string; pct: number }) {
 
 // ── Main Page ─────────────────────────────────────────────────────
 export default function AnalyticsPage() {
+  const t = useAdminT().analytics
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [overview, setOverview] = useState<Overview | null>(null)
   const [opportunities, setOpportunities] = useState<OpportunityRow[]>([])
@@ -214,7 +216,7 @@ export default function AnalyticsPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
         <p className="mt-1 text-sm text-gray-500">Explore audit data, find opportunities, and fix issues.</p>
       </div>
 
@@ -251,17 +253,17 @@ export default function AnalyticsPage() {
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard label="Restaurants" value={overview.totalRestaurants} icon={Eye} />
-                <StatCard label="Audits run" value={overview.totalAudits} sub={`${overview.completedAudits} completed`} icon={CheckCircle2} />
-                <StatCard label="Avg visibility" value={`${overview.avgVisibility}/100`} icon={BarChart2} />
-                <StatCard label="Avg opportunity" value={`${overview.avgOpportunity}/100`} icon={TrendingUp} />
+                <StatCard label={t.restaurants} value={overview.totalRestaurants} icon={Eye} />
+                <StatCard label={t.auditsRun} value={overview.totalAudits} sub={`${overview.completedAudits} ${t.completed}`} icon={CheckCircle2} />
+                <StatCard label={t.avgVisibility} value={`${overview.avgVisibility}/100`} icon={BarChart2} />
+                <StatCard label={t.avgOpportunity} value={`${overview.avgOpportunity}/100`} icon={TrendingUp} />
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard label="Avg mention rate" value={`${overview.avgMentionFreq}%`} icon={RefreshCw} />
-                <StatCard label="Scored audits" value={overview.totalScores} icon={CheckCircle2} />
-                <StatCard label="Missing scores" value={overview.missingScores} sub="completed but no score" icon={AlertCircle} />
-                <StatCard label="Failed audits" value={overview.failedAudits} icon={XCircle} />
+                <StatCard label={t.avgMentionRate} value={`${overview.avgMentionFreq}%`} icon={RefreshCw} />
+                <StatCard label={t.scoredAudits} value={overview.totalScores} icon={CheckCircle2} />
+                <StatCard label={t.missingScores} value={overview.missingScores} sub={t.completedNoScore} icon={AlertCircle} />
+                <StatCard label={t.failedAudits} value={overview.failedAudits} icon={XCircle} />
               </div>
 
               {/* Quick links */}

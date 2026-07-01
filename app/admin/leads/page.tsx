@@ -1,15 +1,17 @@
+import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { ADMIN_COPY, type AdminLang } from '@/lib/admin-copy'
 
 const STATUSES = [
-  { value: 'not_contacted',  label: 'Not contacted',  color: 'bg-gray-100 text-gray-600' },
-  { value: 'email_sent',     label: 'Email sent',     color: 'bg-blue-50 text-blue-600' },
-  { value: 'opened',         label: 'Opened',         color: 'bg-blue-50 text-blue-600' },
-  { value: 'replied',        label: 'Replied',        color: 'bg-purple-50 text-purple-600' },
-  { value: 'interested',     label: 'Interested',     color: 'bg-amber-50 text-amber-600' },
-  { value: 'demo_scheduled', label: 'Demo scheduled', color: 'bg-amber-50 text-amber-600' },
-  { value: 'customer',       label: 'Customer',       color: 'bg-emerald-50 text-emerald-600' },
-  { value: 'lost',           label: 'Lost',           color: 'bg-red-50 text-red-500' },
+  { value: 'not_contacted',  color: 'bg-gray-100 text-gray-600' },
+  { value: 'email_sent',     color: 'bg-blue-50 text-blue-600' },
+  { value: 'opened',         color: 'bg-blue-50 text-blue-600' },
+  { value: 'replied',        color: 'bg-purple-50 text-purple-600' },
+  { value: 'interested',     color: 'bg-amber-50 text-amber-600' },
+  { value: 'demo_scheduled', color: 'bg-amber-50 text-amber-600' },
+  { value: 'customer',       color: 'bg-emerald-50 text-emerald-600' },
+  { value: 'lost',           color: 'bg-red-50 text-red-500' },
 ]
 
 function statusInfo(value: string | null) {
@@ -65,6 +67,9 @@ export default async function LeadsPage({
   searchParams: Promise<{ status?: string }>
 }) {
   const { status } = await searchParams
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get('finded_lang')?.value ?? 'nl') as AdminLang
+  const t = ADMIN_COPY[lang].leads
   const leads = await getLeads()
 
   const filtered = status && status !== 'all'
@@ -79,8 +84,8 @@ export default async function LeadsPage({
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-        <p className="text-sm text-gray-500 mt-1">{leads.length} restaurants · {counts['customer'] ?? 0} customers · {counts['interested'] ?? 0} interested</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+        <p className="text-sm text-gray-500 mt-1">{leads.length} {t.subtitle} · {counts['customer'] ?? 0} {t.customers} · {counts['interested'] ?? 0} {t.interested}</p>
       </div>
 
       {/* Status filter tabs */}
@@ -105,7 +110,7 @@ export default async function LeadsPage({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {s.label} ({counts[s.value] ?? 0})
+            {t.statusLabels[s.value as keyof typeof t.statusLabels] ?? s.value} ({counts[s.value] ?? 0})
           </Link>
         ))}
       </div>
@@ -141,7 +146,7 @@ export default async function LeadsPage({
                   <td className="px-4 py-3 text-gray-500">{lead.city}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${s.color}`}>
-                      {s.label}
+                      {t.statusLabels[lead.lead_status as keyof typeof t.statusLabels] ?? lead.lead_status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">

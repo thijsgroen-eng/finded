@@ -1,4 +1,6 @@
+import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { ADMIN_COPY, type AdminLang } from '@/lib/admin-copy'
 import { formatDateTime } from '@/lib/utils'
 import { Badge } from '@/components/ui'
 import { displayCity } from '@/lib/engine/dashboard'
@@ -27,6 +29,9 @@ export default async function RequestsPage({
   searchParams: Promise<{ status?: string }>
 }) {
   const { status } = await searchParams
+  const cookieStore = await cookies()
+  const lang = (cookieStore.get('finded_lang')?.value ?? 'nl') as AdminLang
+  const t = ADMIN_COPY[lang].requests
   const requests = await getRequests(status)
   const newCount = (await getRequests('new_request')).length
 
@@ -35,7 +40,7 @@ export default async function RequestsPage({
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Audit requests</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Submitted from the public funnel at <code className="text-xs bg-gray-100 px-1 rounded">/audit</code>.
           {newCount > 0 && <> · <strong>{newCount}</strong> new</>}

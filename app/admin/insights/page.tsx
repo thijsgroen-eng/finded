@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui'
 import { Loader2, TrendingUp, Lightbulb, RefreshCw, X, Database } from 'lucide-react'
+import { useAdminT } from '@/components/admin/lang-context'
 
 interface Benchmark { n: number; avgVisibility: number | null; avgMentionFrequency: number | null; pctMentioned: number; factRates: Record<string, number> }
 interface SegBenchmark extends Benchmark { key: string }
@@ -29,6 +30,7 @@ const scorev = (x: number | null) => x == null ? '—' : String(Math.round(x))
 const ML: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
 
 export default function InsightsPage() {
+  const t = useAdminT().insights
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -70,8 +72,8 @@ export default function InsightsPage() {
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Industry insights</h1>
-          <p className="text-sm text-gray-500 mt-1">Aggregate, anonymized intelligence from every audit — the data ChatGPT doesn&rsquo;t have.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={load} disabled={loading}><RefreshCw className="w-3.5 h-3.5" /> Refresh</Button>
@@ -122,10 +124,10 @@ export default function InsightsPage() {
             <CardHeader><CardTitle>{hasFilter ? `${[cuisine, city].filter(Boolean).join(' · ')}` : 'All restaurants'} <span className="text-gray-400 font-normal">· {data.filterN} audits</span></CardTitle></CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <Stat label="Avg visibility" value={`${scorev(b!.avgVisibility)}/100`} />
+                <Stat label={t.avgVisibility} value={`${scorev(b!.avgVisibility)}/100`} />
                 <Stat label="% recommended" value={pctv(b!.pctMentioned)} />
-                <Stat label="Avg mention freq." value={pctv(b!.avgMentionFrequency)} />
-                <Stat label="Audits" value={String(b!.n)} />
+                <Stat label={t.avgMentionFreq} value={pctv(b!.avgMentionFrequency)} />
+                <Stat label={t.audits} value={String(b!.n)} />
               </div>
             </CardContent>
           </Card>
@@ -195,8 +197,8 @@ export default function InsightsPage() {
           </Card>
 
           {/* Segment tables — click a row to filter */}
-          {data.byCuisine.length > 0 && <Segments title="By cuisine" rows={data.byCuisine} active={cuisine} onPick={(k) => { setCuisine(k === cuisine ? '' : k); setCity('') }} />}
-          {data.byCity.length > 0 && <Segments title="By city" rows={data.byCity} active={city} onPick={(k) => { setCity(k === city ? '' : k); setCuisine('') }} />}
+          {data.byCuisine.length > 0 && <Segments title={t.byCuisine} rows={data.byCuisine} active={cuisine} onPick={(k) => { setCuisine(k === cuisine ? '' : k); setCity('') }} />}
+          {data.byCity.length > 0 && <Segments title={t.byCity} rows={data.byCity} active={city} onPick={(k) => { setCity(k === city ? '' : k); setCuisine('') }} />}
 
           <p className="text-xs text-gray-400">Only aggregate statistics are shown — never individual restaurant data. Segments appear once at least 5 audits exist for them.</p>
         </div>

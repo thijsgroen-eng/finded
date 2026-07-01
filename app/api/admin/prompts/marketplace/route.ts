@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isValidSession, getSessionUser, ADMIN_COOKIE } from '@/lib/auth/admin'
+import { isValidSession, readSession, ADMIN_COOKIE } from '@/lib/auth/admin'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { cookies } from 'next/headers'
 import { ALL_PROMPTS, MARKETPLACE_PACKS } from '@/lib/marketplace/catalog'
@@ -9,7 +9,7 @@ async function auth() {
   const jar = await cookies()
   const token = jar.get(ADMIN_COOKIE)?.value
   if (!token || !(await isValidSession(token))) return null
-  return getSessionUser(token)
+  return readSession(token)
 }
 
 // POST /api/admin/prompts/marketplace

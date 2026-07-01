@@ -723,7 +723,7 @@ export const auditFunction = inngest.createFunction(
         })
         return 1
       }))
-      const crawled = crawlResults.reduce((a, b) => a + b, 0)
+      const crawled = crawlResults.reduce((a: number, b) => a + b, 0)
       await emitEvent(audit_id, 'competitors.crawled', { data: { crawled } })
       return { crawled }
     })

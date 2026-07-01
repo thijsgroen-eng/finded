@@ -15,15 +15,11 @@ export default async function PromptsPage() {
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t.prompts.title}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            The query corpus audits run against. Edits override the built-in
-            templates without a deploy; leave a section untouched to keep the
-            shipped defaults.
-          </p>
+          <p className="text-sm text-gray-500 mt-1">{t.prompts.pageSubtitle}</p>
         </div>
         <Link href="/admin/prompts/marketplace"
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700">
-          <Store className="w-4 h-4" /> Prompt Marketplace
+          <Store className="w-4 h-4" /> {t.prompts.marketplaceBtn}
         </Link>
       </div>
       <PromptEditor />

@@ -424,16 +424,13 @@ export const auditFunction = inngest.createFunction(
                 },
               }).eq('id', runId)
 
-              for (const ent of extraction.entities) {
-                // Resolve each extracted name against the target so the mention is
-                // self-describing evidence (normalized name, target flag, why).
-                const m = matchEntity(
-                  { name: ent.name },
-                  { id: entity.id, name: entity.name, domain: (entity as any).domain ?? null },
-                )
-                const { data: entityRow } = await supabaseAdmin
-                  .from('entities')
-                  .insert({
+              if (extraction.entities.length > 0) {
+                const entityInserts = extraction.entities.map(ent => {
+                  const m = matchEntity(
+                    { name: ent.name },
+                    { id: entity.id, name: entity.name, domain: (entity as any).domain ?? null },
+                  )
+                  return {
                     audit_id,
                     model:        provider.name,
                     prompt_id:    promptObj.id,
@@ -449,14 +446,21 @@ export const auditFunction = inngest.createFunction(
                     matched_restaurant_id: m.matchedRestaurantId,
                     match_reason:          m.reason ? `${m.reason} (${m.confidence.toFixed(2)})` : null,
                     evidence_excerpt:      ent.context ? ent.context.slice(0, 280) : null,
-                  })
+                  }
+                })
+                const { data: insertedEntities } = await supabaseAdmin
+                  .from('entities')
+                  .insert(entityInserts)
                   .select('id')
-                  .single()
-
-                if (entityRow && ent.reasons.length > 0) {
-                  await supabaseAdmin.from('recommendation_reasons').insert(
-                    ent.reasons.map((reason: string) => ({ entity_id: entityRow.id, audit_id, reason }))
-                  )
+                const allReasons = extraction.entities.flatMap((ent, i) =>
+                  (ent.reasons ?? []).map((reason: string) => ({
+                    entity_id: insertedEntities?.[i]?.id,
+                    audit_id,
+                    reason,
+                  }))
+                ).filter(r => r.entity_id != null)
+                if (allReasons.length > 0) {
+                  await supabaseAdmin.from('recommendation_reasons').insert(allReasons)
                 }
               }
 
@@ -709,17 +713,17 @@ export const auditFunction = inngest.createFunction(
       const sources = (srcRows ?? []).flatMap((r: any) => Array.isArray(r.sources) ? r.sources : [])
 
       const { resolveCompetitorUrl } = await import('@/lib/audit/competitor-resolve')
-      let crawled = 0
-      for (const c of comps) {
+      const crawlResults = await Promise.all(comps.map(async (c) => {
         const url = resolveCompetitorUrl(c.name, sources)
-        if (!url) continue
+        if (!url) return 0
         const signals = await auditWebsite(url).catch(() => null)
-        if (!signals || signals.error) continue
+        if (!signals || signals.error) return 0
         await supabaseAdmin.from('competitor_audits').insert({
           audit_id, competitor_name: c.name, normalized_name: c.canonical_key, website: url, signals,
         })
-        crawled++
-      }
+        return 1
+      }))
+      const crawled = crawlResults.reduce((a, b) => a + b, 0)
       await emitEvent(audit_id, 'competitors.crawled', { data: { crawled } })
       return { crawled }
     })

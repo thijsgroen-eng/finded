@@ -80,9 +80,9 @@ const T = {
       { name: 'AI Visibility Audit', price: '€49', cadence: 'one-time', q: 'Why do competitors appear more often?', badge: 'Most popular', features: ['Everything in the free check', 'All four AI models analysed', 'Prompt-level evidence', 'Competitor comparison & why they win', 'Website, menu & structured-data analysis', 'Evidence-backed recommendations', '30-day action plan'], cta: 'Get the full audit', note: 'Understand exactly why competitors appear more often.', highlight: true },
       { name: 'AI Visibility Implementation', price: '€299', cadence: 'one-time', q: 'Help me actually fix it.', badge: 'Best value', features: ['Everything in the audit', 'Restaurant schema implemented', 'FAQ & AI-friendly content', 'Homepage & location improvements', 'Menu & Google Business improvements', 'Follow-up audit (before / after)'], cta: 'Discuss implementation', note: 'We make your restaurant easier for AI to understand and recommend.', highlight: false },
     ],
-    founderKicker: 'From the founder',
-    founderQuote: (f: string) => `“Hi, I'm ${f}. I work with restaurants every day — and I built Finded because owners had no way of knowing whether AI recommends them, or their competitors.”`,
-    founderBody: "Every completed audit improves how well we understand the way AI discovers restaurants. It's a small, independent platform built in the Netherlands. If you have a question, email me — I read every one.",
+    founderKicker: 'About us',
+    founderQuote: (_f: string) => `”We work with restaurants every day — and we built Finded because owners had no way of knowing whether AI recommends them, or their competitors.”`,
+    founderBody: “Every completed audit improves how well we understand the way AI discovers restaurants. It's a small, independent platform built in the Netherlands. Have a question? Email us — we read every one.”,
     leadTitle: 'See whether AI recommends your restaurant',
     leadSub: "Send your website and city, and we'll email you a link to your free AI Visibility Dashboard.",
     faqKicker: 'FAQ', faqTitle: 'Honest answers',
@@ -149,9 +149,9 @@ const T = {
       { name: 'AI-zichtbaarheidsaudit', price: '€49', cadence: 'eenmalig', q: 'Waarom verschijnen concurrenten vaker?', badge: 'Populairst', features: ['Alles uit de gratis check', 'Alle vier de AI-modellen geanalyseerd', 'Bewijs op promptniveau', 'Concurrentievergelijking & waarom zij winnen', 'Website-, menu- & gestructureerde-data-analyse', 'Op bewijs gebaseerde aanbevelingen', '30-dagen actieplan'], cta: 'Volledige audit aanvragen', note: 'Begrijp precies waarom concurrenten vaker verschijnen.', highlight: true },
       { name: 'AI-zichtbaarheidsimplementatie', price: '€299', cadence: 'eenmalig', q: 'Help me het echt op te lossen.', badge: 'Beste keuze', features: ['Alles uit de audit', 'Restaurant-schema geïmplementeerd', 'FAQ & AI-vriendelijke content', 'Homepage- & locatieverbeteringen', 'Menu- & Google-bedrijfsprofiel-verbeteringen', 'Vervolg-audit (voor / na)'], cta: 'Implementatie bespreken', note: 'We maken je restaurant makkelijker te begrijpen en aan te bevelen voor AI.', highlight: false },
     ],
-    founderKicker: 'Van de oprichter',
-    founderQuote: (f: string) => `“Hoi, ik ben ${f}. Ik werk elke dag met restaurants — en ik bouwde Finded omdat eigenaren geen idee hadden of AI hen aanbeveelt, of juist hun concurrenten.”`,
-    founderBody: 'Elke voltooide audit verbetert hoe goed we begrijpen hoe AI restaurants ontdekt. Het is een klein, onafhankelijk platform gebouwd in Nederland. Heb je een vraag? Mail me — ik lees ze allemaal.',
+    founderKicker: 'Over ons',
+    founderQuote: (_f: string) => `”We werken elke dag met restaurants — en we bouwden Finded omdat eigenaren geen idee hadden of AI hen aanbeveelt, of juist hun concurrenten.”`,
+    founderBody: 'Elke voltooide audit verbetert hoe goed we begrijpen hoe AI restaurants ontdekt. Het is een klein, onafhankelijk platform gebouwd in Nederland. Heb je een vraag? Mail ons — we lezen ze allemaal.',
     leadTitle: 'Zie of AI jouw restaurant aanbeveelt',
     leadSub: 'Stuur je website en plaats, en we mailen je een link naar je gratis AI-zichtbaarheidsdashboard.',
     faqKicker: 'FAQ', faqTitle: 'Eerlijke antwoorden',
@@ -507,14 +507,14 @@ export default async function LandingPage() {
       <section style={{ borderTop: `1px solid ${BORDER2}`, background: BG_SOFT }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '92px 24px', display: 'flex', gap: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ flexShrink: 0 }}>
-            <div style={{ width: 150, height: 150, borderRadius: 24, background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px -28px rgba(181,104,58,0.6)' }}><span style={{ fontSize: 52, fontWeight: 800, color: '#fff' }}>{founder.charAt(0)}</span></div>
+            <div style={{ width: 150, height: 150, borderRadius: 24, background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 24px 60px -28px rgba(181,104,58,0.6)' }}><span style={{ fontSize: 52, fontWeight: 800, color: '#fff' }}>F</span></div>
           </div>
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14 }}>{t.founderKicker}</div>
             <p style={{ fontSize: 'clamp(20px, 2.4vw, 26px)', color: INK, lineHeight: 1.35, marginBottom: 14, fontWeight: 700, letterSpacing: -0.6 }}>{t.founderQuote(founder)}</p>
             <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.65, marginBottom: 18 }}>{t.founderBody}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>{founder}</span><span style={{ color: FAINT }}>·</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: INK }}>Finded</span><span style={{ color: FAINT }}>·</span>
               <a href={`mailto:${contactEmail}`} style={{ fontSize: 14, color: ACCENT, fontWeight: 600, textDecoration: 'none' }}>{contactEmail}</a>
             </div>
           </div>

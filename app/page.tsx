@@ -329,7 +329,7 @@ export default async function LandingPage() {
           <a href="#how" style={navLink}>{t.nav.how}</a>
           <a href="#pricing" style={navLink}>{t.nav.pricing}</a>
           <a href="#data" style={navLink}>{t.nav.resources}</a>
-          <a href={`mailto:${contactEmail}?subject=Finded for Agencies`} style={navLink}>{t.nav.agencies}</a>
+          <a href="/agencies" style={navLink}>{t.nav.agencies}</a>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <LangToggle current={lang} tone="dark" />

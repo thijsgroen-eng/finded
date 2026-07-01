@@ -394,7 +394,7 @@ export default async function LandingPage() {
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '56px 24px' }}>
           <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 28 }}>{t.insightsEyebrow}</div>
           {haveData ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {statValues.map((value, i) => {
                 const Icon = STAT_ICONS[i]
                 return (

@@ -439,11 +439,11 @@ export default async function LandingPage() {
       {/* How */}
       <section id="how" style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 24px 96px', scrollMarginTop: 70 }}>
         <SectionTitle kicker={t.howKicker} title={t.howTitle} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: 14 }}>
           {t.how.map(([n, title, d]) => (
             <div key={n} className="card-fx" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 18 }}>
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: GRAD, color: '#fff', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>{n}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: INK, marginBottom: 4 }}>{title}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: INK, marginBottom: 4, overflowWrap: 'break-word', wordBreak: 'break-word' }}>{title}</div>
               <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{d}</div>
             </div>
           ))}

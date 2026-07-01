@@ -1,31 +1,23 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { clientHealth } from '@/lib/crm/health'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/admin/clients  (admin-gated by middleware)
- * The client CRM: restaurants that are customers (paid plan or customer/monitoring
- * status), enriched with their portal account (signed-up / last-active), audit
- * count, latest score, and a computed health score.
- */
 export async function GET() {
   const { data: rows, error } = await supabaseAdmin
     .from('restaurant_overview')
     .select('id, name, city, cuisine, email, plan, report_paid, prospect_status, visibility_score, last_audit_at, audit_count, created_at')
-    .or('plan.in.(audit,implementation),report_paid.eq.true,prospect_status.in.(customer,monitoring)')
+    .or('plan.in.(audit,implementation,beta),report_paid.eq.true,prospect_status.in.(customer,monitoring)')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const ids = (rows ?? []).map((r: any) => r.id)
 
-  // Portal accounts, keyed by email (signed-up + last-active).
   const { data: users } = await supabaseAdmin.from('customer_users').select('email, created_at, last_login_at')
   const byEmail = new Map<string, { created_at: string; last_login_at: string | null }>()
   for (const u of users ?? []) if (u.email) byEmail.set(u.email.toLowerCase(), { created_at: u.created_at, last_login_at: u.last_login_at })
 
-  // Revenue + first-paid date per restaurant (from Stripe payments).
   const revenue = new Map<string, number>()
   const firstPaid = new Map<string, string>()
   if (ids.length) {
@@ -38,7 +30,7 @@ export async function GET() {
       if (!cur || new Date(p.created_at) < new Date(cur)) firstPaid.set(p.restaurant_id, p.created_at)
     }
   }
-  // Fallback onboarded date: first completed audit.
+
   const firstAudit = new Map<string, string>()
   if (ids.length) {
     const { data: auds } = await supabaseAdmin
@@ -54,9 +46,13 @@ export async function GET() {
   const now = Date.now()
   const clients = (rows ?? []).map((r: any) => {
     const acct = r.email ? byEmail.get(String(r.email).toLowerCase()) : undefined
-    const plan = r.plan === 'implementation' ? 'implementation' : (r.plan === 'audit' || r.report_paid) ? 'audit' : 'free'
+    const plan = r.plan === 'implementation' ? 'implementation'
+      : r.plan === 'beta' ? 'beta'
+      : (r.plan === 'audit' || r.report_paid) ? 'audit'
+      : 'free'
     const health = clientHealth({
-      plan, auditCount: r.audit_count ?? 0, visibilityScore: r.visibility_score,
+      plan: plan === 'beta' ? 'free' : plan,
+      auditCount: r.audit_count ?? 0, visibilityScore: r.visibility_score,
       lastAuditAt: r.last_audit_at, lastLoginAt: acct?.last_login_at ?? null, now,
     })
     return {
@@ -73,13 +69,53 @@ export async function GET() {
       health_score: health.score, health_band: health.band, health_reasons: health.reasons,
     }
   })
-  // At-risk first so the operator sees who needs attention.
   clients.sort((a, b) => a.health_score - b.health_score)
 
-  const paying = clients.filter((c) => c.plan !== 'free').length
+  const paying = clients.filter((c) => c.plan !== 'free' && c.plan !== 'beta').length
   const atRisk = clients.filter((c) => c.health_band === 'at_risk').length
   const avgHealth = clients.length ? Math.round(clients.reduce((s, c) => s + c.health_score, 0) / clients.length) : 0
   const revenueCents = clients.reduce((s, c) => s + c.revenue_cents, 0)
 
   return NextResponse.json({ clients, summary: { total: clients.length, paying, atRisk, avgHealth, revenueCents } })
+}
+
+// POST /api/admin/clients — create a new client or update plan
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => ({} as Record<string, unknown>))
+  const action = body.action
+
+  if (action === 'create') {
+    const { name, email, city, cuisine, plan } = body as Record<string, string>
+    if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    const { data, error } = await supabaseAdmin.from('restaurants').insert({
+      name: name.trim(),
+      email: email?.trim() || null,
+      city: city?.trim() || null,
+      cuisine: cuisine?.trim() || null,
+      plan: plan ?? 'free',
+      prospect_status: 'customer',
+    }).select('id').single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, id: data.id })
+  }
+
+  if (action === 'set_plan') {
+    const { id, plan } = body as Record<string, string>
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+    const allowed = ['free', 'beta', 'audit', 'implementation']
+    if (!allowed.includes(plan)) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    const { error } = await supabaseAdmin.from('restaurants').update({ plan }).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'delete') {
+    const { id } = body as Record<string, string>
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+    const { error } = await supabaseAdmin.from('restaurants').update({ prospect_status: 'not_audited', plan: null }).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }

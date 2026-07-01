@@ -34,19 +34,20 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   return (
     <>
-      <div className="px-5 py-5 border-b border-gray-800">
+      <div className="px-5 py-5 border-b border-[rgba(36,28,19,0.12)]">
         <div className="flex items-baseline gap-1">
-          <span className="text-white font-bold text-lg tracking-tight">Finded</span>
-          <span className="text-xs text-gray-500 font-medium">admin</span>
+          <span className="text-[#241C13] font-bold text-lg tracking-tight">Finded</span>
+          <span className="text-xs text-[rgba(36,28,19,0.46)] font-medium">admin</span>
         </div>
       </div>
 
       {/* New audit CTA */}
-      <div className="px-3 py-3 border-b border-gray-800">
+      <div className="px-3 py-3 border-b border-[rgba(36,28,19,0.12)]">
         <Link
           href="/admin/new"
           onClick={onNavigate}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-white text-gray-900 text-sm font-semibold hover:bg-gray-100 transition-colors"
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors text-white"
+          style={{ background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' }}
         >
           <Plus className="w-4 h-4" />
           New audit
@@ -64,27 +65,27 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                 active
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                  ? 'text-[#241C13] bg-[rgba(181,104,58,0.16)] border border-[rgba(181,104,58,0.3)]'
+                  : 'text-[rgba(36,28,19,0.60)] hover:text-[#241C13] hover:bg-[rgba(36,28,19,0.06)] border border-transparent'
               )}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              <Icon className={cn('w-4 h-4 flex-shrink-0', active ? 'text-[#B5683A]' : '')} />
               {label}
             </Link>
           )
         })}
       </nav>
 
-      <div className="px-3 py-3 border-t border-gray-800">
+      <div className="px-3 py-3 border-t border-[rgba(36,28,19,0.12)]">
         <button
           type="button"
           onClick={logout}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-[rgba(36,28,19,0.60)] hover:text-[#241C13] hover:bg-[rgba(36,28,19,0.06)] transition-colors border border-transparent"
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
           Log out
         </button>
-        <p className="text-xs text-gray-600 px-3 pt-2">Finded Platform v1.0</p>
+        <p className="text-xs text-[rgba(36,28,19,0.36)] px-3 pt-2">Finded Platform v1.0</p>
       </div>
     </>
   )
@@ -108,7 +109,7 @@ export function AdminSidebar() {
   return (
     <>
       {/* Mobile top bar (hidden on md+) */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-gray-950 text-gray-100 border-b border-gray-800">
+      <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-[#E7DAC1] text-[#241C13] border-b border-[rgba(36,28,19,0.12)]">
         <button
           type="button"
           aria-label="Open menu"
@@ -118,13 +119,13 @@ export function AdminSidebar() {
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-baseline gap-1">
-          <span className="text-white font-bold tracking-tight">Finded</span>
-          <span className="text-xs text-gray-500 font-medium">admin</span>
+          <span className="text-[#241C13] font-bold tracking-tight">Finded</span>
+          <span className="text-xs text-[rgba(36,28,19,0.46)] font-medium">admin</span>
         </div>
       </header>
 
       {/* Desktop rail (hidden below md) */}
-      <aside className="hidden md:flex w-56 min-h-screen bg-gray-950 text-gray-300 flex-col flex-shrink-0">
+      <aside className="hidden md:flex w-56 min-h-screen bg-[#E7DAC1] text-[#241C13] flex-col flex-shrink-0 border-r border-[rgba(36,28,19,0.12)]">
         <SidebarBody />
       </aside>
 
@@ -136,12 +137,12 @@ export function AdminSidebar() {
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <aside className="absolute inset-y-0 left-0 w-64 max-w-[80%] bg-gray-950 text-gray-300 flex flex-col shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-64 max-w-[80%] bg-[#E7DAC1] text-[#241C13] flex flex-col shadow-xl">
             <button
               type="button"
               aria-label="Close menu"
               onClick={() => setOpen(false)}
-              className="absolute top-4 right-3 p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors"
+              className="absolute top-4 right-3 p-1.5 rounded-md text-[rgba(36,28,19,0.50)] hover:text-[#241C13] hover:bg-[rgba(36,28,19,0.06)] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

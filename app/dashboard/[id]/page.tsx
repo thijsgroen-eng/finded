@@ -15,7 +15,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const BG = '#070711', BORDER = 'rgba(255,255,255,0.09)', MUTED = '#9a9fb6', FAINT = '#646a85'
+const BG = '#F1E8D7', BORDER = 'rgba(36,28,19,0.14)', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)'
 
 async function getData(id: string, cid: string | null, bypassOwnership: boolean): Promise<DashboardData | null> {
   if (!bypassOwnership) {
@@ -111,18 +111,18 @@ export default async function CustomerRestaurantDashboard({ params }: { params: 
   const tl = PORTAL[lang].list
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: '#f4f5fa', fontFamily: 'var(--font-inter), sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: '#241C13', fontFamily: 'var(--font-inter), sans-serif' }}>
       {adminPreview && (
-        <div style={{ background: 'rgba(124,92,255,0.15)', borderBottom: '1px solid rgba(124,92,255,0.3)', padding: '8px 24px', fontSize: 12.5, color: '#c4b5fd', textAlign: 'center' }}>
-          {td.adminPreview} <a href={`/admin/restaurants/${id}`} style={{ color: '#fff', fontWeight: 600 }}>{td.backOffice}</a>
+        <div style={{ background: 'rgba(181,104,58,0.15)', borderBottom: '1px solid rgba(181,104,58,0.3)', padding: '8px 24px', fontSize: 12.5, color: '#B5683A', textAlign: 'center' }}>
+          {td.adminPreview} <a href={`/admin/restaurants/${id}`} style={{ color: '#9A5530', fontWeight: 600 }}>{td.backOffice}</a>
         </div>
       )}
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(241,232,215,0.88)', backdropFilter: 'blur(14px)' }}>
         <a href={adminPreview ? `/admin/restaurants/${id}` : '/dashboard'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: MUTED, textDecoration: 'none', fontSize: 13.5, fontWeight: 600 }}>
           <ArrowLeft style={{ width: 15, height: 15 }} /> {adminPreview ? td.backOffice : td.allRestaurants}
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <LangToggle current={lang} tone="dark" />
+          <LangToggle current={lang} tone="light" />
           <span style={{ fontSize: 13, color: FAINT }}>{adminPreview ? td.adminPreviewShort : customer!.email}</span>
           {!adminPreview && <LogoutButton label={tl.logout} />}
         </div>

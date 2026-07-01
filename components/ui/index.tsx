@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils'
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline'
 
 const badgeVariants: Record<BadgeVariant, string> = {
-  default: 'bg-gray-100 text-gray-700',
+  default: 'bg-[rgba(36,28,19,0.08)] text-[#241C13]',
   success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   warning: 'bg-amber-50 text-amber-700 border border-amber-200',
   danger:  'bg-red-50 text-red-700 border border-red-200',
   info:    'bg-blue-50 text-blue-700 border border-blue-200',
-  outline: 'bg-transparent border border-gray-300 text-gray-600',
+  outline: 'bg-transparent border border-[rgba(36,28,19,0.20)] text-[rgba(36,28,19,0.66)]',
 }
 
 export function Badge({
@@ -45,7 +45,7 @@ export function Card({
   className?: string
 }) {
   return (
-    <div className={cn('bg-white rounded-lg border border-gray-200 shadow-sm', className)}>
+    <div className={cn('bg-white rounded-lg border border-[rgba(36,28,19,0.14)] shadow-sm', className)}>
       {children}
     </div>
   )
@@ -90,9 +90,9 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary:   'bg-gray-900 text-white hover:bg-gray-700 border border-gray-900',
-  secondary: 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300',
-  ghost:     'bg-transparent text-gray-600 hover:bg-gray-100 border border-transparent',
+  primary:   'text-white border border-transparent hover:opacity-90',
+  secondary: 'bg-white text-[#241C13] hover:bg-[#F1E8D7] border border-[rgba(36,28,19,0.20)]',
+  ghost:     'bg-transparent text-[rgba(36,28,19,0.66)] hover:bg-[rgba(36,28,19,0.06)] border border-transparent',
   danger:    'bg-red-600 text-white hover:bg-red-700 border border-red-600',
 }
 
@@ -124,6 +124,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      style={variant === 'primary' ? { background: 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)' } : undefined}
       className={cn(
         'inline-flex items-center gap-2 rounded-md font-medium transition-colors',
         'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -173,7 +174,7 @@ export function StatCard({
     <Card>
       <CardContent className="flex items-start gap-3 py-5">
         {icon && (
-          <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-md bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500">
+          <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-md bg-[rgba(181,104,58,0.10)] border border-[rgba(181,104,58,0.20)] flex items-center justify-center text-[#B5683A]">
             {icon}
           </div>
         )}

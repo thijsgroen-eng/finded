@@ -10,15 +10,15 @@ import { ArrowRight, Building2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const BG = '#070711', CARD = 'rgba(255,255,255,0.035)', BORDER = 'rgba(255,255,255,0.09)'
-const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85'
-const GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)'
+const BG = '#F1E8D7', CARD = 'rgba(255,255,255,0.65)', BORDER = 'rgba(36,28,19,0.14)'
+const INK = '#241C13', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)'
+const GRAD = 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)'
 
 function scoreColor(n: number | null) {
   if (n == null) return FAINT
-  if (n >= 60) return '#34d399'
-  if (n >= 30) return '#fbbf24'
-  return '#fb7185'
+  if (n >= 60) return '#16a34a'
+  if (n >= 30) return '#d97706'
+  return '#dc2626'
 }
 
 export default async function CustomerDashboard() {
@@ -32,13 +32,13 @@ export default async function CustomerDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: INK, fontFamily: 'var(--font-inter), sans-serif' }}>
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(241,232,215,0.88)', backdropFilter: 'blur(14px)' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
           <span style={{ width: 28, height: 28, borderRadius: 8, background: GRAD, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 15 }}>F</span>
-          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5 }}>finded</span>
+          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: INK }}>finded</span>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <LangToggle current={lang} tone="dark" />
+          <LangToggle current={lang} tone="light" />
           <span style={{ fontSize: 13, color: FAINT }}>{session.email}</span>
           <LogoutButton label={t.logout} />
         </div>
@@ -60,7 +60,7 @@ export default async function CustomerDashboard() {
             {restaurants.map((r) => (
               <a key={r.id} href={`/dashboard/${r.id}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 18, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px', textDecoration: 'none', color: INK }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 14, background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.25)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 14, background: 'rgba(181,104,58,0.12)', border: '1px solid rgba(181,104,58,0.25)', flexShrink: 0 }}>
                   <span style={{ fontSize: 22, fontWeight: 800, color: scoreColor(r.visibility_score), lineHeight: 1 }}>{r.visibility_score ?? '—'}</span>
                   <span style={{ fontSize: 9, color: FAINT, marginTop: 2 }}>/100</span>
                 </div>
@@ -71,7 +71,7 @@ export default async function CustomerDashboard() {
                     {r.last_audit_at ? ` · ${t.auditedOn(new Date(r.last_audit_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB'))}` : ` · ${t.notAudited}`}
                   </div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', background: 'rgba(124,92,255,0.12)', border: '1px solid rgba(124,92,255,0.25)', borderRadius: 6, padding: '4px 9px' }}>{planLabel(r.plan)}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#B5683A', background: 'rgba(181,104,58,0.12)', border: '1px solid rgba(181,104,58,0.25)', borderRadius: 6, padding: '4px 9px' }}>{planLabel(r.plan)}</span>
                 <ArrowRight style={{ width: 18, height: 18, color: FAINT, flexShrink: 0 }} />
               </a>
             ))}

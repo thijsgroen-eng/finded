@@ -8,9 +8,9 @@ import {
 import { PORTAL } from '@/lib/portal-copy'
 import type { Language } from '@/lib/i18n'
 
-const CARD = 'rgba(255,255,255,0.035)', BORDER2 = 'rgba(255,255,255,0.06)', BORDER = 'rgba(255,255,255,0.09)'
-const INK = '#f4f5fa', MUTED = '#9a9fb6', FAINT = '#646a85', GREEN = '#34d399', AMBER = '#fbbf24', RED = '#fb7185'
-const GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)'
+const CARD = 'rgba(255,255,255,0.70)', BORDER2 = 'rgba(36,28,19,0.10)', BORDER = 'rgba(36,28,19,0.16)'
+const INK = '#241C13', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)', GREEN = '#16a34a', AMBER = '#d97706', RED = '#dc2626'
+const GRAD = 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)'
 const FONT = 'var(--font-inter), sans-serif'
 const ML: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
 type Dash = typeof PORTAL['en']['dash']
@@ -49,16 +49,16 @@ function Ring({ pct, size, stroke, label, sub }: { pct: number; size: number; st
   const id = `g${Math.round(pct)}${size}`
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
-      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7c5cff" /><stop offset="100%" stopColor="#4f8cff" /></linearGradient></defs>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#C8804E" /><stop offset="100%" stopColor="#B5683A" /></linearGradient></defs>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(36,28,19,0.10)" strokeWidth={stroke} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${dash} ${c - dash}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      <text x="50%" y="49%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.26, fontWeight: 800, fill: '#fff' }}>{label}</text>
+      <text x="50%" y="49%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.26, fontWeight: 800, fill: INK }}>{label}</text>
       {sub && <text x="50%" y="66%" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: FONT, fontSize: size * 0.12, fill: MUTED }}>{sub}</text>}
     </svg>
   )
 }
-function Bar({ pct, color = '#7c5cff' }: { pct: number; color?: string }) {
-  return <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}><div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%', borderRadius: 4, background: color }} /></div>
+function Bar({ pct, color = '#B5683A' }: { pct: number; color?: string }) {
+  return <div style={{ height: 7, borderRadius: 4, background: 'rgba(36,28,19,0.10)', overflow: 'hidden' }}><div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%', borderRadius: 4, background: color }} /></div>
 }
 
 function TrendChart({ history, lang, t }: { history: { visibility_score: number; snapshot_date: string }[]; lang: Language; t: Dash }) {
@@ -73,13 +73,13 @@ function TrendChart({ history, lang, t }: { history: { visibility_score: number;
   return (
     <svg viewBox={`0 0 ${W} 195`} style={{ width: '100%', height: 'auto', marginTop: 10 }}>
       <defs>
-        <linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(124,92,255,0.35)" /><stop offset="100%" stopColor="rgba(124,92,255,0)" /></linearGradient>
-        <linearGradient id="st" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#5b8cff" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient>
+        <linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(181,104,58,0.35)" /><stop offset="100%" stopColor="rgba(181,104,58,0)" /></linearGradient>
+        <linearGradient id="st" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#D08A5A" /><stop offset="100%" stopColor="#B5683A" /></linearGradient>
       </defs>
-      {[0, 25, 50, 75, 100].map((g) => (<g key={g}><line x1={44} y1={Y(g)} x2={W - 10} y2={Y(g)} stroke="rgba(255,255,255,0.06)" /><text x={32} y={Y(g) + 3} textAnchor="end" style={{ fontFamily: FONT, fontSize: 9, fill: FAINT }}>{g}</text></g>))}
+      {[0, 25, 50, 75, 100].map((g) => (<g key={g}><line x1={44} y1={Y(g)} x2={W - 10} y2={Y(g)} stroke="rgba(36,28,19,0.08)" /><text x={32} y={Y(g) + 3} textAnchor="end" style={{ fontFamily: FONT, fontSize: 9, fill: FAINT }}>{g}</text></g>))}
       <polygon points={area} fill="url(#ar)" />
       <polyline points={line} fill="none" stroke="url(#st)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r={2.8} fill="#a78bfa" />)}
+      {pts.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r={2.8} fill="#B5683A" />)}
       {history.map((h, i) => i % step === 0 ? <text key={i} x={X(i)} y={190} textAnchor="middle" style={{ fontFamily: FONT, fontSize: 9, fill: FAINT }}>{new Date(h.snapshot_date).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { month: 'short', year: '2-digit' })}</text> : null)}
     </svg>
   )
@@ -137,8 +137,8 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
             const active = tab === key
             return (
               <button key={key} onClick={() => setTab(key)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : MUTED, background: active ? 'rgba(124,92,255,0.16)' : 'transparent', border: active ? '1px solid rgba(124,92,255,0.3)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-                <Icon style={{ width: 15, height: 15, color: active ? '#a78bfa' : FAINT }} /> {label}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? INK : MUTED, background: active ? 'rgba(181,104,58,0.16)' : 'transparent', border: active ? '1px solid rgba(181,104,58,0.3)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                <Icon style={{ width: 15, height: 15, color: active ? '#B5683A' : FAINT }} /> {label}
               </button>
             )
           })}
@@ -158,7 +158,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
               <div style={{ display: 'flex', gap: 18, alignItems: 'center', margin: '12px 0 20px' }}>
                 <Ring pct={score ?? 0} size={120} stroke={12} label={String(score ?? '—')} sub="/100" />
                 <div>
-                  {score != null && <span style={{ fontSize: 12, fontWeight: 800, color: bandColor(score), background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, padding: '4px 11px', borderRadius: 7 }}>{scoreBand(score, t)}</span>}
+                  {score != null && <span style={{ fontSize: 12, fontWeight: 800, color: bandColor(score), background: 'rgba(36,28,19,0.06)', border: `1px solid ${BORDER}`, padding: '4px 11px', borderRadius: 7 }}>{scoreBand(score, t)}</span>}
                   <p style={{ fontSize: 13.5, color: MUTED, marginTop: 10, maxWidth: 380, lineHeight: 1.5 }}>{t.scoreLong(confidence ?? '—')}</p>
                 </div>
               </div>
@@ -189,7 +189,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
                       <span style={{ fontSize: 13.5, color: INK, fontWeight: 600 }}>{ML[m.model] ?? m.model}</span>
                       <span style={{ fontSize: 13, color: MUTED }}>{Math.round(m.frequency * 100)}% · {m.mentions} {m.mentions === 1 ? t.mentionOne : t.mentionMany}{m.avg_position != null ? ` · ${t.avgPos} ${m.avg_position.toFixed(1)}` : ''}</span>
                     </div>
-                    <Bar pct={m.frequency * 100} color={m.mentions > 0 ? '#7c5cff' : 'rgba(255,255,255,0.15)'} />
+                    <Bar pct={m.frequency * 100} color={m.mentions > 0 ? '#B5683A' : 'rgba(36,28,19,0.12)'} />
                   </div>
                 ))}
               </div>
@@ -233,7 +233,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
                   <h3 style={{ fontSize: 15.5, fontWeight: 700, color: INK, marginBottom: 6 }}>{r.title}</h3>
                   {r.what && <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.55, marginBottom: 8 }}>{r.what}</p>}
                   {r.why && <p style={{ fontSize: 13, color: '#cfd2e0', lineHeight: 1.5, marginBottom: 8 }}>{r.why}</p>}
-                  {(r.evidence || r.benchmark) && <div style={{ fontSize: 12, color: '#a78bfa', background: 'rgba(124,92,255,0.08)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 11px' }}>{r.benchmark || r.evidence}{r.data_source ? ` · ${r.data_source}` : ''}</div>}
+                  {(r.evidence || r.benchmark) && <div style={{ fontSize: 12, color: '#B5683A', background: 'rgba(181,104,58,0.08)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 11px' }}>{r.benchmark || r.evidence}{r.data_source ? ` · ${r.data_source}` : ''}</div>}
                 </div>
               ))}
             </div>
@@ -301,7 +301,7 @@ function Overview({ data, lang }: { data: DashboardData; lang: Language }) {
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 10 }}>
             <Ring pct={score ?? 0} size={104} stroke={11} label={String(score ?? '—')} sub="/100" />
             <div>
-              {score != null && <span style={{ fontSize: 11, fontWeight: 800, color: bandColor(score), background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, padding: '3px 9px', borderRadius: 6 }}>{scoreBand(score, t)}</span>}
+              {score != null && <span style={{ fontSize: 11, fontWeight: 800, color: bandColor(score), background: 'rgba(36,28,19,0.06)', border: `1px solid ${BORDER}`, padding: '3px 9px', borderRadius: 6 }}>{scoreBand(score, t)}</span>}
               <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, margin: '10px 0 0' }}>{t.scoreOverviewBody}</p>
             </div>
           </div>
@@ -333,8 +333,8 @@ function Overview({ data, lang }: { data: DashboardData; lang: Language }) {
         </div>
         <div style={{ display: 'grid', gap: 14 }}>
           {insight && (
-            <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(124,92,255,0.16), rgba(79,124,255,0.06))', border: '1px solid rgba(124,92,255,0.25)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#a78bfa' }}><Sparkles style={{ width: 13, height: 13 }} /> {t.keyInsight}</div>
+            <div style={{ ...cardBox, background: 'linear-gradient(135deg, rgba(181,104,58,0.14), rgba(200,128,78,0.06))', border: '1px solid rgba(181,104,58,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...eyebrow, color: '#B5683A' }}><Sparkles style={{ width: 13, height: 13 }} /> {t.keyInsight}</div>
               <p style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, margin: '10px 0 0' }}>{insight}</p>
             </div>
           )}

@@ -64,7 +64,7 @@ export interface ReportData {
 const MODEL_LABELS: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
 const ml = (m: string) => MODEL_LABELS[m] ?? m
 
-const NAVY = '#0f1b2d', ORANGE = '#f97316', INK = '#111827', MUTED = '#6b7280', FAINT = '#9ca3af'
+const NAVY = '#2a1f14', ORANGE = '#B5683A', INK = '#111827', MUTED = '#6b7280', FAINT = '#9ca3af'
 const LINE = '#e5e7eb', PANEL = '#f7f8fa', WHITE = '#ffffff', GREEN = '#16a34a', AMBER = '#d97706', RED = '#dc2626'
 const pct = (x: number) => `${Math.round(x * 100)}%`
 

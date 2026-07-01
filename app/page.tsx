@@ -82,7 +82,7 @@ const T = {
     ],
     founderKicker: 'About us',
     founderQuote: (_f: string) => `”We work with restaurants every day — and we built Finded because owners had no way of knowing whether AI recommends them, or their competitors.”`,
-    founderBody: “Every completed audit improves how well we understand the way AI discovers restaurants. It's a small, independent platform built in the Netherlands. Have a question? Email us — we read every one.”,
+    founderBody: “Every completed audit improves how well we understand the way AI discovers restaurants. It is a small, independent platform built in the Netherlands. Have a question? Email us — we read every one.”,
     leadTitle: 'See whether AI recommends your restaurant',
     leadSub: "Send your website and city, and we'll email you a link to your free AI Visibility Dashboard.",
     faqKicker: 'FAQ', faqTitle: 'Honest answers',

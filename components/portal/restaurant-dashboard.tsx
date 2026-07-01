@@ -15,6 +15,35 @@ const FONT = 'var(--font-inter), sans-serif'
 const ML: Record<string, string> = { openai: 'ChatGPT', anthropic: 'Claude', gemini: 'Gemini', perplexity: 'Perplexity' }
 type Dash = typeof PORTAL['en']['dash']
 
+// Score component labels stored in DB are always English — translate client-side
+const SCORE_LABELS: Record<string, Record<string, string>> = {
+  nl: {
+    'Mention frequency': 'Vermeldingsfrequentie',
+    'Share of voice vs competitors': 'Share of voice vs. concurrenten',
+    'Model consensus': 'Modelconsensus',
+    'Authority & citations': 'Autoriteit & citaties',
+    'Website signals': 'Websitesignalen',
+  },
+}
+const DETAIL_PATTERNS: Array<{ pattern: RegExp; nl: (...m: string[]) => string }> = [
+  { pattern: /Mentioned in (\d+)% of sampled answers\./, nl: (p) => `Genoemd in ${p}% van de geteste antwoorden.` },
+  { pattern: /(\d+)% of all restaurant mentions in this prompt set\./, nl: (p) => `${p}% van alle restaurantvermeldingen in deze promptset.` },
+  { pattern: /(\d+) of (\d+) AI models mentioned you\./, nl: (a, b) => `${a} van de ${b} AI-modellen noemden je.` },
+  { pattern: /Authority signals \(AI citation of your site \+ review presence\): (\d+)%\./, nl: (p) => `Autoriteitssignalen (AI-citatie van je site + reviewaanwezigheid): ${p}%.` },
+  { pattern: /(\d+) of (\d+) AI-readiness signals present on the website\./, nl: (a, b) => `${a} van de ${b} AI-gereedheidssignalen aanwezig op de website.` },
+]
+function translateLabel(label: string, lang: string) {
+  return SCORE_LABELS[lang]?.[label] ?? label
+}
+function translateDetail(detail: string, lang: string) {
+  if (lang === 'en') return detail
+  for (const { pattern, nl } of DETAIL_PATTERNS) {
+    const m = detail.match(pattern)
+    if (m) return nl(...m.slice(1))
+  }
+  return detail
+}
+
 export interface DashboardData {
   restaurant: { id: string; name: string; city: string | null; cuisine: string | null; preview_slug: string | null; plan: string | null }
   ready: boolean
@@ -167,11 +196,11 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
                 {scoreComponents.length === 0 ? <p style={{ fontSize: 13, color: FAINT }}>{t.breakdownNA}</p> : scoreComponents.map((c) => (
                   <div key={c.label}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 13, color: INK }}>{c.label} <span style={{ color: FAINT }}>· {c.weight}% {t.weight}</span></span>
+                      <span style={{ fontSize: 13, color: INK }}>{translateLabel(c.label, lang)} <span style={{ color: FAINT }}>· {c.weight}% {t.weight}</span></span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: bandColor(c.score) }}>{c.score}/100</span>
                     </div>
                     <Bar pct={c.score} color={bandColor(c.score)} />
-                    {c.detail && <p style={{ fontSize: 11.5, color: FAINT, marginTop: 5 }}>{c.detail}</p>}
+                    {c.detail && <p style={{ fontSize: 11.5, color: FAINT, marginTop: 5 }}>{translateDetail(c.detail, lang)}</p>}
                   </div>
                 ))}
               </div>

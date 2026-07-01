@@ -47,6 +47,13 @@ const STR = {
     monitorCta: 'Maandelijkse monitoring — €29/maand',
     scoreMethodTitle: 'Hoe deze score is berekend',
     scoreWeight: 'weging',
+    scoreLabels: {
+      'Mention frequency': 'Vermeldingsfrequentie',
+      'Share of voice vs competitors': 'Share of voice vs. concurrenten',
+      'Model consensus': 'Modelconsensus',
+      'Authority & citations': 'Autoriteit & citaties',
+      'Website signals': 'Websitesignalen',
+    } as Record<string, string>,
     scoreConfidence: 'Betrouwbaarheid',
     scoreVariability: 'Gemeten over deze set prompts. AI-antwoorden kunnen variëren; scores zijn indicatief, geen garantie.',
     footer: 'Finded · AI-zichtbaarheid voor restaurants ·',
@@ -107,6 +114,7 @@ const STR = {
     monitorCta: 'Monthly monitoring — €29/month',
     scoreMethodTitle: 'How this score is calculated',
     scoreWeight: 'weight',
+    scoreLabels: {} as Record<string, string>,
     scoreConfidence: 'Confidence',
     scoreVariability: 'Measured across this prompt set. AI answers can vary; scores are directional, not a guarantee.',
     footer: 'Finded · AI Visibility for Restaurants ·',
@@ -449,7 +457,7 @@ export default async function PreviewReportPage({
             {scoreBreakdown.components.map((c) => (
               <div key={c.key} style={{ padding: '8px 0', borderBottom: '1px solid rgba(36,28,19,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#241C13' }}>{c.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#241C13' }}>{t.scoreLabels[c.label] ?? c.label}</span>
                   <span style={{ fontSize: 13, color: "rgba(36,28,19,0.60)" }}>
                     {Math.round(c.score)}/100 · {Math.round(c.weight * 100)}% {t.scoreWeight}
                   </span>

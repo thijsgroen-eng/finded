@@ -161,7 +161,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
     <div style={{ maxWidth: 1240, margin: '0 auto', padding: 24 }}>
       <Header data={data} lang={lang} />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,210px) 1fr', gap: 18, alignItems: 'start' }}>
-        <aside style={{ ...cardBox, background: '#FBF6EE', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 16 }}>
+        <aside style={{ ...cardBox, background: '#F5EDE0', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 16 }}>
           {nav.map(({ key, icon: Icon, label }) => {
             const active = tab === key
             return (

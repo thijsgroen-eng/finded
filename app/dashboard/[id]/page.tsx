@@ -15,7 +15,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-const BG = '#F1E8D7', BORDER = 'rgba(36,28,19,0.14)', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)'
+const BG = '#D9CDB8', BORDER = 'rgba(36,28,19,0.14)', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)'
 
 async function getData(id: string, cid: string | null, bypassOwnership: boolean): Promise<DashboardData | null> {
   if (!bypassOwnership) {
@@ -117,7 +117,7 @@ export default async function CustomerRestaurantDashboard({ params }: { params: 
           {td.adminPreview} <a href={`/admin/restaurants/${id}`} style={{ color: '#9A5530', fontWeight: 600 }}>{td.backOffice}</a>
         </div>
       )}
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(241,232,215,0.88)', backdropFilter: 'blur(14px)' }}>
+      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(217,205,184,0.92)', backdropFilter: 'blur(14px)' }}>
         <a href={adminPreview ? `/admin/restaurants/${id}` : '/dashboard'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: MUTED, textDecoration: 'none', fontSize: 13.5, fontWeight: 600 }}>
           <ArrowLeft style={{ width: 15, height: 15 }} /> {adminPreview ? td.backOffice : td.allRestaurants}
         </a>

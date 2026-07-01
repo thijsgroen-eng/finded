@@ -3,8 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import Anthropic from '@anthropic-ai/sdk'
 import { sanitizeJsonLd } from '@/lib/engine/jsonld'
 
-if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
 
 // Appended to every fix's system prompt: any JSON-LD must be syntactically valid.
 const VALID_JSONLD_RULE = `
@@ -185,6 +184,7 @@ export const fixFunction = inngest.createFunction(
     triggers: [{ event: 'fix/requested' }],
   },
   async ({ event, step }) => {
+    if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
     const { recommendation_id, restaurant_id, audit_id, fix_type } = event.data
 
     // Load data

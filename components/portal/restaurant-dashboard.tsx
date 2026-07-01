@@ -8,7 +8,7 @@ import {
 import { PORTAL } from '@/lib/portal-copy'
 import type { Language } from '@/lib/i18n'
 
-const CARD = 'rgba(255,255,255,0.70)', BORDER2 = 'rgba(36,28,19,0.10)', BORDER = 'rgba(36,28,19,0.16)'
+const CARD = '#FFFFFF', BORDER2 = 'rgba(36,28,19,0.09)', BORDER = 'rgba(36,28,19,0.13)'
 const INK = '#241C13', MUTED = 'rgba(36,28,19,0.66)', FAINT = 'rgba(36,28,19,0.46)', GREEN = '#16a34a', AMBER = '#d97706', RED = '#dc2626'
 const GRAD = 'linear-gradient(135deg, #C8804E 0%, #B5683A 50%, #9A5530 100%)'
 const FONT = 'var(--font-inter), sans-serif'
@@ -161,12 +161,12 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
     <div style={{ maxWidth: 1240, margin: '0 auto', padding: 24 }}>
       <Header data={data} lang={lang} />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,210px) 1fr', gap: 18, alignItems: 'start' }}>
-        <aside style={{ ...cardBox, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 16 }}>
+        <aside style={{ ...cardBox, background: '#FBF6EE', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 16 }}>
           {nav.map(({ key, icon: Icon, label }) => {
             const active = tab === key
             return (
               <button key={key} onClick={() => setTab(key)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? INK : MUTED, background: active ? 'rgba(181,104,58,0.16)' : 'transparent', border: active ? '1px solid rgba(181,104,58,0.3)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? '#7A3E1E' : MUTED, background: active ? 'rgba(181,104,58,0.14)' : 'transparent', border: active ? '1px solid rgba(181,104,58,0.28)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
                 <Icon style={{ width: 15, height: 15, color: active ? '#B5683A' : FAINT }} /> {label}
               </button>
             )
@@ -261,7 +261,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
                   </div>
                   <h3 style={{ fontSize: 15.5, fontWeight: 700, color: INK, marginBottom: 6 }}>{r.title}</h3>
                   {r.what && <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.55, marginBottom: 8 }}>{r.what}</p>}
-                  {r.why && <p style={{ fontSize: 13, color: '#cfd2e0', lineHeight: 1.5, marginBottom: 8 }}>{r.why}</p>}
+                  {r.why && <p style={{ fontSize: 13, color: FAINT, lineHeight: 1.5, marginBottom: 8 }}>{r.why}</p>}
                   {(r.evidence || r.benchmark) && <div style={{ fontSize: 12, color: '#B5683A', background: 'rgba(181,104,58,0.08)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 11px' }}>{r.benchmark || r.evidence}{r.data_source ? ` · ${r.data_source}` : ''}</div>}
                 </div>
               ))}

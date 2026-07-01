@@ -25,3 +25,13 @@ If a feature does neither, don't build it. Concretely:
   individual customer's data in benchmarks.
 - Keep what works (audit engine, crawler, GBP, PDFs, recommendations,
   competitor analysis); evolve, don't rewrite.
+
+# Admin backoffice translation rule
+
+**Every admin UI string must exist in both NL and EN in `lib/admin-copy.ts`.**
+
+- Server components read the cookie: `const t = ADMIN_COPY[lang]`
+- Client components use: `const t = useAdminT()` from `AdminLangContext`
+- The `AdminCopy` type is inferred from the EN block — adding a key to EN is enough to extend the type
+- When adding or changing any admin page, component, or feature: update `lib/admin-copy.ts` with both the English (`en`) and Dutch (`nl`) strings before committing. Never hardcode English (or Dutch) text in admin UI files.
+- Deploy to Vercel by pushing to `main` — do this automatically after every change, no need to ask.

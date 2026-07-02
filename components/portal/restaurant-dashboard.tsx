@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   Home, Gauge, Bot, Users, ListChecks, Globe, TrendingUp, FileDown,
-  Sparkles, ExternalLink, Check, X,
+  Sparkles, ExternalLink, Check, X, RefreshCw,
 } from 'lucide-react'
 import { PORTAL } from '@/lib/portal-copy'
 import type { Language } from '@/lib/i18n'
@@ -147,6 +147,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
   if (!data.ready) {
     return (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: 24 }}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <Header data={data} lang={lang} />
         <div style={{ ...cardBox, padding: 40, textAlign: 'center' }}>
           <Gauge style={{ width: 34, height: 34, color: FAINT, margin: '0 auto 12px' }} />
@@ -159,6 +160,7 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
 
   return (
     <div style={{ maxWidth: 1240, margin: '0 auto', padding: 24 }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <Header data={data} lang={lang} />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,210px) 1fr', gap: 18, alignItems: 'start' }}>
         <aside style={{ ...cardBox, background: '#F5EDE0', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 16 }}>
@@ -306,15 +308,73 @@ export function RestaurantDashboard({ data, lang = 'en' }: { data: DashboardData
   )
 }
 
+const SUBSCRIPTION_PLANS = ['monthly', 'starter', 'pro']
+
 function Header({ data, lang }: { data: DashboardData; lang: Language }) {
   const { restaurant, auditedAt } = data
-  const t = PORTAL[lang].list
+  const tl = PORTAL[lang].list
+  const td = PORTAL[lang].dash
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const canRerun = SUBSCRIPTION_PLANS.includes(restaurant.plan ?? '')
+
+  async function handleRerun() {
+    setStatus('loading')
+    setMsg(null)
+    try {
+      const res = await fetch('/api/portal/rerun-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant_id: restaurant.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        if (json.error === 'already_running') { setMsg(td.rerunAlreadyRunning); setStatus('error') }
+        else if (json.error === 'subscription_required') { setMsg(td.rerunSubscriptionRequired); setStatus('error') }
+        else { setMsg(td.rerunError); setStatus('error') }
+      } else {
+        setMsg(td.rerunSuccess)
+        setStatus('done')
+      }
+    } catch {
+      setMsg(td.rerunError)
+      setStatus('error')
+    }
+  }
+
   return (
     <div style={{ marginBottom: 18 }}>
-      <h1 style={{ fontSize: 'clamp(22px,3vw,28px)', fontWeight: 800, letterSpacing: -0.8 }}>{restaurant.name}</h1>
-      <p style={{ fontSize: 14, color: MUTED, marginTop: 2 }}>
-        {[restaurant.city, restaurant.cuisine].filter(Boolean).join(' · ') || '—'}{auditedAt ? ` · ${t.auditedOn(new Date(auditedAt).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB'))}` : ''}
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h1 style={{ fontSize: 'clamp(22px,3vw,28px)', fontWeight: 800, letterSpacing: -0.8 }}>{restaurant.name}</h1>
+          <p style={{ fontSize: 14, color: MUTED, marginTop: 2 }}>
+            {[restaurant.city, restaurant.cuisine].filter(Boolean).join(' · ') || '—'}{auditedAt ? ` · ${tl.auditedOn(new Date(auditedAt).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB'))}` : ''}
+          </p>
+        </div>
+        {canRerun && (
+          <button
+            onClick={handleRerun}
+            disabled={status === 'loading' || status === 'done'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              border: '1px solid rgba(36,28,19,0.18)',
+              background: status === 'done' ? '#f0fdf4' : CARD,
+              color: status === 'done' ? GREEN : INK,
+              cursor: status === 'loading' || status === 'done' ? 'default' : 'pointer',
+              opacity: status === 'loading' ? 0.7 : 1,
+              transition: 'all 0.15s',
+            }}
+          >
+            <RefreshCw style={{ width: 14, height: 14, animation: status === 'loading' ? 'spin 1s linear infinite' : undefined }} />
+            {status === 'loading' ? td.rerunRunning : td.rerunBtn}
+          </button>
+        )}
+      </div>
+      {msg && (
+        <p style={{ marginTop: 8, fontSize: 13, color: status === 'error' ? RED : GREEN }}>{msg}</p>
+      )}
     </div>
   )
 }
